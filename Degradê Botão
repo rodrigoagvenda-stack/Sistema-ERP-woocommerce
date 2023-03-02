@@ -1,1 +1,30 @@
+.elementor-button {
+    background: linear-gradient(234deg, #ccff00, #789600, #ccff00, #7f9f00, #ccff00, #9cc300, #ccff00);
+    background-size: 1400% 1400%;
 
+    -webkit-animation: AnimationName 9s ease infinite;
+    -moz-animation: AnimationName 9s ease infinite;
+    -o-animation: AnimationName 9s ease infinite;
+    animation: AnimationName 9s ease infinite;
+}
+
+@-webkit-keyframes AnimationName {
+    0%{background-position:72% 0%}
+    50%{background-position:29% 100%}
+    100%{background-position:72% 0%}
+}
+@-moz-keyframes AnimationName {
+    0%{background-position:72% 0%}
+    50%{background-position:29% 100%}
+    100%{background-position:72% 0%}
+}
+@-o-keyframes AnimationName {
+    0%{background-position:72% 0%}
+    50%{background-position:29% 100%}
+    100%{background-position:72% 0%}
+}
+@keyframes AnimationName {
+    0%{background-position:72% 0%}
+    50%{background-position:29% 100%}
+    100%{background-position:72% 0%}
+}
