@@ -39,7 +39,7 @@ Vá em **Settings → Environment Variables** e adicione:
 ```bash
 VITE_SUPABASE_URL=https://seu-projeto.supabase.co
 VITE_SUPABASE_ANON_KEY=sua-chave-publica-aqui
-VITE_WHATSAPP_NUMBER=5577999838660
+VITE_WHATSAPP_NUMBER=5511986751552
 ```
 
 **⚠️ Importante:**
@@ -94,7 +94,7 @@ VITE_SUPABASE_URL=https://hnkhihzeqtzqzybkjype.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 # WhatsApp (OPCIONAL)
-VITE_WHATSAPP_NUMBER=5577999838660
+VITE_WHATSAPP_NUMBER=5511986751552
 
 # Node Environment (OPCIONAL)
 NODE_ENV=production
@@ -131,7 +131,7 @@ Visualize logs em tempo real:
 ✅ Variáveis de ambiente configuradas!
 🔧 Configuração carregada
 📡 SUPABASE_URL: https://...
-📱 WHATSAPP: 5577999838660
+📱 WHATSAPP: 5511986751552
 ```
 
 ### Métricas
@@ -431,7 +431,7 @@ Antes de considerar o deploy completo:
 ### Ajuda Adicional
 
 - **Email**: contato@lukayagriffe.com.br
-- **WhatsApp**: (77) 99983-8660
+- **WhatsApp**: (11) 98675-1552
 
 ---
 
@@ -447,7 +447,7 @@ docker build -t lukaya-griffe .
 docker run -p 8080:80 \
   -e VITE_SUPABASE_URL=https://... \
   -e VITE_SUPABASE_ANON_KEY=... \
-  -e VITE_WHATSAPP_NUMBER=5577999838660 \
+  -e VITE_WHATSAPP_NUMBER=5511986751552 \
   lukaya-griffe
 
 # Acessar

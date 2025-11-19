@@ -15,7 +15,7 @@
 # Vá em Settings → Environment Variables
 VITE_SUPABASE_URL=https://seu-projeto.supabase.co
 VITE_SUPABASE_ANON_KEY=sua-chave-aqui
-VITE_WHATSAPP_NUMBER=5577999838660
+VITE_WHATSAPP_NUMBER=5511986751552
 ```
 
 ### 3. Deploy

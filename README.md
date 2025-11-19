@@ -213,7 +213,7 @@ theme: {
 
 Edite em `src/App.jsx`:
 ```javascript
-const whatsappNumber = '5577999838660'; // Seu número aqui
+const whatsappNumber = '5511986751552'; // Seu número aqui
 ```
 
 ## 📝 Roadmap de Melhorias
@@ -268,7 +268,7 @@ Este projeto é propriedade da Lukaya Griffe. Todos os direitos reservados.
 ## 👥 Suporte
 
 Para dúvidas ou suporte:
-- WhatsApp: (77) 99983-8660
+- WhatsApp: (11) 98675-1552
 - Email: contato@lukayagriffe.com.br
 
 ---

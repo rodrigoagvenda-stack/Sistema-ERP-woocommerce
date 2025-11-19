@@ -148,7 +148,7 @@ theme: {
 
 Edite `src/App.jsx` linha ~268:
 ```javascript
-const whatsappNumber = '5577999838660'; // Seu número aqui!
+const whatsappNumber = '5511986751552'; // Seu número aqui!
 ```
 
 ### Mudar Nome da Loja
@@ -195,7 +195,7 @@ server: {
 ## 💬 Suporte
 
 **Dúvidas?** Abra uma issue ou entre em contato:
-- 📱 WhatsApp: (77) 99983-8660
+- 📱 WhatsApp: (11) 98675-1552
 - 📧 Email: contato@lukayagriffe.com.br
 
 ## 🎉 Dicas Extras

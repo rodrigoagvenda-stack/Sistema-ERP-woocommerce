@@ -314,7 +314,7 @@ npm run deploy
 ```bash
 VITE_SUPABASE_URL=sua_url_aqui
 VITE_SUPABASE_ANON_KEY=sua_chave_aqui
-VITE_WHATSAPP_NUMBER=5577999838660
+VITE_WHATSAPP_NUMBER=5511986751552
 ```
 
 ### 2. Atualizar Código para Usar Env Vars
@@ -523,7 +523,7 @@ Configure headers CORS no Supabase ou use proxy
 
 Em caso de dúvidas:
 - 📧 Email: suporte@lukayagriffe.com.br
-- 💬 WhatsApp: (77) 99983-8660
+- 💬 WhatsApp: (11) 98675-1552
 
 ---
 
