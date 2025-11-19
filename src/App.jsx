@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Package, ShoppingBag, Menu, X, TrendingUp, DollarSign, Plus, Edit2, Trash2, Save, ArrowLeft, Eye, Upload, LogOut, Lock, Home, ChevronRight, ShoppingCart, MessageCircle, Minus, Tag, Copy, Check } from 'lucide-react';
+import { ENV } from './config/env';
 
-const SUPABASE_URL = 'https://hnkhihzeqtzqzybkjype.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhua2hpaHplcXR6cXp5YmtqeXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NzAyNjMsImV4cCI6MjA3NzE0NjI2M30.FWsLnIruhnwigbjLl0dSI5Bx1sg2S_JU7ubE-fGdqaA';
+const SUPABASE_URL = ENV.SUPABASE_URL;
+const SUPABASE_ANON_KEY = ENV.SUPABASE_ANON_KEY;
 
 const supabaseAPI = {
   headers: {
@@ -233,7 +234,7 @@ export default function LukayaGriffeERP() {
     ).join('\n\n');
 
     const message = '🛍️ *Pedido Lukaya Griffe*\n\n' + items + '\n\n💰 *Total: R$ ' + getCartTotal().toFixed(2) + '*';
-    const whatsappNumber = '5577999838660';
+    const whatsappNumber = ENV.WHATSAPP_NUMBER;
     const url = 'https://wa.me/' + whatsappNumber + '?text=' + encodeURIComponent(message);
     window.open(url, '_blank');
   };

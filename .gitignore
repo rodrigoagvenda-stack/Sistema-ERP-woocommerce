@@ -27,3 +27,6 @@ dist-ssr
 .env
 .env.local
 .env.production
+
+# Runtime environment config (gerado pelo Docker)
+public/env-config.js
