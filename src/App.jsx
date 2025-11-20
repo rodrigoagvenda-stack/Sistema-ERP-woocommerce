@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Package, ShoppingBag, Menu, X, TrendingUp, DollarSign, Plus, Edit2, Trash2, Save, ArrowLeft, Eye, Upload, LogOut, Lock, Home, ChevronRight, ShoppingCart, MessageCircle, Minus, Tag, Copy, Check } from 'lucide-react';
 import { ENV } from './config/env';
+import { supabase, signIn, signUp, signOut, getCurrentUser, isAdmin } from './lib/supabase';
 
 const SUPABASE_URL = ENV.SUPABASE_URL;
 const SUPABASE_ANON_KEY = ENV.SUPABASE_ANON_KEY;
@@ -119,21 +120,51 @@ export default function LukayaGriffeERP() {
   const [showCart, setShowCart] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [user, setUser] = useState(null);
 
+  // Verificar sessão do Supabase ao carregar
   useEffect(() => {
-    const savedAuth = localStorage.getItem('lukaya_auth');
-    if (savedAuth) {
-      const auth = JSON.parse(savedAuth);
-      setIsAuthenticated(true);
-      setUserEmail(auth.email);
-    }
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
 
-    const savedCart = localStorage.getItem('lukaya_cart');
-    if (savedCart) {
-      setCart(JSON.parse(savedCart));
-    }
+        if (session?.user) {
+          setUser(session.user);
+          setIsAuthenticated(true);
+          setUserEmail(session.user.email);
+        }
 
-    setLoading(false);
+        // Carregar carrinho do localStorage
+        const savedCart = localStorage.getItem('lukaya_cart');
+        if (savedCart) {
+          setCart(JSON.parse(savedCart));
+        }
+      } catch (error) {
+        console.error('Erro ao verificar sessão:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+
+    // Escutar mudanças de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        setIsAuthenticated(true);
+        setUserEmail(session.user.email);
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+        setUserEmail('');
+        setMode('catalog');
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -182,17 +213,29 @@ export default function LukayaGriffeERP() {
     }
   };
 
-  const handleLogin = (email) => {
-    setIsAuthenticated(true);
-    setUserEmail(email);
-    localStorage.setItem('lukaya_auth', JSON.stringify({ email: email }));
+  const handleLogin = async (email, password) => {
+    try {
+      const data = await signIn(email, password);
+      setUser(data.user);
+      setIsAuthenticated(true);
+      setUserEmail(data.user.email);
+      return { success: true };
+    } catch (error) {
+      console.error('Erro no login:', error);
+      return { success: false, error: error.message };
+    }
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setUserEmail('');
-    localStorage.removeItem('lukaya_auth');
-    setMode('catalog');
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      setUser(null);
+      setIsAuthenticated(false);
+      setUserEmail('');
+      setMode('catalog');
+    } catch (error) {
+      console.error('Erro no logout:', error);
+    }
   };
 
   const addToCart = (product, size) => {
@@ -262,10 +305,14 @@ export default function LukayaGriffeERP() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSignUp, setIsSignUp] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
       e.preventDefault();
       setError('');
+      setSuccess('');
 
       if (!email || !password) {
         setError('Preencha todos os campos');
@@ -277,8 +324,29 @@ export default function LukayaGriffeERP() {
         return;
       }
 
-      handleLogin(email);
-      setMode('admin');
+      setIsLoading(true);
+
+      if (isSignUp) {
+        // Criar nova conta
+        try {
+          await signUp(email, password);
+          setSuccess('Conta criada! Verifique seu email para confirmar.');
+          setIsSignUp(false);
+        } catch (error) {
+          setError(error.message || 'Erro ao criar conta.');
+        }
+      } else {
+        // Fazer login
+        const result = await handleLogin(email, password);
+
+        if (result.success) {
+          setMode('admin');
+        } else {
+          setError(result.error || 'Erro ao fazer login. Verifique suas credenciais.');
+        }
+      }
+
+      setIsLoading(false);
     };
 
     return (
@@ -289,12 +357,18 @@ export default function LukayaGriffeERP() {
               <Lock className="w-12 h-12 text-yellow-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Lukaya Griffe</h1>
-            <p className="text-gray-600">Área Administrativa</p>
+            <p className="text-gray-600">{isSignUp ? 'Criar Conta' : 'Área Administrativa'}</p>
           </div>
 
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-600">{success}</p>
             </div>
           )}
 
@@ -323,9 +397,10 @@ export default function LukayaGriffeERP() {
 
             <button
               onClick={handleSubmit}
-              className="w-full py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium"
+              disabled={isLoading}
+              className="w-full py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Entrar
+              {isLoading ? (isSignUp ? 'Criando conta...' : 'Entrando...') : (isSignUp ? 'Criar Conta' : 'Entrar')}
             </button>
 
             <button
@@ -338,7 +413,17 @@ export default function LukayaGriffeERP() {
 
           <div className="mt-8 pt-6 border-t border-gray-200">
             <p className="text-xs text-center text-gray-500">
-              💡 Demo: Use qualquer email/senha com 6+ caracteres
+              {isSignUp ? 'Já tem uma conta?' : 'Primeira vez?'}{' '}
+              <button
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setError('');
+                  setSuccess('');
+                }}
+                className="text-yellow-600 hover:text-yellow-700 font-medium"
+              >
+                {isSignUp ? 'Fazer login' : 'Criar conta'}
+              </button>
             </p>
           </div>
         </div>
