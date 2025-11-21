@@ -310,10 +310,15 @@ export default function LukayaGriffeERP() {
         setBanners(data || []);
       } else {
         const banner = await supabaseAPI.getActiveBanner();
-        setActiveBanner(banner);
+        // Se não encontrar banner no Supabase, mantém o banner fake
+        if (banner) {
+          setActiveBanner(banner);
+        }
+        // Se não encontrar, o banner fake inicial permanece
       }
     } catch (error) {
       console.error('Erro ao carregar banners:', error);
+      // Em caso de erro, mantém o banner fake
     }
   };
 
@@ -816,8 +821,8 @@ export default function LukayaGriffeERP() {
                   </button>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-sm p-4">
-                  <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <div className={`${darkMode ? 'bg-[#202020]' : 'bg-white'} rounded-lg shadow-sm p-4`}>
+                  <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-3 flex items-center gap-2`}>
                     <Tag className="w-4 h-4" />
                     Categorias
                   </h3>
@@ -849,8 +854,8 @@ export default function LukayaGriffeERP() {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-sm p-4">
-                  <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <div className={`${darkMode ? 'bg-[#202020]' : 'bg-white'} rounded-lg shadow-sm p-4`}>
+                  <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-3 flex items-center gap-2`}>
                     <DollarSign className="w-4 h-4" />
                     Preço
                   </h3>
