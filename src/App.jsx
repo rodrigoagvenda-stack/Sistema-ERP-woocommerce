@@ -5,6 +5,9 @@ import { supabase, signIn, signUp, signOut, getCurrentUser, isAdmin } from './li
 import Banner from './components/Banner';
 import { ProductBadge, ProductPrice } from './components/ProductBadge';
 import RelatedProducts from './components/RelatedProducts';
+import MarketplaceSettings from './components/MarketplaceSettings';
+import ProductMarketplaces from './components/ProductMarketplaces';
+import MarketplaceSyncLogs from './components/MarketplaceSyncLogs';
 
 const SUPABASE_URL = ENV.SUPABASE_URL;
 const SUPABASE_ANON_KEY = ENV.SUPABASE_ANON_KEY;
