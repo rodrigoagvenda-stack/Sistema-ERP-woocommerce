@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Store, Key, Check, X, AlertCircle, Save, Eye, EyeOff } from 'lucide-react'
+import { Store, Key, Check, X, AlertCircle, Save, Eye, EyeOff, Zap, Loader } from 'lucide-react'
 
 const MARKETPLACES = [
   { id: 'mercado_livre', name: 'Mercado Livre', color: 'yellow', icon: '🛒' },
@@ -14,6 +14,8 @@ export default function MarketplaceSettings({ darkMode }) {
   const [credentials, setCredentials] = useState({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(null)
+  const [testing, setTesting] = useState(null)
+  const [testResults, setTestResults] = useState({})
   const [showSecrets, setShowSecrets] = useState({})
   const [message, setMessage] = useState(null)
 
@@ -80,6 +82,62 @@ export default function MarketplaceSettings({ darkMode }) {
       setMessage({ type: 'error', text: 'Erro ao salvar credenciais: ' + error.message })
     } finally {
       setSaving(null)
+    }
+  }
+
+  async function testConnection(marketplace) {
+    setTesting(marketplace)
+    setTestResults(prev => ({ ...prev, [marketplace]: null }))
+
+    try {
+      const cred = credentials[marketplace] || {}
+
+      // Mapear campos para o formato esperado pela Edge Function
+      const credPayload = {
+        client_id: cred.client_id,
+        client_secret: cred.client_secret,
+        access_token: cred.access_token,
+        refresh_token: cred.refresh_token,
+        store_url: cred.store_url,
+        seller_id: cred.seller_id,
+        shop_id: cred.shop_id,
+        partner_id: cred.client_id, // Shopee usa partner_id
+        partner_key: cred.client_secret, // Shopee usa partner_key
+        app_key: cred.client_id, // TikTok usa app_key
+        app_secret: cred.client_secret // TikTok usa app_secret
+      }
+
+      const { data, error } = await supabase.functions.invoke('test-marketplace-connection', {
+        body: {
+          marketplace,
+          credentials: credPayload
+        }
+      })
+
+      if (error) throw error
+
+      setTestResults(prev => ({
+        ...prev,
+        [marketplace]: data
+      }))
+
+      if (data.success) {
+        setMessage({ type: 'success', text: `✅ ${data.message}` })
+      } else {
+        setMessage({ type: 'error', text: `❌ ${data.error}` })
+      }
+
+      setTimeout(() => setMessage(null), 5000)
+
+    } catch (error) {
+      console.error('Erro ao testar conexão:', error)
+      setTestResults(prev => ({
+        ...prev,
+        [marketplace]: { success: false, error: error.message }
+      }))
+      setMessage({ type: 'error', text: 'Erro ao testar conexão: ' + error.message })
+    } finally {
+      setTesting(null)
     }
   }
 
@@ -329,19 +387,73 @@ export default function MarketplaceSettings({ darkMode }) {
               </div>
             </div>
 
-            {/* Botão Salvar */}
-            <button
-              onClick={() => saveCredentials(marketplace.id)}
-              disabled={saving === marketplace.id}
-              className={`w-full px-6 py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${
-                darkMode
-                  ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
-                  : 'bg-yellow-400 hover:bg-yellow-500 text-black'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              <Save className="w-5 h-5" />
-              {saving === marketplace.id ? 'Salvando...' : 'Salvar Configurações'}
-            </button>
+            {/* Resultado do Teste */}
+            {testResults[marketplace.id] && (
+              <div className={`p-3 rounded-lg flex items-start gap-3 ${
+                testResults[marketplace.id].success
+                  ? darkMode ? 'bg-green-500/20 text-green-400' : 'bg-green-50 text-green-700'
+                  : darkMode ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-700'
+              }`}>
+                {testResults[marketplace.id].success ? (
+                  <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <X className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                )}
+                <div className="flex-1">
+                  <p className="text-sm font-medium">
+                    {testResults[marketplace.id].success ? 'Conexão bem-sucedida!' : 'Erro na conexão'}
+                  </p>
+                  <p className="text-xs mt-1 opacity-90">
+                    {testResults[marketplace.id].message || testResults[marketplace.id].error}
+                  </p>
+                  {testResults[marketplace.id].userData && (
+                    <pre className="text-xs mt-2 opacity-75">
+                      {JSON.stringify(testResults[marketplace.id].userData, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Botões de Ação */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Botão Testar Conexão */}
+              <button
+                onClick={() => testConnection(marketplace.id)}
+                disabled={testing === marketplace.id || saving === marketplace.id}
+                className={`px-6 py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${
+                  darkMode
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {testing === marketplace.id ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    Testando...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-5 h-5" />
+                    Testar Conexão
+                  </>
+                )}
+              </button>
+
+              {/* Botão Salvar */}
+              <button
+                onClick={() => saveCredentials(marketplace.id)}
+                disabled={saving === marketplace.id || testing === marketplace.id}
+                className={`px-6 py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${
+                  darkMode
+                    ? 'bg-yellow-500 hover:bg-yellow-600 text-black'
+                    : 'bg-yellow-400 hover:bg-yellow-500 text-black'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <Save className="w-5 h-5" />
+                {saving === marketplace.id ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
           </div>
         )
       })}

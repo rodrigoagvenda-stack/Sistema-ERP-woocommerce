@@ -406,11 +406,55 @@ Recomendamos usar uma biblioteca especializada ou serviço intermediário.
 ### Boas Práticas:
 
 1. ✅ **Nunca** commite credenciais no Git
-2. ✅ Use **variáveis de ambiente** (.env)
+2. ✅ Credenciais gerenciadas via **interface admin** (não no .env)
 3. ✅ Rotacione tokens regularmente
 4. ✅ Configure **Row Level Security** no Supabase
 5. ✅ Use **HTTPS** em produção
 6. ✅ Monitore logs de acesso
+7. ✅ **Teste conexões** antes de salvar
+8. ✅ Implemente **criptografia em repouso** (ver abaixo)
+
+### Gerenciamento de Credenciais:
+
+As credenciais dos marketplaces são:
+- ✅ Gerenciadas via **interface administrativa**
+- ✅ Armazenadas no **banco de dados** (tabela `marketplace_credentials`)
+- ✅ **Não** estão no código-fonte ou .env
+- ✅ Acessíveis apenas via **API autenticada**
+- ✅ Botão "Testar Conexão" valida credenciais antes de salvar
+
+### Criptografia de Credenciais (Recomendado para Produção):
+
+⚠️ As credenciais atualmente são armazenadas em texto plano no banco. Para produção, recomendamos:
+
+**Opção 1: Criptografia no Supabase (Vault)**
+
+```sql
+-- Habilitar Supabase Vault
+-- https://supabase.com/docs/guides/database/vault
+
+-- Criar secrets
+INSERT INTO vault.secrets (secret) VALUES ('seu_client_secret');
+
+-- Atualizar tabela para usar secrets
+ALTER TABLE marketplace_credentials
+ADD COLUMN client_secret_id UUID REFERENCES vault.secrets(id);
+```
+
+**Opção 2: Criptografia com pgcrypto (PostgreSQL)**
+
+```sql
+-- Instalar extensão pgcrypto
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Criptografar ao inserir
+INSERT INTO marketplace_credentials (client_secret)
+VALUES (pgp_sym_encrypt('secret_value', current_setting('app.encryption_key')));
+
+-- Descriptografar ao ler (via Edge Function)
+SELECT pgp_sym_decrypt(client_secret::bytea, current_setting('app.encryption_key'))
+FROM marketplace_credentials;
+```
 
 ### Permissões no Supabase:
 
@@ -419,6 +463,11 @@ Recomendamos usar uma biblioteca especializada ou serviço intermediário.
 CREATE POLICY "Admins podem gerenciar credenciais"
 ON marketplace_credentials FOR ALL
 USING (auth.role() = 'authenticated');
+
+-- Adicionar verificação de admin role customizada
+CREATE POLICY "Apenas admins podem ver credenciais"
+ON marketplace_credentials FOR SELECT
+USING (auth.jwt() ->> 'role' = 'admin');
 ```
 
 ---
