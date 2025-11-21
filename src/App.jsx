@@ -1958,6 +1958,13 @@ export default function LukayaGriffeERP() {
             <Tag size={20} />
             {sidebarOpen && <span>Categorias</span>}
           </button>
+          <button
+            onClick={() => setCurrentPage('banners')}
+            className={'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ' + (currentPage === 'banners' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800')}
+          >
+            <Sparkles size={20} />
+            {sidebarOpen && <span>Banners</span>}
+          </button>
         </nav>
 
         {sidebarOpen && (
@@ -1995,6 +2002,38 @@ export default function LukayaGriffeERP() {
         {currentPage === 'dashboard' && <Dashboard />}
         {currentPage === 'products' && <ProductsManagement />}
         {currentPage === 'categories' && <CategoriesManagement />}
+        {currentPage === 'banners' && (
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-3xl font-bold text-gray-800">Gestão de Banners</h1>
+              <p className="text-gray-600">Funcionalidade em desenvolvimento - Use o SQL do TABELAS_NOVAS.sql para criar banners</p>
+            </div>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8">
+              <h3 className="text-lg font-bold text-yellow-800 mb-4">📸 Como criar banners agora:</h3>
+              <ol className="list-decimal list-inside space-y-2 text-yellow-900">
+                <li>Abra o SQL Editor no Supabase Dashboard</li>
+                <li>Execute o script TABELAS_NOVAS.sql (se ainda não executou)</li>
+                <li>Use este SQL para criar um banner:
+                  <pre className="bg-white p-4 rounded mt-2 text-sm overflow-x-auto">
+{`INSERT INTO banners (
+  title, description, image_url,
+  button_text, is_active, order_index
+) VALUES (
+  'Black Friday 2025',
+  'Até 70% OFF em produtos selecionados!',
+  'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?w=1920',
+  'Ver Ofertas',
+  true,
+  1
+);`}
+                  </pre>
+                </li>
+                <li>Banner aparecerá automaticamente no catálogo!</li>
+              </ol>
+              <p className="mt-4 text-sm text-yellow-700">Interface de upload visual será implementada em breve.</p>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
