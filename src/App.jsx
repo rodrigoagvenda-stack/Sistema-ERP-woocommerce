@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, ShoppingBag, Menu, X, TrendingUp, DollarSign, Plus, Edit2, Trash2, Save, ArrowLeft, Eye, Upload, LogOut, Lock, Home, ChevronRight, ShoppingCart, MessageCircle, Minus, Tag, Copy, Check } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, Menu, X, TrendingUp, DollarSign, Plus, Edit2, Trash2, Save, ArrowLeft, Eye, Upload, LogOut, Lock, Home, ChevronRight, ShoppingCart, MessageCircle, Minus, Tag, Copy, Check, Moon, Sun, Sparkles, Flame } from 'lucide-react';
 import { ENV } from './config/env';
 import { supabase, signIn, signUp, signOut, getCurrentUser, isAdmin } from './lib/supabase';
+import Banner from './components/Banner';
+import { ProductBadge, ProductPrice } from './components/ProductBadge';
+import RelatedProducts from './components/RelatedProducts';
 
 const SUPABASE_URL = ENV.SUPABASE_URL;
 const SUPABASE_ANON_KEY = ENV.SUPABASE_ANON_KEY;
@@ -104,6 +107,78 @@ const supabaseAPI = {
 
   async incrementViews(id, currentViews) {
     await this.updateProduct(id, { views: currentViews + 1 });
+  },
+
+  // Banner APIs
+  async getBanners() {
+    const response = await fetch(SUPABASE_URL + '/rest/v1/banners?order=order_index.asc', {
+      headers: this.headers
+    });
+    return response.json();
+  },
+
+  async getActiveBanner() {
+    const response = await fetch(SUPABASE_URL + '/rest/v1/banners?is_active=eq.true&order=order_index.asc&limit=1', {
+      headers: this.headers
+    });
+    const data = await response.json();
+    return data[0] || null;
+  },
+
+  async createBanner(banner) {
+    const response = await fetch(SUPABASE_URL + '/rest/v1/banners', {
+      method: 'POST',
+      headers: this.headers,
+      body: JSON.stringify(banner)
+    });
+    return response.json();
+  },
+
+  async updateBanner(id, banner) {
+    const response = await fetch(SUPABASE_URL + '/rest/v1/banners?id=eq.' + id, {
+      method: 'PATCH',
+      headers: this.headers,
+      body: JSON.stringify(banner)
+    });
+    return response.json();
+  },
+
+  async deleteBanner(id) {
+    const response = await fetch(SUPABASE_URL + '/rest/v1/banners?id=eq.' + id, {
+      method: 'DELETE',
+      headers: this.headers
+    });
+    return response.ok;
+  },
+
+  // Settings API
+  async getSettings() {
+    const response = await fetch(SUPABASE_URL + '/rest/v1/settings?limit=1', {
+      headers: this.headers
+    });
+    const data = await response.json();
+    return data[0] || null;
+  },
+
+  async updateSettings(settings) {
+    // Primeiro tenta atualizar
+    const response = await fetch(SUPABASE_URL + '/rest/v1/settings?id=eq.1', {
+      method: 'PATCH',
+      headers: this.headers,
+      body: JSON.stringify(settings)
+    });
+
+    // Se não existir, cria
+    if (!response.ok) {
+      const createResponse = await fetch(SUPABASE_URL + '/rest/v1/settings', {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify({ id: 1, ...settings })
+      });
+      return createResponse.json();
+    }
+
+    return response.json();
   }
 };
 
@@ -121,6 +196,9 @@ export default function LukayaGriffeERP() {
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [user, setUser] = useState(null);
+  const [banners, setBanners] = useState([]);
+  const [darkMode, setDarkMode] = useState(false);
+  const [activeBanner, setActiveBanner] = useState(null);
 
   // Verificar sessão do Supabase ao carregar
   useEffect(() => {
@@ -171,10 +249,13 @@ export default function LukayaGriffeERP() {
     if (mode === 'admin' && isAuthenticated) {
       loadAllProducts();
       loadCategories();
+      loadBanners();
     } else if (mode === 'catalog') {
       loadProducts();
       loadCategories();
+      loadBanners();
     }
+    loadSettings(); // Carregar settings em ambos os modos
   }, [isAuthenticated, mode]);
 
   useEffect(() => {
@@ -210,6 +291,31 @@ export default function LukayaGriffeERP() {
       }
     } catch (error) {
       console.error('Erro ao carregar categorias:', error);
+    }
+  };
+
+  const loadBanners = async () => {
+    try {
+      if (mode === 'admin' && isAuthenticated) {
+        const data = await supabaseAPI.getBanners();
+        setBanners(data || []);
+      } else {
+        const banner = await supabaseAPI.getActiveBanner();
+        setActiveBanner(banner);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar banners:', error);
+    }
+  };
+
+  const loadSettings = async () => {
+    try {
+      const data = await supabaseAPI.getSettings();
+      if (data && data.dark_mode !== undefined) {
+        setDarkMode(data.dark_mode);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações:', error);
     }
   };
 
@@ -500,21 +606,28 @@ export default function LukayaGriffeERP() {
     const hasActiveFilters = selectedCategory !== 'all' || priceRange !== 'all' || selectedSize || searchTerm;
 
     return (
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white shadow-sm sticky top-0 z-40">
+      <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <header className={`shadow-sm sticky top-0 z-40 transition-colors duration-300 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl font-bold text-yellow-600">Lukaya Griffe</h1>
-              <div className="flex items-center gap-4">
+              <h1 className={`text-2xl font-bold ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>Lukaya Griffe</h1>
+              <div className="flex items-center gap-2 sm:gap-4">
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700 text-yellow-400' : 'hover:bg-gray-100 text-gray-700'}`}
+                  title={darkMode ? 'Modo Claro' : 'Modo Escuro'}
+                >
+                  {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </button>
                 <button
                   onClick={() => setMode('admin')}
-                  className="hidden md:block px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                  className={`hidden md:block px-4 py-2 text-sm rounded-lg transition-colors ${darkMode ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'}`}
                 >
                   Admin
                 </button>
                 <button
                   onClick={() => setShowCart(true)}
-                  className="relative p-2 hover:bg-gray-100 rounded-lg"
+                  className={`relative p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
                 >
                   <ShoppingCart className="w-6 h-6" />
                   {cart.length > 0 && (
@@ -634,6 +747,9 @@ export default function LukayaGriffeERP() {
             )}
           </div>
         </header>
+
+        {/* Banner Hero */}
+        {activeBanner && <Banner banner={activeBanner} darkMode={darkMode} />}
 
         <div className="max-w-7xl mx-auto px-4 py-6">
           {/* Breadcrumb de Filtros Ativos */}
@@ -804,20 +920,21 @@ export default function LukayaGriffeERP() {
                     <div
                       key={product.id}
                       onClick={() => setSelectedProductId(product.id)}
-                      className="bg-white rounded-lg shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                      className="bg-white rounded-lg shadow-sm overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group"
                     >
-                      <div className="aspect-square bg-gray-200 overflow-hidden">
+                      <div className="aspect-square bg-gray-200 overflow-hidden relative">
+                        <ProductBadge product={product} />
                         <img
                           src={product.image_urls || 'https://via.placeholder.com/400'}
                           alt={product.name}
-                          className="w-full h-full object-cover hover:scale-105 transition-transform"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                         />
                       </div>
                       <div className="p-4">
                         <p className="text-sm sm:text-xs text-gray-500 mb-1">
                           {categories.find(c => c.id === product.category_id)?.name || 'Sem categoria'}
                         </p>
-                        <h3 className="font-semibold text-gray-800 mb-2 text-base sm:text-sm">{product.name}</h3>
+                        <h3 className="font-semibold text-gray-800 mb-2 text-base sm:text-sm line-clamp-2 group-hover:text-yellow-600 transition-colors">{product.name}</h3>
                         {product.available_sizes && product.available_sizes.length > 0 && (
                           <div className="flex flex-wrap gap-1 mb-2">
                             {product.available_sizes.slice(0, 5).map(size => (
@@ -839,11 +956,9 @@ export default function LukayaGriffeERP() {
                             )}
                           </div>
                         )}
-                        <p className="text-lg sm:text-xl font-bold text-yellow-600">
-                          R$ {product.price.toFixed(2)}
-                        </p>
+                        <ProductPrice product={product} />
                         <p className="text-sm sm:text-xs text-gray-500 mt-1">
-                          6x de R$ {(product.price / 6).toFixed(2)}
+                          ou 6x de R$ {(product.price / 6).toFixed(2)}
                         </p>
                       </div>
                     </div>
