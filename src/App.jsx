@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Package, ShoppingBag, Menu, X, TrendingUp, DollarSign, Plus, Edit2, Trash2, Save, ArrowLeft, Eye, Upload, LogOut, Lock, Home, ChevronRight, ShoppingCart, MessageCircle, Minus, Tag, Copy, Check, Moon, Sun, Sparkles, Flame } from 'lucide-react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { ENV } from './config/env';
 import { supabase, signIn, signUp, signOut, getCurrentUser, isAdmin } from './lib/supabase';
 import Banner from './components/Banner';
@@ -1465,13 +1467,39 @@ export default function LukayaGriffeERP() {
 
     const handleSubmit = async (e) => {
       e.preventDefault();
+      console.log('🔄 Iniciando salvamento de produto...');
+      console.log('📦 Dados do produto:', formData);
+
+      // Validar campos obrigatórios
+      if (!formData.name || !formData.name.trim()) {
+        toast.warning('⚠️ Nome do produto é obrigatório');
+        return;
+      }
+
+      if (!formData.price || formData.price <= 0) {
+        toast.warning('⚠️ Preço do produto é obrigatório e deve ser maior que zero');
+        return;
+      }
+
       setSaving(true);
       try {
         if (editingProduct) {
-          await supabaseAPI.updateProduct(editingProduct.id, formData);
+          console.log('✏️ Editando produto:', editingProduct.id);
+          const result = await supabaseAPI.updateProduct(editingProduct.id, formData);
+          console.log('✅ Resultado:', result);
+          toast.success('✅ Produto atualizado com sucesso!');
         } else {
-          await supabaseAPI.createProduct(formData);
+          console.log('➕ Criando novo produto');
+          const result = await supabaseAPI.createProduct(formData);
+          console.log('✅ Resultado:', result);
+
+          if (result && result[0]) {
+            toast.success('✅ Produto cadastrado com sucesso!');
+          } else {
+            throw new Error('Nenhum dado retornado do servidor');
+          }
         }
+
         await loadAllProducts();
         setShowForm(false);
         setEditingProduct(null);
@@ -1489,7 +1517,8 @@ export default function LukayaGriffeERP() {
         setSelectedSizes([]);
         setImagePreview('');
       } catch (error) {
-        alert('Erro ao salvar produto');
+        console.error('❌ Erro ao salvar produto:', error);
+        toast.error('❌ Erro ao salvar produto: ' + (error.message || 'Erro desconhecido'));
       } finally {
         setSaving(false);
       }
@@ -1772,17 +1801,33 @@ export default function LukayaGriffeERP() {
 
     const handleSubmit = async (e) => {
       e.preventDefault();
+      console.log('🔄 Iniciando salvamento de categoria...');
+      console.log('📦 Dados:', formData);
+
       if (!formData.name.trim()) {
-        alert('Nome da categoria é obrigatório');
+        toast.warning('⚠️ Nome da categoria é obrigatório');
         return;
       }
+
       setSaving(true);
       try {
         if (editingCategory) {
-          await supabaseAPI.updateCategory(editingCategory.id, formData);
+          console.log('✏️ Editando categoria:', editingCategory.id);
+          const result = await supabaseAPI.updateCategory(editingCategory.id, formData);
+          console.log('✅ Resultado:', result);
+          toast.success('✅ Categoria atualizada com sucesso!');
         } else {
-          await supabaseAPI.createCategory(formData);
+          console.log('➕ Criando nova categoria');
+          const result = await supabaseAPI.createCategory(formData);
+          console.log('✅ Resultado:', result);
+
+          if (result && result[0]) {
+            toast.success('✅ Categoria criada com sucesso!');
+          } else {
+            throw new Error('Nenhum dado retornado do servidor');
+          }
         }
+
         await loadCategories();
         setShowForm(false);
         setEditingCategory(null);
@@ -1792,7 +1837,8 @@ export default function LukayaGriffeERP() {
           size_type: null
         });
       } catch (error) {
-        alert('Erro ao salvar categoria');
+        console.error('❌ Erro ao salvar categoria:', error);
+        toast.error('❌ Erro ao salvar categoria: ' + (error.message || 'Erro desconhecido'));
       } finally {
         setSaving(false);
       }
@@ -2097,6 +2143,19 @@ export default function LukayaGriffeERP() {
           </div>
         )}
       </main>
+
+      {/* Toast Container para notificações */}
+      <ToastContainer
+        position="top-right"
+        autoClose={4000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 }
