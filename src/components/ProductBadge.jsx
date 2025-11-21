@@ -82,21 +82,21 @@ export const ProductBadge = ({ product }) => {
 /**
  * Componente de Preço com Desconto
  */
-export const ProductPrice = ({ product }) => {
+export const ProductPrice = ({ product, darkMode = false }) => {
   const hasDiscount = product.discount_percentage && product.discount_percentage > 0;
 
   return (
     <div className="space-y-1">
       {hasDiscount && product.original_price && (
-        <p className="text-sm text-gray-400 line-through">
+        <p className={`text-sm line-through ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
           R$ {product.original_price.toFixed(2)}
         </p>
       )}
-      <p className={`${hasDiscount ? 'text-xl sm:text-2xl' : 'text-lg sm:text-xl'} font-bold ${hasDiscount ? 'text-red-600' : 'text-yellow-600'}`}>
+      <p className={`${hasDiscount ? 'text-xl sm:text-2xl' : 'text-lg sm:text-xl'} font-bold ${hasDiscount ? 'text-red-500' : darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
         R$ {product.price.toFixed(2)}
       </p>
       {hasDiscount && (
-        <p className="text-xs sm:text-sm text-green-600 font-medium">
+        <p className="text-xs sm:text-sm text-green-500 font-medium">
           Economia: R$ {(product.original_price - product.price).toFixed(2)}
         </p>
       )}

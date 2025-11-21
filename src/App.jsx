@@ -198,7 +198,16 @@ export default function LukayaGriffeERP() {
   const [user, setUser] = useState(null);
   const [banners, setBanners] = useState([]);
   const [darkMode, setDarkMode] = useState(false);
-  const [activeBanner, setActiveBanner] = useState(null);
+  const [activeBanner, setActiveBanner] = useState({
+    id: 1,
+    title: 'Coleção Verão 2025',
+    description: 'Novas peças exclusivas chegando! Aproveite os lançamentos com até 30% OFF',
+    image_url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&h=600&fit=crop',
+    image_url_mobile: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=800&fit=crop',
+    button_text: 'Ver Coleção',
+    link_url: '#',
+    is_active: true
+  });
 
   // Verificar sessão do Supabase ao carregar
   useEffect(() => {
@@ -606,22 +615,22 @@ export default function LukayaGriffeERP() {
     const hasActiveFilters = selectedCategory !== 'all' || priceRange !== 'all' || selectedSize || searchTerm;
 
     return (
-      <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        <header className={`shadow-sm sticky top-0 z-40 transition-colors duration-300 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+      <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-[#111111]' : 'bg-gray-50'}`}>
+        <header className={`shadow-sm sticky top-0 z-40 transition-colors duration-300 ${darkMode ? 'bg-[#202020]' : 'bg-white'}`}>
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between mb-4">
               <h1 className={`text-2xl font-bold ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>Lukaya Griffe</h1>
               <div className="flex items-center gap-2 sm:gap-4">
                 <button
                   onClick={() => setDarkMode(!darkMode)}
-                  className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700 text-yellow-400' : 'hover:bg-gray-100 text-gray-700'}`}
+                  className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-[#333333] text-yellow-400' : 'hover:bg-gray-100 text-gray-700'}`}
                   title={darkMode ? 'Modo Claro' : 'Modo Escuro'}
                 >
                   {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                 </button>
                 <button
                   onClick={() => setMode('admin')}
-                  className={`hidden md:block px-4 py-2 text-sm rounded-lg transition-colors ${darkMode ? 'text-gray-300 hover:text-white hover:bg-gray-700' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'}`}
+                  className={`px-3 py-2 text-xs sm:text-sm rounded-lg transition-colors ${darkMode ? 'text-white hover:text-yellow-400 hover:bg-[#333333]' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'}`}
                 >
                   Admin
                 </button>
@@ -920,7 +929,7 @@ export default function LukayaGriffeERP() {
                     <div
                       key={product.id}
                       onClick={() => setSelectedProductId(product.id)}
-                      className="bg-white rounded-lg shadow-sm overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group"
+                      className={`${darkMode ? 'bg-[#202020]' : 'bg-white'} rounded-lg shadow-sm overflow-hidden cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group`}
                     >
                       <div className="aspect-square bg-gray-200 overflow-hidden relative">
                         <ProductBadge product={product} />
@@ -931,10 +940,10 @@ export default function LukayaGriffeERP() {
                         />
                       </div>
                       <div className="p-4">
-                        <p className="text-sm sm:text-xs text-gray-500 mb-1">
+                        <p className={`text-sm sm:text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mb-1`}>
                           {categories.find(c => c.id === product.category_id)?.name || 'Sem categoria'}
                         </p>
-                        <h3 className="font-semibold text-gray-800 mb-2 text-base sm:text-sm line-clamp-2 group-hover:text-yellow-600 transition-colors">{product.name}</h3>
+                        <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'} mb-2 text-base sm:text-sm line-clamp-2 group-hover:text-yellow-400 transition-colors`}>{product.name}</h3>
                         {product.available_sizes && product.available_sizes.length > 0 && (
                           <div className="flex flex-wrap gap-1 mb-2">
                             {product.available_sizes.slice(0, 5).map(size => (
@@ -956,8 +965,8 @@ export default function LukayaGriffeERP() {
                             )}
                           </div>
                         )}
-                        <ProductPrice product={product} />
-                        <p className="text-sm sm:text-xs text-gray-500 mt-1">
+                        <ProductPrice product={product} darkMode={darkMode} />
+                        <p className={`text-sm sm:text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
                           ou 6x de R$ {(product.price / 6).toFixed(2)}
                         </p>
                       </div>
