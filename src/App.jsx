@@ -428,14 +428,13 @@ export default function LukayaGriffeERP() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [isSignUp, setIsSignUp] = useState(false);
+    // NOTA: Cadastro público removido por segurança
+    // Novos admins devem ser criados manualmente via SQL no Supabase
 
     const handleSubmit = async (e) => {
       e.preventDefault();
       setError('');
-      setSuccess('');
 
       if (!email || !password) {
         setError('Preencha todos os campos');
@@ -449,24 +448,13 @@ export default function LukayaGriffeERP() {
 
       setIsLoading(true);
 
-      if (isSignUp) {
-        // Criar nova conta
-        try {
-          await signUp(email, password);
-          setSuccess('Conta criada! Verifique seu email para confirmar.');
-          setIsSignUp(false);
-        } catch (error) {
-          setError(error.message || 'Erro ao criar conta.');
-        }
-      } else {
-        // Fazer login
-        const result = await handleLogin(email, password);
+      // Fazer login
+      const result = await handleLogin(email, password);
 
-        if (result.success) {
-          setMode('admin');
-        } else {
-          setError(result.error || 'Erro ao fazer login. Verifique suas credenciais.');
-        }
+      if (result.success) {
+        setMode('admin');
+      } else {
+        setError(result.error || 'Erro ao fazer login. Verifique suas credenciais.');
       }
 
       setIsLoading(false);
@@ -480,18 +468,12 @@ export default function LukayaGriffeERP() {
               <Lock className="w-12 h-12 text-yellow-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Lukaya Griffe</h1>
-            <p className="text-gray-600">{isSignUp ? 'Criar Conta' : 'Área Administrativa'}</p>
+            <p className="text-gray-600">Área Administrativa</p>
           </div>
 
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-600">{success}</p>
             </div>
           )}
 
@@ -523,7 +505,7 @@ export default function LukayaGriffeERP() {
               disabled={isLoading}
               className="w-full py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? (isSignUp ? 'Criando conta...' : 'Entrando...') : (isSignUp ? 'Criar Conta' : 'Entrar')}
+              {isLoading ? 'Entrando...' : 'Entrar'}
             </button>
 
             <button
@@ -534,21 +516,8 @@ export default function LukayaGriffeERP() {
             </button>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-xs text-center text-gray-500">
-              {isSignUp ? 'Já tem uma conta?' : 'Primeira vez?'}{' '}
-              <button
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setError('');
-                  setSuccess('');
-                }}
-                className="text-yellow-600 hover:text-yellow-700 font-medium"
-              >
-                {isSignUp ? 'Fazer login' : 'Criar conta'}
-              </button>
-            </p>
-          </div>
+          {/* Cadastro público removido por segurança */}
+          {/* Novos administradores devem ser criados via SQL no Supabase */}
         </div>
       </div>
     );
