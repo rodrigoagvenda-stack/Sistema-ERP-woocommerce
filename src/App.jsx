@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, ShoppingBag, Menu, X, TrendingUp, DollarSign, Plus, Edit2, Trash2, Save, ArrowLeft, Eye, Upload, LogOut, Lock, Home, ChevronRight, ShoppingCart, MessageCircle, Minus, Tag, Copy, Check, Moon, Sun, Sparkles, Flame } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, Menu, X, TrendingUp, DollarSign, Plus, Edit2, Trash2, Save, ArrowLeft, Eye, Upload, LogOut, Lock, Home, ChevronRight, ShoppingCart, MessageCircle, Minus, Tag, Copy, Check, Moon, Sun, Sparkles, Flame, Settings } from 'lucide-react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { ENV } from './config/env';
 import { supabase, signIn, signUp, signOut, getCurrentUser, isAdmin } from './lib/supabase';
 import Banner from './components/Banner';
@@ -8,6 +10,7 @@ import RelatedProducts from './components/RelatedProducts';
 import MarketplaceSettings from './components/MarketplaceSettings';
 import ProductMarketplaces from './components/ProductMarketplaces';
 import MarketplaceSyncLogs from './components/MarketplaceSyncLogs';
+import BannerManagement from './components/BannerManagement';
 
 const SUPABASE_URL = ENV.SUPABASE_URL;
 const SUPABASE_ANON_KEY = ENV.SUPABASE_ANON_KEY;
@@ -428,14 +431,13 @@ export default function LukayaGriffeERP() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [isSignUp, setIsSignUp] = useState(false);
+    // NOTA: Cadastro público removido por segurança
+    // Novos admins devem ser criados manualmente via SQL no Supabase
 
     const handleSubmit = async (e) => {
       e.preventDefault();
       setError('');
-      setSuccess('');
 
       if (!email || !password) {
         setError('Preencha todos os campos');
@@ -449,24 +451,13 @@ export default function LukayaGriffeERP() {
 
       setIsLoading(true);
 
-      if (isSignUp) {
-        // Criar nova conta
-        try {
-          await signUp(email, password);
-          setSuccess('Conta criada! Verifique seu email para confirmar.');
-          setIsSignUp(false);
-        } catch (error) {
-          setError(error.message || 'Erro ao criar conta.');
-        }
-      } else {
-        // Fazer login
-        const result = await handleLogin(email, password);
+      // Fazer login
+      const result = await handleLogin(email, password);
 
-        if (result.success) {
-          setMode('admin');
-        } else {
-          setError(result.error || 'Erro ao fazer login. Verifique suas credenciais.');
-        }
+      if (result.success) {
+        setMode('admin');
+      } else {
+        setError(result.error || 'Erro ao fazer login. Verifique suas credenciais.');
       }
 
       setIsLoading(false);
@@ -480,18 +471,12 @@ export default function LukayaGriffeERP() {
               <Lock className="w-12 h-12 text-yellow-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Lukaya Griffe</h1>
-            <p className="text-gray-600">{isSignUp ? 'Criar Conta' : 'Área Administrativa'}</p>
+            <p className="text-gray-600">Área Administrativa</p>
           </div>
 
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-600">{success}</p>
             </div>
           )}
 
@@ -523,7 +508,7 @@ export default function LukayaGriffeERP() {
               disabled={isLoading}
               className="w-full py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? (isSignUp ? 'Criando conta...' : 'Entrando...') : (isSignUp ? 'Criar Conta' : 'Entrar')}
+              {isLoading ? 'Entrando...' : 'Entrar'}
             </button>
 
             <button
@@ -534,21 +519,8 @@ export default function LukayaGriffeERP() {
             </button>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <p className="text-xs text-center text-gray-500">
-              {isSignUp ? 'Já tem uma conta?' : 'Primeira vez?'}{' '}
-              <button
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setError('');
-                  setSuccess('');
-                }}
-                className="text-yellow-600 hover:text-yellow-700 font-medium"
-              >
-                {isSignUp ? 'Fazer login' : 'Criar conta'}
-              </button>
-            </p>
-          </div>
+          {/* Cadastro público removido por segurança */}
+          {/* Novos administradores devem ser criados via SQL no Supabase */}
         </div>
       </div>
     );
@@ -1496,13 +1468,39 @@ export default function LukayaGriffeERP() {
 
     const handleSubmit = async (e) => {
       e.preventDefault();
+      console.log('🔄 Iniciando salvamento de produto...');
+      console.log('📦 Dados do produto:', formData);
+
+      // Validar campos obrigatórios
+      if (!formData.name || !formData.name.trim()) {
+        toast.warning('⚠️ Nome do produto é obrigatório');
+        return;
+      }
+
+      if (!formData.price || formData.price <= 0) {
+        toast.warning('⚠️ Preço do produto é obrigatório e deve ser maior que zero');
+        return;
+      }
+
       setSaving(true);
       try {
         if (editingProduct) {
-          await supabaseAPI.updateProduct(editingProduct.id, formData);
+          console.log('✏️ Editando produto:', editingProduct.id);
+          const result = await supabaseAPI.updateProduct(editingProduct.id, formData);
+          console.log('✅ Resultado:', result);
+          toast.success('✅ Produto atualizado com sucesso!');
         } else {
-          await supabaseAPI.createProduct(formData);
+          console.log('➕ Criando novo produto');
+          const result = await supabaseAPI.createProduct(formData);
+          console.log('✅ Resultado:', result);
+
+          if (result && result[0]) {
+            toast.success('✅ Produto cadastrado com sucesso!');
+          } else {
+            throw new Error('Nenhum dado retornado do servidor');
+          }
         }
+
         await loadAllProducts();
         setShowForm(false);
         setEditingProduct(null);
@@ -1520,7 +1518,8 @@ export default function LukayaGriffeERP() {
         setSelectedSizes([]);
         setImagePreview('');
       } catch (error) {
-        alert('Erro ao salvar produto');
+        console.error('❌ Erro ao salvar produto:', error);
+        toast.error('❌ Erro ao salvar produto: ' + (error.message || 'Erro desconhecido'));
       } finally {
         setSaving(false);
       }
@@ -1705,52 +1704,107 @@ export default function LukayaGriffeERP() {
 
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
           {products.length > 0 ? (
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Produto</th>
-                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Preço</th>
-                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Status</th>
-                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Views</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product, index) => (
-                  <tr key={product.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        <img src={product.image_urls || 'https://via.placeholder.com/100'} alt={product.name} className="w-12 h-12 object-cover rounded" />
-                        <div>
-                          <p className="font-medium text-gray-800">{product.name}</p>
-                          <p className="text-sm text-gray-500 truncate max-w-xs">{product.description}</p>
+            <>
+              {/* Desktop Table View */}
+              <table className="w-full hidden md:table">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Produto</th>
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Preço</th>
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Status</th>
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Views</th>
+                    <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map((product, index) => (
+                    <tr key={product.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          <img src={product.image_urls || 'https://via.placeholder.com/100'} alt={product.name} className="w-12 h-12 object-cover rounded" />
+                          <div>
+                            <p className="font-medium text-gray-800">{product.name}</p>
+                            <p className="text-sm text-gray-500 truncate max-w-xs">{product.description}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 text-gray-700 font-medium">R$ {product.price.toFixed(2)}</td>
+                      <td className="py-4 px-6">
+                        <button
+                          onClick={() => handleToggleStatus(product)}
+                          className={product.status === 'active' ? 'px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700' : 'px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700'}
+                        >
+                          {product.status === 'active' ? 'Ativo' : 'Inativo'}
+                        </button>
+                      </td>
+                      <td className="py-4 px-6 text-gray-700">{product.views || 0}</td>
+                      <td className="py-4 px-6">
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={() => handleEdit(product)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
+                            <Edit2 className="w-5 h-5" />
+                          </button>
+                          <button onClick={() => handleDelete(product.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden divide-y divide-gray-200">
+                {products.map((product) => (
+                  <div key={product.id} className="p-4">
+                    <div className="flex gap-3 mb-3">
+                      <img
+                        src={product.image_urls || 'https://via.placeholder.com/100'}
+                        alt={product.name}
+                        className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-800 mb-1">{product.name}</h3>
+                        <p className="text-sm text-gray-600 line-clamp-2 mb-2">{product.description}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold text-yellow-600">
+                            R$ {product.price.toFixed(2)}
+                          </span>
+                          <button
+                            onClick={() => handleToggleStatus(product)}
+                            className={product.status === 'active' ? 'px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700' : 'px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700'}
+                          >
+                            {product.status === 'active' ? 'Ativo' : 'Inativo'}
+                          </button>
                         </div>
                       </div>
-                    </td>
-                    <td className="py-4 px-6 text-gray-700 font-medium">R$ {product.price.toFixed(2)}</td>
-                    <td className="py-4 px-6">
-                      <button
-                        onClick={() => handleToggleStatus(product)}
-                        className={product.status === 'active' ? 'px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700' : 'px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700'}
-                      >
-                        {product.status === 'active' ? 'Ativo' : 'Inativo'}
-                      </button>
-                    </td>
-                    <td className="py-4 px-6 text-gray-700">{product.views || 0}</td>
-                    <td className="py-4 px-6">
-                      <div className="flex gap-2 justify-end">
-                        <button onClick={() => handleEdit(product)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
-                          <Edit2 className="w-5 h-5" />
+                    </div>
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                        <Eye size={16} />
+                        <span>{product.views || 0} views</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEdit(product)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium"
+                        >
+                          <Edit2 size={16} />
+                          Editar
                         </button>
-                        <button onClick={() => handleDelete(product.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-                          <Trash2 className="w-5 h-5" />
+                        <button
+                          onClick={() => handleDelete(product.id)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium"
+                        >
+                          <Trash2 size={16} />
+                          Deletar
                         </button>
                       </div>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           ) : (
             <div className="text-center py-12">
               <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -1803,17 +1857,33 @@ export default function LukayaGriffeERP() {
 
     const handleSubmit = async (e) => {
       e.preventDefault();
+      console.log('🔄 Iniciando salvamento de categoria...');
+      console.log('📦 Dados:', formData);
+
       if (!formData.name.trim()) {
-        alert('Nome da categoria é obrigatório');
+        toast.warning('⚠️ Nome da categoria é obrigatório');
         return;
       }
+
       setSaving(true);
       try {
         if (editingCategory) {
-          await supabaseAPI.updateCategory(editingCategory.id, formData);
+          console.log('✏️ Editando categoria:', editingCategory.id);
+          const result = await supabaseAPI.updateCategory(editingCategory.id, formData);
+          console.log('✅ Resultado:', result);
+          toast.success('✅ Categoria atualizada com sucesso!');
         } else {
-          await supabaseAPI.createCategory(formData);
+          console.log('➕ Criando nova categoria');
+          const result = await supabaseAPI.createCategory(formData);
+          console.log('✅ Resultado:', result);
+
+          if (result && result[0]) {
+            toast.success('✅ Categoria criada com sucesso!');
+          } else {
+            throw new Error('Nenhum dado retornado do servidor');
+          }
         }
+
         await loadCategories();
         setShowForm(false);
         setEditingCategory(null);
@@ -1823,7 +1893,8 @@ export default function LukayaGriffeERP() {
           size_type: null
         });
       } catch (error) {
-        alert('Erro ao salvar categoria');
+        console.error('❌ Erro ao salvar categoria:', error);
+        toast.error('❌ Erro ao salvar categoria: ' + (error.message || 'Erro desconhecido'));
       } finally {
         setSaving(false);
       }
@@ -1920,57 +1991,107 @@ export default function LukayaGriffeERP() {
 
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
           {categories.length > 0 ? (
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Nome</th>
-                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Tipo</th>
-                  <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Status</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {categories.map((category, index) => (
-                  <tr key={category.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="py-4 px-6">
+            <>
+              {/* Desktop Table View */}
+              <table className="w-full hidden md:table">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Nome</th>
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Tipo</th>
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Status</th>
+                    <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {categories.map((category, index) => (
+                    <tr key={category.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-yellow-100 rounded-lg">
+                            <Tag className="w-5 h-5 text-yellow-600" />
+                          </div>
+                          <p className="font-medium text-gray-800">{category.name}</p>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        {category.size_type ? (
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                            {category.size_type === 'clothing' ? 'Roupas' : 'Calçados'}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-500">Sem tamanho</span>
+                        )}
+                      </td>
+                      <td className="py-4 px-6">
+                        <button
+                          onClick={() => handleToggleStatus(category)}
+                          className={category.status === 'active' ? 'px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700' : 'px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700'}
+                        >
+                          {category.status === 'active' ? 'Ativo' : 'Inativo'}
+                        </button>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={() => handleEdit(category)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
+                            <Edit2 className="w-5 h-5" />
+                          </button>
+                          <button onClick={() => handleDelete(category.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden divide-y divide-gray-200">
+                {categories.map((category) => (
+                  <div key={category.id} className="p-4">
+                    <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-yellow-100 rounded-lg">
                           <Tag className="w-5 h-5 text-yellow-600" />
                         </div>
-                        <p className="font-medium text-gray-800">{category.name}</p>
+                        <div>
+                          <h3 className="font-semibold text-gray-800">{category.name}</h3>
+                          {category.size_type ? (
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                              {category.size_type === 'clothing' ? 'Roupas' : 'Calçados'}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-500">Sem tamanho</span>
+                          )}
+                        </div>
                       </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      {category.size_type ? (
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                          {category.size_type === 'clothing' ? 'Roupas' : 'Calçados'}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-gray-500">Sem tamanho</span>
-                      )}
-                    </td>
-                    <td className="py-4 px-6">
                       <button
                         onClick={() => handleToggleStatus(category)}
-                        className={category.status === 'active' ? 'px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700' : 'px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700'}
+                        className={category.status === 'active' ? 'px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700' : 'px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700'}
                       >
                         {category.status === 'active' ? 'Ativo' : 'Inativo'}
                       </button>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex gap-2 justify-end">
-                        <button onClick={() => handleEdit(category)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
-                          <Edit2 className="w-5 h-5" />
-                        </button>
-                        <button onClick={() => handleDelete(category.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                    </div>
+                    <div className="flex gap-2 pt-3 border-t border-gray-100">
+                      <button
+                        onClick={() => handleEdit(category)}
+                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium"
+                      >
+                        <Edit2 size={16} />
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(category.id)}
+                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium"
+                      >
+                        <Trash2 size={16} />
+                        Deletar
+                      </button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           ) : (
             <div className="text-center py-12">
               <Tag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -2020,39 +2141,97 @@ export default function LukayaGriffeERP() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <aside className={(sidebarOpen ? 'w-64' : 'w-20') + ' bg-white shadow-lg transition-all duration-300 flex flex-col'}>
+    <div className="flex h-screen bg-gray-100 overflow-hidden">
+      {/* Mobile Header - Only visible on mobile */}
+      <div className="md:hidden fixed top-0 left-0 right-0 bg-white shadow-md z-40 px-4 py-3 flex items-center justify-between">
+        <h1 className="text-lg font-bold text-yellow-500">Lukaya Griffe</h1>
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="text-gray-600 hover:text-gray-800 p-2"
+        >
+          <Menu size={24} />
+        </button>
+      </div>
+
+      {/* Backdrop overlay for mobile */}
+      {sidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        ${sidebarOpen ? 'w-64' : 'w-20'}
+        bg-white shadow-lg transition-all duration-300 flex flex-col
+        md:relative fixed inset-y-0 left-0 z-50
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
         <div className="p-6 flex items-center justify-between border-b border-gray-200">
           {sidebarOpen && <h1 className="text-xl font-bold text-yellow-500">Lukaya Griffe</h1>}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-gray-600 hover:text-gray-800">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="text-gray-600 hover:text-gray-800 hidden md:block"
+          >
             {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+          {/* Close button for mobile */}
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="text-gray-600 hover:text-gray-800 md:hidden"
+          >
+            <X size={24} />
           </button>
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
           <button
-            onClick={() => setCurrentPage('dashboard')}
+            onClick={() => {
+              setCurrentPage('dashboard');
+              // Close sidebar on mobile
+              if (window.innerWidth < 768) setSidebarOpen(false);
+            }}
             className={'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ' + (currentPage === 'dashboard' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800')}
           >
             <LayoutDashboard size={20} />
             {sidebarOpen && <span>Dashboard</span>}
           </button>
           <button
-            onClick={() => setCurrentPage('products')}
+            onClick={() => {
+              setCurrentPage('products');
+              if (window.innerWidth < 768) setSidebarOpen(false);
+            }}
             className={'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ' + (currentPage === 'products' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800')}
           >
             <Package size={20} />
             {sidebarOpen && <span>Produtos</span>}
           </button>
           <button
-            onClick={() => setCurrentPage('categories')}
+            onClick={() => {
+              setCurrentPage('categories');
+              if (window.innerWidth < 768) setSidebarOpen(false);
+            }}
             className={'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ' + (currentPage === 'categories' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800')}
           >
             <Tag size={20} />
             {sidebarOpen && <span>Categorias</span>}
           </button>
           <button
-            onClick={() => setCurrentPage('banners')}
+            onClick={() => {
+              setCurrentPage('integrations');
+              if (window.innerWidth < 768) setSidebarOpen(false);
+            }}
+            className={'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ' + (currentPage === 'integrations' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800')}
+          >
+            <Settings size={20} />
+            {sidebarOpen && <span>Integrações</span>}
+          </button>
+          <button
+            onClick={() => {
+              setCurrentPage('banners');
+              if (window.innerWidth < 768) setSidebarOpen(false);
+            }}
             className={'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ' + (currentPage === 'banners' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800')}
           >
             <Sparkles size={20} />
@@ -2070,7 +2249,10 @@ export default function LukayaGriffeERP() {
               {copiedLink ? 'Link Copiado!' : 'Copiar Link'}
             </button>
             <button
-              onClick={() => setMode('catalog')}
+              onClick={() => {
+                setMode('catalog');
+                if (window.innerWidth < 768) setSidebarOpen(false);
+              }}
               className="w-full flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium"
             >
               <ShoppingBag size={16} />
@@ -2091,43 +2273,34 @@ export default function LukayaGriffeERP() {
         )}
       </aside>
 
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto md:pt-0 pt-16">
         {currentPage === 'dashboard' && <Dashboard />}
         {currentPage === 'products' && <ProductsManagement />}
         {currentPage === 'categories' && <CategoriesManagement />}
-        {currentPage === 'banners' && (
+        {currentPage === 'integrations' && (
           <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-3xl font-bold text-gray-800">Gestão de Banners</h1>
-              <p className="text-gray-600">Funcionalidade em desenvolvimento - Use o SQL do TABELAS_NOVAS.sql para criar banners</p>
-            </div>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8">
-              <h3 className="text-lg font-bold text-yellow-800 mb-4">📸 Como criar banners agora:</h3>
-              <ol className="list-decimal list-inside space-y-2 text-yellow-900">
-                <li>Abra o SQL Editor no Supabase Dashboard</li>
-                <li>Execute o script TABELAS_NOVAS.sql (se ainda não executou)</li>
-                <li>Use este SQL para criar um banner:
-                  <pre className="bg-white p-4 rounded mt-2 text-sm overflow-x-auto">
-{`INSERT INTO banners (
-  title, description, image_url,
-  button_text, is_active, order_index
-) VALUES (
-  'Black Friday 2025',
-  'Até 70% OFF em produtos selecionados!',
-  'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?w=1920',
-  'Ver Ofertas',
-  true,
-  1
-);`}
-                  </pre>
-                </li>
-                <li>Banner aparecerá automaticamente no catálogo!</li>
-              </ol>
-              <p className="mt-4 text-sm text-yellow-700">Interface de upload visual será implementada em breve.</p>
-            </div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-6">⚙️ Integrações com Marketplaces</h1>
+            <p className="text-gray-600 mb-8">Configure as credenciais dos marketplaces para sincronizar seus produtos automaticamente.</p>
+            <MarketplaceSettings darkMode={darkMode} />
           </div>
         )}
+        {currentPage === 'banners' && (
+          <BannerManagement />
+        )}
       </main>
+
+      {/* Toast Container para notificações */}
+      <ToastContainer
+        position="top-right"
+        autoClose={4000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 }
