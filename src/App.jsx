@@ -860,53 +860,44 @@ export default function LukayaGriffeERP() {
                     Categorias
                   </h3>
                   <div className="space-y-1.5">
-                    <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
-                      selectedCategory === 'all'
-                        ? darkMode
-                          ? 'bg-yellow-500/20 border-yellow-500/50'
-                          : 'bg-yellow-50 border-yellow-400'
-                        : darkMode
-                        ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
-                        : 'border-transparent hover:bg-gray-100'
-                    }`}>
-                      <input
-                        type="radio"
-                        name="category"
-                        value="all"
-                        checked={selectedCategory === 'all'}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
-                      />
-                      <span className={`text-sm font-medium ${
+                    <button
+                      onClick={() => setSelectedCategory('all')}
+                      className={`w-full flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
                         selectedCategory === 'all'
-                          ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
-                          : darkMode ? 'text-gray-300' : 'text-gray-700'
-                      }`}>Todas as categorias</span>
-                    </label>
-                    {categories.map(cat => (
-                      <label key={cat.id} className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
-                        selectedCategory === String(cat.id)
                           ? darkMode
                             ? 'bg-yellow-500/20 border-yellow-500/50'
                             : 'bg-yellow-50 border-yellow-400'
                           : darkMode
                           ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
                           : 'border-transparent hover:bg-gray-100'
-                      }`}>
-                        <input
-                          type="radio"
-                          name="category"
-                          value={cat.id}
-                          checked={selectedCategory === String(cat.id)}
-                          onChange={(e) => setSelectedCategory(e.target.value)}
-                          className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
-                        />
+                      }`}
+                    >
+                      <span className={`text-sm font-medium ${
+                        selectedCategory === 'all'
+                          ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
+                          : darkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}>Todas as categorias</span>
+                    </button>
+                    {categories.map(cat => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setSelectedCategory(String(cat.id))}
+                        className={`w-full flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
+                          selectedCategory === String(cat.id)
+                            ? darkMode
+                              ? 'bg-yellow-500/20 border-yellow-500/50'
+                              : 'bg-yellow-50 border-yellow-400'
+                            : darkMode
+                            ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
+                            : 'border-transparent hover:bg-gray-100'
+                        }`}
+                      >
                         <span className={`text-sm font-medium ${
                           selectedCategory === String(cat.id)
                             ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
                             : darkMode ? 'text-gray-300' : 'text-gray-700'
                         }`}>{cat.name}</span>
-                      </label>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -919,121 +910,96 @@ export default function LukayaGriffeERP() {
                     Faixa de Preço
                   </h3>
                   <div className="space-y-1.5">
-                    <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
-                      priceRange === 'all'
-                        ? darkMode
-                          ? 'bg-yellow-500/20 border-yellow-500/50'
-                          : 'bg-yellow-50 border-yellow-400'
-                        : darkMode
-                        ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
-                        : 'border-transparent hover:bg-gray-100'
-                    }`}>
-                      <input
-                        type="radio"
-                        name="price"
-                        value="all"
-                        checked={priceRange === 'all'}
-                        onChange={(e) => setPriceRange(e.target.value)}
-                        className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
-                      />
+                    <button
+                      onClick={() => setPriceRange('all')}
+                      className={`w-full flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
+                        priceRange === 'all'
+                          ? darkMode
+                            ? 'bg-yellow-500/20 border-yellow-500/50'
+                            : 'bg-yellow-50 border-yellow-400'
+                          : darkMode
+                          ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
+                          : 'border-transparent hover:bg-gray-100'
+                      }`}
+                    >
                       <span className={`text-sm font-medium ${
                         priceRange === 'all'
                           ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
                           : darkMode ? 'text-gray-300' : 'text-gray-700'
                       }`}>Todos os preços</span>
-                    </label>
-                    <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
-                      priceRange === '0-50'
-                        ? darkMode
-                          ? 'bg-yellow-500/20 border-yellow-500/50'
-                          : 'bg-yellow-50 border-yellow-400'
-                        : darkMode
-                        ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
-                        : 'border-transparent hover:bg-gray-100'
-                    }`}>
-                      <input
-                        type="radio"
-                        name="price"
-                        value="0-50"
-                        checked={priceRange === '0-50'}
-                        onChange={(e) => setPriceRange(e.target.value)}
-                        className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
-                      />
+                    </button>
+                    <button
+                      onClick={() => setPriceRange('0-50')}
+                      className={`w-full flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
+                        priceRange === '0-50'
+                          ? darkMode
+                            ? 'bg-yellow-500/20 border-yellow-500/50'
+                            : 'bg-yellow-50 border-yellow-400'
+                          : darkMode
+                          ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
+                          : 'border-transparent hover:bg-gray-100'
+                      }`}
+                    >
                       <span className={`text-sm font-medium ${
                         priceRange === '0-50'
                           ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
                           : darkMode ? 'text-gray-300' : 'text-gray-700'
                       }`}>Até R$ 50</span>
-                    </label>
-                    <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
-                      priceRange === '50-100'
-                        ? darkMode
-                          ? 'bg-yellow-500/20 border-yellow-500/50'
-                          : 'bg-yellow-50 border-yellow-400'
-                        : darkMode
-                        ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
-                        : 'border-transparent hover:bg-gray-100'
-                    }`}>
-                      <input
-                        type="radio"
-                        name="price"
-                        value="50-100"
-                        checked={priceRange === '50-100'}
-                        onChange={(e) => setPriceRange(e.target.value)}
-                        className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
-                      />
+                    </button>
+                    <button
+                      onClick={() => setPriceRange('50-100')}
+                      className={`w-full flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
+                        priceRange === '50-100'
+                          ? darkMode
+                            ? 'bg-yellow-500/20 border-yellow-500/50'
+                            : 'bg-yellow-50 border-yellow-400'
+                          : darkMode
+                          ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
+                          : 'border-transparent hover:bg-gray-100'
+                      }`}
+                    >
                       <span className={`text-sm font-medium ${
                         priceRange === '50-100'
                           ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
                           : darkMode ? 'text-gray-300' : 'text-gray-700'
                       }`}>R$ 50 - R$ 100</span>
-                    </label>
-                    <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
-                      priceRange === '100-200'
-                        ? darkMode
-                          ? 'bg-yellow-500/20 border-yellow-500/50'
-                          : 'bg-yellow-50 border-yellow-400'
-                        : darkMode
-                        ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
-                        : 'border-transparent hover:bg-gray-100'
-                    }`}>
-                      <input
-                        type="radio"
-                        name="price"
-                        value="100-200"
-                        checked={priceRange === '100-200'}
-                        onChange={(e) => setPriceRange(e.target.value)}
-                        className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
-                      />
+                    </button>
+                    <button
+                      onClick={() => setPriceRange('100-200')}
+                      className={`w-full flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
+                        priceRange === '100-200'
+                          ? darkMode
+                            ? 'bg-yellow-500/20 border-yellow-500/50'
+                            : 'bg-yellow-50 border-yellow-400'
+                          : darkMode
+                          ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
+                          : 'border-transparent hover:bg-gray-100'
+                      }`}
+                    >
                       <span className={`text-sm font-medium ${
                         priceRange === '100-200'
                           ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
                           : darkMode ? 'text-gray-300' : 'text-gray-700'
                       }`}>R$ 100 - R$ 200</span>
-                    </label>
-                    <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
-                      priceRange === '200+'
-                        ? darkMode
-                          ? 'bg-yellow-500/20 border-yellow-500/50'
-                          : 'bg-yellow-50 border-yellow-400'
-                        : darkMode
-                        ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
-                        : 'border-transparent hover:bg-gray-100'
-                    }`}>
-                      <input
-                        type="radio"
-                        name="price"
-                        value="200+"
-                        checked={priceRange === '200+'}
-                        onChange={(e) => setPriceRange(e.target.value)}
-                        className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
-                      />
+                    </button>
+                    <button
+                      onClick={() => setPriceRange('200+')}
+                      className={`w-full flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
+                        priceRange === '200+'
+                          ? darkMode
+                            ? 'bg-yellow-500/20 border-yellow-500/50'
+                            : 'bg-yellow-50 border-yellow-400'
+                          : darkMode
+                          ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
+                          : 'border-transparent hover:bg-gray-100'
+                      }`}
+                    >
                       <span className={`text-sm font-medium ${
                         priceRange === '200+'
                           ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
                           : darkMode ? 'text-gray-300' : 'text-gray-700'
                       }`}>Acima de R$ 200</span>
-                    </label>
+                    </button>
                   </div>
                 </div>
               </aside>
