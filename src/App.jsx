@@ -669,12 +669,13 @@ export default function LukayaGriffeERP() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowSizeFilter(!showSizeFilter)}
-                  className={
-                    'px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ' +
-                    (showSizeFilter || selectedSize
-                      ? 'bg-yellow-500 text-white shadow-md'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50')
-                  }
+                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                    showSizeFilter || selectedSize
+                      ? 'bg-yellow-500 text-white shadow-md hover:bg-yellow-600'
+                      : darkMode
+                      ? 'bg-[#202020] text-yellow-400 border border-yellow-500/30 hover:bg-[#333333]'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
                 >
                   <Tag className="w-4 h-4" />
                   <span className="hidden sm:inline">Filtrar por Tamanho</span>
@@ -683,7 +684,11 @@ export default function LukayaGriffeERP() {
 
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="md:hidden w-full px-4 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2 font-medium"
+                  className={`md:hidden w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-all ${
+                    darkMode
+                      ? 'bg-[#202020] border border-gray-700 text-white hover:bg-[#333333]'
+                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
                 >
                   <Package className="w-5 h-5" />
                   Filtros {hasActiveFilters && <span className="px-2 py-0.5 bg-yellow-500 text-white text-xs rounded-full">{[selectedCategory !== 'all', priceRange !== 'all', searchTerm].filter(Boolean).length}</span>}
@@ -693,10 +698,17 @@ export default function LukayaGriffeERP() {
 
             {/* Painel de Filtro por Tamanho */}
             {showSizeFilter && (
-              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={`mt-4 p-5 rounded-xl border-2 transition-all ${
+                darkMode
+                  ? 'bg-[#202020] border-yellow-500/20'
+                  : 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-300'
+              }`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className={`block text-sm font-semibold mb-2 flex items-center gap-2 ${
+                      darkMode ? 'text-yellow-400' : 'text-gray-800'
+                    }`}>
+                      <Tag className="w-4 h-4" />
                       Categoria
                     </label>
                     <select
@@ -706,9 +718,13 @@ export default function LukayaGriffeERP() {
                         setSelectedSize('');
                         setSelectedCategory('all');
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 bg-white"
+                      className={`w-full px-4 py-2.5 border-2 rounded-lg focus:ring-2 focus:ring-yellow-500 transition-all font-medium ${
+                        darkMode
+                          ? 'bg-[#111111] border-gray-700 text-white hover:border-yellow-500/50'
+                          : 'bg-white border-gray-300 text-gray-800 hover:border-yellow-400'
+                      }`}
                     >
-                      <option value="">Todas as categorias</option>
+                      <option value="">Selecione uma categoria</option>
                       {categoriesWithSizes.map(cat => (
                         <option key={cat.id} value={cat.id}>
                           {cat.name}
@@ -718,7 +734,10 @@ export default function LukayaGriffeERP() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className={`block text-sm font-semibold mb-2 flex items-center gap-2 ${
+                      darkMode ? 'text-yellow-400' : 'text-gray-800'
+                    }`}>
+                      <Package className="w-4 h-4" />
                       Tamanho
                     </label>
                     {sizeFilterCategory ? (
@@ -727,33 +746,45 @@ export default function LukayaGriffeERP() {
                           <button
                             key={size}
                             onClick={() => setSelectedSize(size)}
-                            className={
-                              'px-3 py-1.5 rounded-lg font-medium text-sm transition-all ' +
-                              (selectedSize === size
-                                ? 'bg-yellow-500 text-white shadow-md'
-                                : 'bg-white text-gray-700 border border-gray-300 hover:border-yellow-400')
-                            }
+                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all transform hover:scale-105 ${
+                              selectedSize === size
+                                ? darkMode
+                                  ? 'bg-yellow-400/90 text-gray-900 shadow-lg shadow-yellow-500/30'
+                                  : 'bg-yellow-300 text-gray-900 shadow-lg shadow-yellow-500/30'
+                                : darkMode
+                                ? 'bg-yellow-500/80 text-white hover:bg-yellow-500 border-2 border-yellow-400/30'
+                                : 'bg-yellow-500 text-white hover:bg-yellow-600 border-2 border-yellow-400'
+                            }`}
                           >
                             {size}
                           </button>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500 italic py-2">Selecione uma categoria primeiro</p>
+                      <p className={`text-sm italic py-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Selecione uma categoria primeiro
+                      </p>
                     )}
                   </div>
                 </div>
 
                 {selectedSize && (
-                  <div className="mt-3 pt-3 border-t border-yellow-200 flex items-center justify-between">
-                    <span className="text-sm text-gray-700">
-                      Mostrando: <strong>{categories.find(c => c.id === parseInt(sizeFilterCategory))?.name} - Tamanho {selectedSize}</strong>
+                  <div className={`mt-4 pt-4 border-t-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 ${
+                    darkMode ? 'border-gray-700' : 'border-yellow-300'
+                  }`}>
+                    <span className={`text-sm flex items-center gap-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      <Check className="w-4 h-4 text-green-500" />
+                      Filtrando: <strong className={darkMode ? 'text-yellow-400' : 'text-yellow-600'}>{categories.find(c => c.id === parseInt(sizeFilterCategory))?.name} - Tamanho {selectedSize}</strong>
                     </span>
                     <button
                       onClick={handleClearSizeFilter}
-                      className="text-sm text-yellow-700 hover:text-yellow-800 font-medium"
+                      className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${
+                        darkMode
+                          ? 'text-yellow-400 hover:bg-[#333333]'
+                          : 'text-yellow-700 hover:bg-yellow-200'
+                      }`}
                     >
-                      Limpar
+                      ✕ Limpar filtro
                     </button>
                   </div>
                 )}
@@ -821,99 +852,187 @@ export default function LukayaGriffeERP() {
                   </button>
                 </div>
 
-                <div className={`${darkMode ? 'bg-[#202020]' : 'bg-white'} rounded-lg shadow-sm p-4`}>
-                  <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-3 flex items-center gap-2`}>
-                    <Tag className="w-4 h-4" />
+                <div className={`${darkMode ? 'bg-gradient-to-br from-[#202020] to-[#1a1a1a]' : 'bg-gradient-to-br from-white to-gray-50'} rounded-xl shadow-md p-5 border-2 ${darkMode ? 'border-yellow-500/10' : 'border-gray-200'}`}>
+                  <h3 className={`font-bold text-base mb-4 flex items-center gap-2 ${darkMode ? 'text-yellow-400' : 'text-gray-800'}`}>
+                    <div className={`p-2 rounded-lg ${darkMode ? 'bg-yellow-500/10' : 'bg-yellow-100'}`}>
+                      <Tag className="w-5 h-5" />
+                    </div>
                     Categorias
                   </h3>
-                  <div className="space-y-2">
-                    <label className={`flex items-center gap-2 cursor-pointer p-2 rounded ${darkMode ? 'hover:bg-[#333333]' : 'hover:bg-gray-50'}`}>
+                  <div className="space-y-1.5">
+                    <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
+                      selectedCategory === 'all'
+                        ? darkMode
+                          ? 'bg-yellow-500/20 border-yellow-500/50'
+                          : 'bg-yellow-50 border-yellow-400'
+                        : darkMode
+                        ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
+                        : 'border-transparent hover:bg-gray-100'
+                    }`}>
                       <input
                         type="radio"
                         name="category"
                         value="all"
                         checked={selectedCategory === 'all'}
                         onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="text-yellow-500 focus:ring-yellow-500"
+                        className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
                       />
-                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Todas</span>
+                      <span className={`text-sm font-medium ${
+                        selectedCategory === 'all'
+                          ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
+                          : darkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}>Todas as categorias</span>
                     </label>
                     {categories.map(cat => (
-                      <label key={cat.id} className={`flex items-center gap-2 cursor-pointer p-2 rounded ${darkMode ? 'hover:bg-[#333333]' : 'hover:bg-gray-50'}`}>
+                      <label key={cat.id} className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
+                        selectedCategory === String(cat.id)
+                          ? darkMode
+                            ? 'bg-yellow-500/20 border-yellow-500/50'
+                            : 'bg-yellow-50 border-yellow-400'
+                          : darkMode
+                          ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
+                          : 'border-transparent hover:bg-gray-100'
+                      }`}>
                         <input
                           type="radio"
                           name="category"
                           value={cat.id}
                           checked={selectedCategory === String(cat.id)}
                           onChange={(e) => setSelectedCategory(e.target.value)}
-                          className="text-yellow-500 focus:ring-yellow-500"
+                          className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
                         />
-                        <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{cat.name}</span>
+                        <span className={`text-sm font-medium ${
+                          selectedCategory === String(cat.id)
+                            ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
+                            : darkMode ? 'text-gray-300' : 'text-gray-700'
+                        }`}>{cat.name}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
-                <div className={`${darkMode ? 'bg-[#202020]' : 'bg-white'} rounded-lg shadow-sm p-4`}>
-                  <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-800'} mb-3 flex items-center gap-2`}>
-                    <DollarSign className="w-4 h-4" />
-                    Preço
+                <div className={`${darkMode ? 'bg-gradient-to-br from-[#202020] to-[#1a1a1a]' : 'bg-gradient-to-br from-white to-gray-50'} rounded-xl shadow-md p-5 border-2 ${darkMode ? 'border-yellow-500/10' : 'border-gray-200'}`}>
+                  <h3 className={`font-bold text-base mb-4 flex items-center gap-2 ${darkMode ? 'text-yellow-400' : 'text-gray-800'}`}>
+                    <div className={`p-2 rounded-lg ${darkMode ? 'bg-yellow-500/10' : 'bg-yellow-100'}`}>
+                      <DollarSign className="w-5 h-5" />
+                    </div>
+                    Faixa de Preço
                   </h3>
-                  <div className="space-y-2">
-                    <label className={`flex items-center gap-2 cursor-pointer p-2 rounded ${darkMode ? 'hover:bg-[#333333]' : 'hover:bg-gray-50'}`}>
+                  <div className="space-y-1.5">
+                    <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
+                      priceRange === 'all'
+                        ? darkMode
+                          ? 'bg-yellow-500/20 border-yellow-500/50'
+                          : 'bg-yellow-50 border-yellow-400'
+                        : darkMode
+                        ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
+                        : 'border-transparent hover:bg-gray-100'
+                    }`}>
                       <input
                         type="radio"
                         name="price"
                         value="all"
                         checked={priceRange === 'all'}
                         onChange={(e) => setPriceRange(e.target.value)}
-                        className="text-yellow-500 focus:ring-yellow-500"
+                        className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
                       />
-                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Todos</span>
+                      <span className={`text-sm font-medium ${
+                        priceRange === 'all'
+                          ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
+                          : darkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}>Todos os preços</span>
                     </label>
-                    <label className={`flex items-center gap-2 cursor-pointer p-2 rounded ${darkMode ? 'hover:bg-[#333333]' : 'hover:bg-gray-50'}`}>
+                    <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
+                      priceRange === '0-50'
+                        ? darkMode
+                          ? 'bg-yellow-500/20 border-yellow-500/50'
+                          : 'bg-yellow-50 border-yellow-400'
+                        : darkMode
+                        ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
+                        : 'border-transparent hover:bg-gray-100'
+                    }`}>
                       <input
                         type="radio"
                         name="price"
                         value="0-50"
                         checked={priceRange === '0-50'}
                         onChange={(e) => setPriceRange(e.target.value)}
-                        className="text-yellow-500 focus:ring-yellow-500"
+                        className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
                       />
-                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Até R$ 50</span>
+                      <span className={`text-sm font-medium ${
+                        priceRange === '0-50'
+                          ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
+                          : darkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}>Até R$ 50</span>
                     </label>
-                    <label className={`flex items-center gap-2 cursor-pointer p-2 rounded ${darkMode ? 'hover:bg-[#333333]' : 'hover:bg-gray-50'}`}>
+                    <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
+                      priceRange === '50-100'
+                        ? darkMode
+                          ? 'bg-yellow-500/20 border-yellow-500/50'
+                          : 'bg-yellow-50 border-yellow-400'
+                        : darkMode
+                        ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
+                        : 'border-transparent hover:bg-gray-100'
+                    }`}>
                       <input
                         type="radio"
                         name="price"
                         value="50-100"
                         checked={priceRange === '50-100'}
                         onChange={(e) => setPriceRange(e.target.value)}
-                        className="text-yellow-500 focus:ring-yellow-500"
+                        className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
                       />
-                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>R$ 50 - R$ 100</span>
+                      <span className={`text-sm font-medium ${
+                        priceRange === '50-100'
+                          ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
+                          : darkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}>R$ 50 - R$ 100</span>
                     </label>
-                    <label className={`flex items-center gap-2 cursor-pointer p-2 rounded ${darkMode ? 'hover:bg-[#333333]' : 'hover:bg-gray-50'}`}>
+                    <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
+                      priceRange === '100-200'
+                        ? darkMode
+                          ? 'bg-yellow-500/20 border-yellow-500/50'
+                          : 'bg-yellow-50 border-yellow-400'
+                        : darkMode
+                        ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
+                        : 'border-transparent hover:bg-gray-100'
+                    }`}>
                       <input
                         type="radio"
                         name="price"
                         value="100-200"
                         checked={priceRange === '100-200'}
                         onChange={(e) => setPriceRange(e.target.value)}
-                        className="text-yellow-500 focus:ring-yellow-500"
+                        className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
                       />
-                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>R$ 100 - R$ 200</span>
+                      <span className={`text-sm font-medium ${
+                        priceRange === '100-200'
+                          ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
+                          : darkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}>R$ 100 - R$ 200</span>
                     </label>
-                    <label className={`flex items-center gap-2 cursor-pointer p-2 rounded ${darkMode ? 'hover:bg-[#333333]' : 'hover:bg-gray-50'}`}>
+                    <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all border-2 ${
+                      priceRange === '200+'
+                        ? darkMode
+                          ? 'bg-yellow-500/20 border-yellow-500/50'
+                          : 'bg-yellow-50 border-yellow-400'
+                        : darkMode
+                        ? 'border-transparent hover:bg-[#333333] hover:border-gray-700'
+                        : 'border-transparent hover:bg-gray-100'
+                    }`}>
                       <input
                         type="radio"
                         name="price"
                         value="200+"
                         checked={priceRange === '200+'}
                         onChange={(e) => setPriceRange(e.target.value)}
-                        className="text-yellow-500 focus:ring-yellow-500"
+                        className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
                       />
-                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Acima de R$ 200</span>
+                      <span className={`text-sm font-medium ${
+                        priceRange === '200+'
+                          ? darkMode ? 'text-yellow-400' : 'text-yellow-700'
+                          : darkMode ? 'text-gray-300' : 'text-gray-700'
+                      }`}>Acima de R$ 200</span>
                     </label>
                   </div>
                 </div>
