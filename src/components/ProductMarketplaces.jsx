@@ -266,13 +266,13 @@ export default function ProductMarketplaces({ productId, darkMode }) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 {isPublished && status?.marketplaceUrl && (
                   <a
                     href={status.marketplaceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`text-xs px-3 py-1 rounded ${
+                    className={`text-xs px-3 py-1 rounded text-center ${
                       darkMode ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                     } transition-colors`}
                   >
@@ -283,7 +283,7 @@ export default function ProductMarketplaces({ productId, darkMode }) {
                 <button
                   onClick={() => syncToMarketplace(marketplace.id)}
                   disabled={isSyncing || !productId}
-                  className={`px-4 py-2 rounded font-medium transition-all flex items-center gap-2 ${
+                  className={`px-4 py-2 rounded font-medium transition-all flex items-center justify-center gap-2 ${
                     isPublished
                       ? darkMode
                         ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
