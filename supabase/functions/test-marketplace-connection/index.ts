@@ -176,8 +176,21 @@ async function testAmazon(credentials: any) {
 // Testar conexão com WooCommerce
 async function testWooCommerce(credentials: any) {
   try {
+    console.log('🔍 WooCommerce - store_url:', credentials.store_url)
+    console.log('🔍 WooCommerce - consumer_key:', credentials.consumer_key ? 'presente' : 'ausente')
+    console.log('🔍 WooCommerce - consumer_secret:', credentials.consumer_secret ? 'presente' : 'ausente')
+
     if (!credentials.store_url || !credentials.consumer_key || !credentials.consumer_secret) {
-      return { success: false, error: 'URL da loja, Consumer Key e Consumer Secret são obrigatórios' }
+      return {
+        success: false,
+        error: `URL da loja, Consumer Key e Consumer Secret são obrigatórios`,
+        debug: {
+          store_url: credentials.store_url || 'AUSENTE',
+          consumer_key: credentials.consumer_key ? 'presente' : 'AUSENTE',
+          consumer_secret: credentials.consumer_secret ? 'presente' : 'AUSENTE',
+          received_keys: Object.keys(credentials)
+        }
+      }
     }
 
     // Validar URL
@@ -231,10 +244,18 @@ serve(async (req) => {
   try {
     const { marketplace, credentials }: TestConnectionRequest = await req.json()
 
+    // Debug log
+    console.log('🔍 DEBUG - Marketplace:', marketplace)
+    console.log('🔍 DEBUG - Credentials keys:', Object.keys(credentials || {}))
+
     if (!marketplace || !credentials) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Marketplace e credenciais são obrigatórios'
+        error: 'Marketplace e credenciais são obrigatórios',
+        debug: {
+          marketplace: marketplace || 'undefined',
+          credentials: credentials ? Object.keys(credentials) : 'undefined'
+        }
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
