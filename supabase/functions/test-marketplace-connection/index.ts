@@ -183,7 +183,13 @@ async function testWooCommerce(credentials: any) {
     if (!credentials.store_url || !credentials.consumer_key || !credentials.consumer_secret) {
       return {
         success: false,
-        error: `URL da loja, Consumer Key e Consumer Secret são obrigatórios. Recebido: store_url=${!!credentials.store_url}, consumer_key=${!!credentials.consumer_key}, consumer_secret=${!!credentials.consumer_secret}`
+        error: `URL da loja, Consumer Key e Consumer Secret são obrigatórios`,
+        debug: {
+          store_url: credentials.store_url || 'AUSENTE',
+          consumer_key: credentials.consumer_key ? 'presente' : 'AUSENTE',
+          consumer_secret: credentials.consumer_secret ? 'presente' : 'AUSENTE',
+          received_keys: Object.keys(credentials)
+        }
       }
     }
 
@@ -245,7 +251,11 @@ serve(async (req) => {
     if (!marketplace || !credentials) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Marketplace e credenciais são obrigatórios'
+        error: 'Marketplace e credenciais são obrigatórios',
+        debug: {
+          marketplace: marketplace || 'undefined',
+          credentials: credentials ? Object.keys(credentials) : 'undefined'
+        }
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
