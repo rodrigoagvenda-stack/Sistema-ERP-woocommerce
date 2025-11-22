@@ -11,6 +11,7 @@ import MarketplaceSettings from './components/MarketplaceSettings';
 import ProductMarketplaces from './components/ProductMarketplaces';
 import MarketplaceSyncLogs from './components/MarketplaceSyncLogs';
 import BannerManagement from './components/BannerManagement';
+import ProductGallery from './components/ProductGallery';
 
 const SUPABASE_URL = ENV.SUPABASE_URL;
 const SUPABASE_ANON_KEY = ENV.SUPABASE_ANON_KEY;
@@ -74,8 +75,9 @@ const supabaseAPI = {
     console.group('🏷️ GET Categories (Active)');
     const { data, error } = await supabase
       .from('categories')
-      .select('id, name')
-      .eq('status', 'active');
+      .select('*')
+      .eq('status', 'active')
+      .order('name', { ascending: true });
 
     if (error) {
       console.error('❌ Erro:', error);
@@ -668,20 +670,41 @@ export default function LukayaGriffeERP() {
         return false;
       }
 
-      // Filtro por tamanho (prioritário)
+      // Filtro por tamanho (prioritário e mais específico)
       if (selectedSize && sizeFilterCategory) {
-        if (product.category_id !== parseInt(sizeFilterCategory)) return false;
-        if (!product.available_sizes || !product.available_sizes.includes(selectedSize)) return false;
+        // Verificar se a categoria do produto corresponde
+        const productCategoryId = typeof product.category_id === 'number'
+          ? product.category_id
+          : parseInt(product.category_id);
+        const filterCategoryId = parseInt(sizeFilterCategory);
+
+        if (productCategoryId !== filterCategoryId) return false;
+
+        // Verificar se o produto tem tamanhos disponíveis
+        if (!product.available_sizes) return false;
+
+        // Garantir que available_sizes é um array
+        const sizes = Array.isArray(product.available_sizes)
+          ? product.available_sizes
+          : [];
+
+        // Verificar se o tamanho selecionado está disponível
+        if (!sizes.includes(selectedSize)) return false;
       }
 
-      // Filtro por categoria normal
-      if (selectedCategory !== 'all' && !selectedSize && product.category_id !== parseInt(selectedCategory)) {
-        return false;
+      // Filtro por categoria normal (apenas quando não há filtro de tamanho)
+      if (selectedCategory !== 'all' && !selectedSize) {
+        const productCategoryId = typeof product.category_id === 'number'
+          ? product.category_id
+          : parseInt(product.category_id);
+        const filterCategoryId = parseInt(selectedCategory);
+
+        if (productCategoryId !== filterCategoryId) return false;
       }
 
       // Filtro por preço
       if (priceRange !== 'all') {
-        const price = product.price;
+        const price = parseFloat(product.price) || 0;
         if (priceRange === '0-50' && (price < 0 || price > 50)) return false;
         if (priceRange === '50-100' && (price < 50 || price > 100)) return false;
         if (priceRange === '100-200' && (price < 100 || price > 200)) return false;
@@ -1114,7 +1137,7 @@ export default function LukayaGriffeERP() {
                       <div className="aspect-square bg-gray-200 overflow-hidden relative">
                         <ProductBadge product={product} />
                         <img
-                          src={product.image_urls || 'https://via.placeholder.com/400'}
+                          src={product.image_urls?.[0] || 'https://via.placeholder.com/400'}
                           alt={product.name}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                         />
@@ -1243,13 +1266,7 @@ export default function LukayaGriffeERP() {
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             <div>
-              <div className="aspect-square bg-gray-200 rounded-xl overflow-hidden mb-4">
-                <img
-                  src={product.image_urls || 'https://via.placeholder.com/800'}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              <ProductGallery images={product.image_urls} />
             </div>
 
             <div>
@@ -1279,45 +1296,81 @@ export default function LukayaGriffeERP() {
                 </div>
               </div>
 
+              {/* Informação de Estoque */}
+              <div className="mb-4">
+                {(product.stock || 0) > 0 ? (
+                  <div className="flex items-center gap-2">
+                    <Package className="w-5 h-5 text-green-600" />
+                    <span className="text-sm font-medium text-green-600">
+                      {product.stock} {product.stock === 1 ? 'unidade disponível' : 'unidades disponíveis'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Package className="w-5 h-5 text-red-600" />
+                    <span className="text-sm font-medium text-red-600">Produto esgotado</span>
+                  </div>
+                )}
+                {(product.stock || 0) > 0 && (product.stock || 0) <= (product.min_stock || 5) && (
+                  <p className="text-xs text-amber-600 mt-1">⚠️ Últimas unidades!</p>
+                )}
+              </div>
+
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">QUANTIDADE</label>
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    disabled={(product.stock || 0) === 0}
+                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Minus className="w-5 h-5" />
                   </button>
                   <span className="text-xl font-medium w-12 text-center">{quantity}</span>
                   <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    onClick={() => setQuantity(Math.min((product.stock || 0), quantity + 1))}
+                    disabled={(product.stock || 0) === 0 || quantity >= (product.stock || 0)}
+                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus className="w-5 h-5" />
                   </button>
                 </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  {(product.stock || 0) > 0 ? `Máximo: ${product.stock} unidades` : 'Sem estoque disponível'}
+                </p>
               </div>
 
               <div className="space-y-3 mb-8">
                 <button
                   onClick={() => {
+                    if ((product.stock || 0) === 0) {
+                      toast.error('❌ Produto sem estoque');
+                      return;
+                    }
                     for (let i = 0; i < quantity; i++) {
                       addToCart(product, selectedSize);
                     }
-                    alert('Produto adicionado ao carrinho!');
+                    toast.success('✅ Produto adicionado ao carrinho!');
                   }}
-                  className="w-full py-3 sm:py-4 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium text-base sm:text-lg"
+                  disabled={(product.stock || 0) === 0}
+                  className="w-full py-3 sm:py-4 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium text-base sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400"
                 >
-                  COMPRAR
+                  {(product.stock || 0) === 0 ? 'SEM ESTOQUE' : 'COMPRAR'}
                 </button>
                 <button
                   onClick={() => {
+                    if ((product.stock || 0) === 0) {
+                      toast.error('❌ Produto sem estoque');
+                      return;
+                    }
                     for (let i = 0; i < quantity; i++) {
                       addToCart(product, selectedSize);
                     }
                     setShowCart(true);
+                    toast.success('✅ Adicionado ao carrinho!');
                   }}
-                  className="w-full py-3 sm:py-4 border-2 border-yellow-500 text-yellow-600 rounded-lg hover:bg-yellow-50 transition-colors font-medium text-base sm:text-lg"
+                  disabled={(product.stock || 0) === 0}
+                  className="w-full py-3 sm:py-4 border-2 border-yellow-500 text-yellow-600 rounded-lg hover:bg-yellow-50 transition-colors font-medium text-base sm:text-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:border-gray-400 disabled:text-gray-400"
                 >
                   ADICIONAR AO CARRINHO
                 </button>
@@ -1342,7 +1395,7 @@ export default function LukayaGriffeERP() {
                   >
                     <div className="aspect-square bg-gray-200">
                       <img
-                        src={relProduct.image_urls || 'https://via.placeholder.com/400'}
+                        src={relProduct.image_urls?.[0] || 'https://via.placeholder.com/400'}
                         alt={relProduct.name}
                         className="w-full h-full object-cover"
                       />
@@ -1382,7 +1435,7 @@ export default function LukayaGriffeERP() {
                 {cart.map((item, index) => (
                   <div key={item.id + '-' + (item.selectedSize || '') + '-' + index} className={`flex gap-3 p-3 sm:p-4 border rounded-lg ${darkMode ? 'border-gray-700' : ''}`}>
                     <img
-                      src={item.image_urls || 'https://via.placeholder.com/100'}
+                      src={item.image_urls?.[0] || 'https://via.placeholder.com/100'}
                       alt={item.name}
                       className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded flex-shrink-0"
                     />
@@ -1489,7 +1542,7 @@ export default function LukayaGriffeERP() {
             <div className="space-y-4">
               {products.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5).map(product => (
                 <div key={product.id} className="flex items-center gap-4 p-4 border rounded-lg">
-                  <img src={product.image_urls || 'https://via.placeholder.com/100'} alt={product.name} className="w-16 h-16 object-cover rounded" />
+                  <img src={product.image_urls?.[0] || 'https://via.placeholder.com/100'} alt={product.name} className="w-16 h-16 object-cover rounded" />
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-800">{product.name}</h3>
                     <p className="text-sm text-gray-600">R$ {product.price.toFixed(2)}</p>
@@ -1523,6 +1576,8 @@ export default function LukayaGriffeERP() {
       price: 0,
       category_id: categories.length > 0 ? categories[0].id : 1,
       status: 'active',
+      stock: 50,
+      min_stock: 5,
     });
     const [imageFiles, setImageFiles] = useState([]); // ARRAY de Files
     const [imagePreviews, setImagePreviews] = useState([]); // ARRAY de previews
@@ -1537,7 +1592,9 @@ export default function LukayaGriffeERP() {
         description: product.description,
         price: product.price,
         category_id: product.category_id,
-        status: product.status
+        status: product.status,
+        stock: product.stock || 0,
+        min_stock: product.min_stock || 5,
       });
       // Se tiver imagens existentes, mostrar previews
       if (product.image_urls && Array.isArray(product.image_urls)) {
@@ -1676,6 +1733,8 @@ export default function LukayaGriffeERP() {
           image_urls: imageUrls, // ✅ ARRAY de URLs (não string!)
           status: formData.status || 'active',
           available_sizes: selectedSizes.length > 0 ? selectedSizes : [], // ✅ ARRAY também
+          stock: parseInt(formData.stock) || 0, // ✅ Estoque atual
+          min_stock: parseInt(formData.min_stock) || 5, // ✅ Estoque mínimo
         };
 
         // Remover campos null/undefined
@@ -1950,7 +2009,7 @@ export default function LukayaGriffeERP() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                 <select
@@ -1961,6 +2020,28 @@ export default function LukayaGriffeERP() {
                   <option value="active">Ativo</option>
                   <option value="inactive">Inativo</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Estoque Atual</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.stock || 0}
+                  onChange={(e) => setFormData(Object.assign({}, formData, { stock: parseInt(e.target.value) || 0 }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                  placeholder="Ex: 50"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Estoque Mínimo</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.min_stock || 5}
+                  onChange={(e) => setFormData(Object.assign({}, formData, { min_stock: parseInt(e.target.value) || 5 }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
+                  placeholder="Ex: 5"
+                />
               </div>
             </div>
 
@@ -1992,7 +2073,7 @@ export default function LukayaGriffeERP() {
           <h1 className="text-3xl font-bold text-gray-800">Gestão de Produtos</h1>
           <button
             onClick={() => setShowForm(true)}
-            className="px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center gap-2 font-medium"
+            className="w-full md:w-auto min-h-[44px] px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center justify-center gap-2 font-medium transition-colors"
           >
             <Plus className="w-5 h-5" />
             Novo Produto
@@ -2018,7 +2099,7 @@ export default function LukayaGriffeERP() {
                     <tr key={product.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <img src={product.image_urls || 'https://via.placeholder.com/100'} alt={product.name} className="w-12 h-12 object-cover rounded" />
+                          <img src={product.image_urls?.[0] || 'https://via.placeholder.com/100'} alt={product.name} className="w-12 h-12 object-cover rounded" />
                           <div>
                             <p className="font-medium text-gray-800">{product.name}</p>
                             <p className="text-sm text-gray-500 truncate max-w-xs">{product.description}</p>
@@ -2056,7 +2137,7 @@ export default function LukayaGriffeERP() {
                   <div key={product.id} className="p-4">
                     <div className="flex gap-3 mb-3">
                       <img
-                        src={product.image_urls || 'https://via.placeholder.com/100'}
+                        src={product.image_urls?.[0] || 'https://via.placeholder.com/100'}
                         alt={product.name}
                         className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
                       />
@@ -2576,7 +2657,10 @@ export default function LukayaGriffeERP() {
         {currentPage === 'categories' && <CategoriesManagement />}
         {currentPage === 'integrations' && (
           <div className="p-6">
-            <h1 className="text-3xl font-bold text-gray-800 mb-6">⚙️ Integrações com Marketplaces</h1>
+            <div className="flex items-center gap-3 mb-6">
+              <Settings className="w-8 h-8 text-yellow-600" />
+              <h1 className="text-3xl font-bold text-gray-800">Integrações com Marketplaces</h1>
+            </div>
             <p className="text-gray-600 mb-8">Configure as credenciais dos marketplaces para sincronizar seus produtos automaticamente.</p>
             <MarketplaceSettings darkMode={darkMode} />
           </div>
