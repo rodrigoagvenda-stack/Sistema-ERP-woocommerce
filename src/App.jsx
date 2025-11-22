@@ -549,7 +549,12 @@ export default function LukayaGriffeERP() {
     ).join('\n\n');
 
     const message = '🛍️ *Pedido Lukaya Griffe*\n\n' + items + '\n\n💰 *Total: R$ ' + getCartTotal().toFixed(2) + '*';
-    const whatsappNumber = ENV.WHATSAPP_NUMBER;
+    const whatsappNumber = '5511986751552'; // NÚMERO CORRETO FORÇADO
+    console.log('🔍 DEBUG WhatsApp:', {
+      numero_usado: whatsappNumber,
+      numero_env: ENV.WHATSAPP_NUMBER,
+      window_env: window._env_?.VITE_WHATSAPP_NUMBER
+    });
     const url = 'https://wa.me/' + whatsappNumber + '?text=' + encodeURIComponent(message);
     window.open(url, '_blank');
   };
