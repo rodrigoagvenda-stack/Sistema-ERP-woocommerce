@@ -7,9 +7,9 @@
 CREATE TABLE IF NOT EXISTS settings (
   id INTEGER PRIMARY KEY DEFAULT 1,
   store_name TEXT DEFAULT 'Lukaya Griffe',
+  whatsapp_number TEXT DEFAULT '+5511986751552',
   store_email TEXT,
   store_address TEXT,
-  whatsapp_number TEXT DEFAULT '+5511986751552',
   min_stock_alert INTEGER DEFAULT 5,
   auto_publish_products BOOLEAN DEFAULT false,
   enable_dark_mode BOOLEAN DEFAULT false,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS settings (
   CONSTRAINT settings_single_row CHECK (id = 1)
 );
 
--- Inserir configurações padrão
+-- Inserir configurações padrão (mesma ordem das colunas!)
 INSERT INTO settings (id, store_name, whatsapp_number)
 VALUES (1, 'Lukaya Griffe', '+5511986751552')
 ON CONFLICT (id) DO NOTHING;
