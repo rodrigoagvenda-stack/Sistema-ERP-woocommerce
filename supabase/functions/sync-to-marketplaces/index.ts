@@ -280,9 +280,69 @@ class WooCommerceService extends MarketplaceService {
         }
       }
 
-      // Adicionar categoria se existir
+      // Buscar/criar categoria se existir
       if (product.category?.name) {
-        payload.categories = [{ name: product.category.name }]
+        console.log('🔍 WooCommerce Sync - Buscando categoria:', product.category.name)
+
+        // Buscar categoria pelo nome
+        const searchCatResponse = await fetch(
+          `${url}/wp-json/wc/v3/products/categories?search=${encodeURIComponent(product.category.name)}`,
+          {
+            method: 'GET',
+            headers: { 'Authorization': `Basic ${auth}` }
+          }
+        )
+
+        let categoryId = null
+
+        if (searchCatResponse.ok) {
+          const categories = await searchCatResponse.json()
+          const exactMatch = categories.find((c: any) => c.name.toLowerCase() === product.category.name.toLowerCase())
+
+          if (exactMatch) {
+            categoryId = exactMatch.id
+            console.log('✅ WooCommerce Sync - Categoria encontrada, ID:', categoryId)
+          }
+        }
+
+        // Se não encontrou, criar categoria
+        if (!categoryId) {
+          console.log('🔍 WooCommerce Sync - Criando categoria...')
+          const createCatResponse = await fetch(
+            `${url}/wp-json/wc/v3/products/categories`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Basic ${auth}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ name: product.category.name })
+            }
+          )
+
+          if (createCatResponse.ok) {
+            const newCat = await createCatResponse.json()
+            categoryId = newCat.id
+            console.log('✅ WooCommerce Sync - Categoria criada, ID:', categoryId)
+          } else {
+            const errorText = await createCatResponse.text()
+            console.error('❌ WooCommerce Sync - Erro ao criar categoria:', errorText)
+
+            // Tentar extrair ID se categoria já existe
+            try {
+              const errorJson = JSON.parse(errorText)
+              if (errorJson.code === 'term_exists' && errorJson.data?.resource_id) {
+                categoryId = errorJson.data.resource_id
+                console.log('✅ WooCommerce Sync - Categoria já existe, ID:', categoryId)
+              }
+            } catch {}
+          }
+        }
+
+        // Adicionar ID da categoria ao payload
+        if (categoryId) {
+          payload.categories = [{ id: categoryId }]
+        }
       }
 
       console.log('🔍 WooCommerce Sync - Payload:', JSON.stringify(payload).substring(0, 200) + '...')

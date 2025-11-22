@@ -248,10 +248,10 @@ export default function ProductMarketplaces({ productId, darkMode }) {
                 : 'bg-gray-50 border-gray-200 hover:border-gray-300'
             }`}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">{marketplace.icon}</span>
-                <div>
+                <div className="flex-1">
                   <h5 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     {marketplace.name}
                   </h5>
@@ -266,7 +266,7 @@ export default function ProductMarketplaces({ productId, darkMode }) {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="flex flex-col gap-2">
                 {isPublished && status?.marketplaceUrl && (
                   <a
                     href={status.marketplaceUrl}
