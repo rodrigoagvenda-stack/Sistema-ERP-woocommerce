@@ -14,6 +14,10 @@ interface Product {
   depth?: number
   images?: string[]
   category_id?: number
+  category?: {
+    id: number
+    name: string
+  }
 }
 
 interface MarketplaceCredentials {
@@ -260,7 +264,7 @@ class WooCommerceService extends MarketplaceService {
         }
       }
 
-      const payload = {
+      const payload: any = {
         name: product.name,
         type: 'simple',
         regular_price: product.price.toString(),
@@ -274,6 +278,11 @@ class WooCommerceService extends MarketplaceService {
           width: product.width?.toString() || '0',
           height: product.height?.toString() || '0'
         }
+      }
+
+      // Adicionar categoria se existir
+      if (product.category?.name) {
+        payload.categories = [{ name: product.category.name }]
       }
 
       console.log('🔍 WooCommerce Sync - Payload:', JSON.stringify(payload).substring(0, 200) + '...')
@@ -362,10 +371,10 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Buscar produto
+    // Buscar produto com categoria
     const { data: product, error: productError } = await supabase
       .from('products')
-      .select('*')
+      .select('*, category:categories(id, name)')
       .eq('id', productId)
       .single()
 
