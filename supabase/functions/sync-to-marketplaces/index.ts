@@ -14,6 +14,10 @@ interface Product {
   depth?: number
   images?: string[]
   category_id?: number
+  category?: {
+    id: number
+    name: string
+  }
 }
 
 interface MarketplaceCredentials {
@@ -214,9 +218,53 @@ class AmazonService extends MarketplaceService {
 
 // Implementação WooCommerce
 class WooCommerceService extends MarketplaceService {
-  async sync(product: Product, credentials: MarketplaceCredentials) {
+  async sync(product: Product, credentials: any) {
     try {
-      const payload = {
+      console.log('🔍 WooCommerce Sync - Produto:', product.id, product.name)
+      console.log('🔍 WooCommerce Sync - store_url:', credentials.store_url)
+      console.log('🔍 WooCommerce Sync - consumer_key:', credentials.consumer_key ? 'presente' : 'ausente')
+      console.log('🔍 WooCommerce Sync - consumer_secret:', credentials.consumer_secret ? 'presente' : 'ausente')
+
+      if (!credentials.store_url || !credentials.consumer_key || !credentials.consumer_secret) {
+        return {
+          success: false,
+          error: 'URL da loja, Consumer Key e Consumer Secret são obrigatórios'
+        }
+      }
+
+      // Validar e normalizar URL
+      let url = credentials.store_url.trim()
+      if (!url.startsWith('http')) {
+        url = 'https://' + url
+      }
+      // Remover trailing slash para evitar URLs com //
+      url = url.replace(/\/+$/, '')
+
+      // Testar se a API WooCommerce está acessível
+      console.log('🔍 WooCommerce Sync - Testando acesso à API...')
+      const auth = btoa(`${credentials.consumer_key}:${credentials.consumer_secret}`)
+      const testEndpoint = `${url}/wp-json/wc/v3`
+
+      const testResponse = await fetch(testEndpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${auth}`
+        }
+      })
+
+      console.log('🔍 WooCommerce Sync - Teste API status:', testResponse.status)
+
+      if (!testResponse.ok) {
+        const errorText = await testResponse.text()
+        if (errorText.includes('<!doctype') || errorText.includes('<html')) {
+          return {
+            success: false,
+            error: 'API REST do WooCommerce não está acessível. Verifique: 1) WooCommerce instalado e ativo, 2) Permalinks configurados (não podem ser "simples"), 3) API REST habilitada em WooCommerce → Configurações → Avançado → API REST'
+          }
+        }
+      }
+
+      const payload: any = {
         name: product.name,
         type: 'simple',
         regular_price: product.price.toString(),
@@ -232,9 +280,18 @@ class WooCommerceService extends MarketplaceService {
         }
       }
 
-      const auth = btoa(`${credentials.client_id}:${credentials.client_secret}`)
+      // Adicionar categoria se existir
+      if (product.category?.name) {
+        payload.categories = [{ name: product.category.name }]
+      }
 
-      const response = await fetch(`${credentials.store_url}/wp-json/wc/v3/products`, {
+      console.log('🔍 WooCommerce Sync - Payload:', JSON.stringify(payload).substring(0, 200) + '...')
+
+      const endpoint = `${url}/wp-json/wc/v3/products`
+
+      console.log('🔍 WooCommerce Sync - URL completa:', endpoint)
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${auth}`,
@@ -243,15 +300,34 @@ class WooCommerceService extends MarketplaceService {
         body: JSON.stringify(payload)
       })
 
+      console.log('🔍 WooCommerce Sync - Response status:', response.status)
+      console.log('🔍 WooCommerce Sync - Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())))
+
       if (!response.ok) {
-        const error = await response.text()
-        return { success: false, error }
+        const errorText = await response.text()
+        console.error('❌ WooCommerce Sync - Erro completo:', errorText.substring(0, 500))
+
+        // Tentar parsear como JSON para pegar mensagem de erro específica do WooCommerce
+        try {
+          const errorJson = JSON.parse(errorText)
+          const errorMsg = errorJson.message || errorJson.code || 'Erro desconhecido'
+          return { success: false, error: `HTTP ${response.status}: ${errorMsg}` }
+        } catch {
+          // Se não for JSON, retornar trecho do erro
+          const shortError = errorText.includes('<!doctype') || errorText.includes('<html')
+            ? 'Página HTML retornada (404) - Verifique se a API WooCommerce está habilitada'
+            : errorText.substring(0, 200)
+          return { success: false, error: `HTTP ${response.status}: ${shortError}` }
+        }
       }
 
       const data = await response.json()
+      console.log('✅ WooCommerce Sync - Produto criado! ID:', data.id)
+
       return { success: true, marketplaceId: data.id?.toString() }
 
     } catch (error) {
+      console.error('❌ WooCommerce Sync - Exception:', error)
       return { success: false, error: error.message }
     }
   }
@@ -269,14 +345,24 @@ function getMarketplaceService(marketplace: string): MarketplaceService | null {
   }
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
     const { productId, marketplaces } = await req.json()
 
     if (!productId) {
       return new Response(JSON.stringify({ error: 'Product ID é obrigatório' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -285,17 +371,17 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Buscar produto
+    // Buscar produto com categoria
     const { data: product, error: productError } = await supabase
       .from('products')
-      .select('*')
+      .select('*, category:categories(id, name)')
       .eq('id', productId)
       .single()
 
     if (productError || !product) {
       return new Response(JSON.stringify({ error: 'Produto não encontrado' }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -308,7 +394,7 @@ serve(async (req) => {
     if (!credentials || credentials.length === 0) {
       return new Response(JSON.stringify({ error: 'Nenhum marketplace configurado' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -357,13 +443,13 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ success: true, results }), {
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 })
