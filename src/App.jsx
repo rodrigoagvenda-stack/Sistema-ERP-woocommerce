@@ -15,100 +15,224 @@ import BannerManagement from './components/BannerManagement';
 const SUPABASE_URL = ENV.SUPABASE_URL;
 const SUPABASE_ANON_KEY = ENV.SUPABASE_ANON_KEY;
 
+// API usando cliente Supabase nativo (mais confiável que fetch)
 const supabaseAPI = {
-  headers: {
-    'apikey': SUPABASE_ANON_KEY,
-    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-    'Content-Type': 'application/json',
-    'Prefer': 'return=representation'
-  },
-
   async getProducts() {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/products?order=created_at.desc&status=eq.active', {
-      headers: this.headers
-    });
-    return response.json();
+    console.group('📦 GET Products (Active)');
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Retornados:', data?.length || 0, 'produtos');
+    console.groupEnd();
+    return data || [];
   },
 
   async getProductById(id) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/products?id=eq.' + id, {
-      headers: this.headers
-    });
-    const data = await response.json();
-    return data[0];
+    console.group('📦 GET Product by ID:', id);
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Produto encontrado:', data?.name);
+    console.groupEnd();
+    return data;
   },
 
   async getAllProducts() {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/products?order=created_at.desc', {
-      headers: this.headers
-    });
-    return response.json();
+    console.group('📦 GET All Products');
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Retornados:', data?.length || 0, 'produtos');
+    console.groupEnd();
+    return data || [];
   },
 
   async getCategories() {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/categories?status=eq.active&select=id,name', {
-      headers: this.headers
-    });
-    return response.json();
+    console.group('🏷️ GET Categories (Active)');
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('status', 'active');
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Retornadas:', data?.length || 0, 'categorias');
+    console.groupEnd();
+    return data || [];
   },
 
   async getAllCategories() {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/categories?order=created_at.desc', {
-      headers: this.headers
-    });
-    return response.json();
+    console.group('🏷️ GET All Categories');
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Retornadas:', data?.length || 0, 'categorias');
+    console.groupEnd();
+    return data || [];
   },
 
   async createProduct(product) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/products', {
-      method: 'POST',
-      headers: this.headers,
-      body: JSON.stringify(product)
-    });
-    return response.json();
+    console.group('➕ CREATE Product');
+    console.log('📤 Dados enviados:', product);
+
+    const { data, error } = await supabase
+      .from('products')
+      .insert([product])
+      .select();
+
+    console.log('📥 Resposta completa:', { data, error });
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      console.error('❌ Nenhum dado retornado!');
+      console.groupEnd();
+      throw new Error('Nenhum dado retornado do servidor');
+    }
+
+    console.log('✅ Produto criado:', data[0]);
+    console.groupEnd();
+    return data;
   },
 
   async updateProduct(id, product) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/products?id=eq.' + id, {
-      method: 'PATCH',
-      headers: this.headers,
-      body: JSON.stringify(product)
-    });
-    return response.json();
+    console.group('✏️ UPDATE Product:', id);
+    console.log('📤 Dados enviados:', product);
+
+    const { data, error } = await supabase
+      .from('products')
+      .update(product)
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Produto atualizado:', data);
+    console.groupEnd();
+    return data;
   },
 
   async deleteProduct(id) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/products?id=eq.' + id, {
-      method: 'DELETE',
-      headers: this.headers
-    });
-    return response.ok;
+    console.group('🗑️ DELETE Product:', id);
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Produto deletado');
+    console.groupEnd();
+    return true;
   },
 
   async createCategory(category) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/categories', {
-      method: 'POST',
-      headers: this.headers,
-      body: JSON.stringify(category)
-    });
-    return response.json();
+    console.group('➕ CREATE Category');
+    console.log('📤 Dados enviados:', category);
+
+    const { data, error } = await supabase
+      .from('categories')
+      .insert([category])
+      .select();
+
+    console.log('📥 Resposta completa:', { data, error });
+
+    if (error) {
+      console.error('❌ Erro Supabase:', error);
+      console.error('📋 Detalhes:', error.message, error.details, error.hint);
+      console.groupEnd();
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      console.error('❌ Nenhum dado retornado!');
+      console.groupEnd();
+      throw new Error('Nenhum dado retornado do servidor');
+    }
+
+    console.log('✅ Categoria criada:', data[0]);
+    console.groupEnd();
+    return data;
   },
 
   async updateCategory(id, category) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/categories?id=eq.' + id, {
-      method: 'PATCH',
-      headers: this.headers,
-      body: JSON.stringify(category)
-    });
-    return response.json();
+    console.group('✏️ UPDATE Category:', id);
+    console.log('📤 Dados enviados:', category);
+
+    const { data, error } = await supabase
+      .from('categories')
+      .update(category)
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Categoria atualizada:', data);
+    console.groupEnd();
+    return data;
   },
 
   async deleteCategory(id) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/categories?id=eq.' + id, {
-      method: 'DELETE',
-      headers: this.headers
-    });
-    return response.ok;
+    console.group('🗑️ DELETE Category:', id);
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Categoria deletada');
+    console.groupEnd();
+    return true;
   },
 
   async incrementViews(id, currentViews) {
