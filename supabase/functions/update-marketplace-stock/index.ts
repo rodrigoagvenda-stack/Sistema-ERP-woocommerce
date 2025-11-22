@@ -102,14 +102,24 @@ async function updateAmazonStock(marketplaceProductId: string, stock: number, cr
   return { success: false, error: 'Amazon SP-API requer configuração avançada' }
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
     const { productId, newStock, marketplaces }: StockUpdate = await req.json()
 
     if (!productId || newStock === undefined) {
       return new Response(JSON.stringify({ error: 'productId e newStock são obrigatórios' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -128,14 +138,14 @@ serve(async (req) => {
     if (productsError) {
       return new Response(JSON.stringify({ error: productsError.message }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
     if (!marketplaceProducts || marketplaceProducts.length === 0) {
       return new Response(JSON.stringify({ error: 'Produto não está vinculado a nenhum marketplace' }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -237,13 +247,13 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ success: true, results }), {
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 })
