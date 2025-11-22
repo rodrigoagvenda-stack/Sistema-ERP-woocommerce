@@ -18,7 +18,7 @@ const getEnvVar = (key) => {
 export const ENV = {
   SUPABASE_URL: getEnvVar('VITE_SUPABASE_URL') || 'https://hnkhihzeqtzqzybkjype.supabase.co',
   SUPABASE_ANON_KEY: getEnvVar('VITE_SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhua2hpaHplcXR6cXp5YmtqeXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NzAyNjMsImV4cCI6MjA3NzE0NjI2M30.FWsLnIruhnwigbjLl0dSI5Bx1sg2S_JU7ubE-fGdqaA',
-  WHATSAPP_NUMBER: getEnvVar('VITE_WHATSAPP_NUMBER') || '5511986751552'
+  WHATSAPP_NUMBER: getEnvVar('VITE_WHATSAPP_NUMBER') || '+5511986751552'
 };
 
 // Validar variáveis obrigatórias
