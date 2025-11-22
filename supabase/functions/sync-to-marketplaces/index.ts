@@ -251,33 +251,114 @@ class WooCommerceService extends MarketplaceService {
         }
       }
 
-      // Testar se a API WooCommerce está acessível
-      console.log('🔍 WooCommerce Sync - Testando acesso à API...')
+      // Testar em duas etapas: 1) WordPress REST API, 2) WooCommerce REST API
+      console.log('🔍 WooCommerce Sync - Testando acesso à API REST do WordPress...')
       const auth = btoa(`${credentials.consumer_key}:${credentials.consumer_secret}`)
-      const testEndpoint = `${url}/wp-json/wc/v3`
 
-      const testResponse = await fetch(testEndpoint, {
+      // ETAPA 1: Verificar se WordPress REST API está funcionando
+      const wpRestEndpoint = `${url}/wp-json/`
+      const wpRestResponse = await fetch(wpRestEndpoint, {
+        method: 'GET'
+      })
+
+      console.log('🔍 WooCommerce Sync - WordPress REST API status:', wpRestResponse.status)
+
+      if (!wpRestResponse.ok) {
+        const errorText = await wpRestResponse.text()
+        console.error('❌ WooCommerce Sync - WordPress REST API não acessível:', errorText.substring(0, 200))
+
+        // Verificar se é um problema de permalinks
+        if (wpRestResponse.status === 404 || errorText.includes('<!doctype') || errorText.includes('<html')) {
+          return {
+            success: false,
+            error: `❌ API REST do WooCommerce não está acessível.
+
+📋 INSTRUÇÕES PARA CORRIGIR:
+
+1️⃣ **PERMALINKS (Causa mais comum)**
+   • Acesse: WordPress Admin → Configurações → Links Permanentes
+   • Escolha QUALQUER opção EXCETO "Simples"
+   • Recomendado: "Nome do post" ou "Dia e nome"
+   • Clique em "Salvar alterações"
+
+2️⃣ **VERIFICAR WOOCOMMERCE**
+   • Acesse: WordPress Admin → Plugins
+   • Confirme que WooCommerce está instalado e ativo
+
+3️⃣ **API REST DO WOOCOMMERCE**
+   • Acesse: WooCommerce → Configurações → Avançado → REST API
+   • Verifique se há chaves API criadas
+   • Consumer Key e Secret devem estar corretos
+
+4️⃣ **URL DA LOJA**
+   • URL testada: ${url}
+   • Deve ser a raiz do WordPress (ex: https://seusite.com)
+   • Não deve incluir /loja, /shop, etc.
+
+🔍 Endpoint testado: ${wpRestEndpoint}
+📊 Status HTTP: ${wpRestResponse.status}
+
+Após fazer as correções, teste novamente a conexão.`
+          }
+        }
+
+        return {
+          success: false,
+          error: `Erro ao acessar WordPress REST API: HTTP ${wpRestResponse.status}. Verifique se WordPress está funcionando corretamente em ${url}`
+        }
+      }
+
+      // ETAPA 2: Verificar se WooCommerce REST API está funcionando
+      console.log('✅ WooCommerce Sync - WordPress REST API OK!')
+      console.log('🔍 WooCommerce Sync - Testando acesso à API do WooCommerce...')
+
+      const wcRestEndpoint = `${url}/wp-json/wc/v3`
+      const wcRestResponse = await fetch(wcRestEndpoint, {
         method: 'GET',
         headers: {
           'Authorization': `Basic ${auth}`
         }
       })
 
-      console.log('🔍 WooCommerce Sync - Teste API status:', testResponse.status)
+      console.log('🔍 WooCommerce Sync - WooCommerce REST API status:', wcRestResponse.status)
 
-      if (!testResponse.ok) {
-        const errorText = await testResponse.text()
-        if (errorText.includes('<!doctype') || errorText.includes('<html')) {
+      if (!wcRestResponse.ok) {
+        const errorText = await wcRestResponse.text()
+        console.error('❌ WooCommerce Sync - WooCommerce API erro:', errorText.substring(0, 200))
+
+        // Verificar se é problema de autenticação
+        if (wcRestResponse.status === 401 || wcRestResponse.status === 403) {
           return {
             success: false,
-            error: `API REST do WooCommerce não está acessível (testando: ${testEndpoint}). Verifique: 1) A URL da loja está correta (deve ser a raiz do WordPress, ex: https://seusite.com), 2) WooCommerce instalado e ativo, 3) Permalinks configurados (não podem ser "simples"), 4) API REST habilitada em WooCommerce → Configurações → Avançado`
+            error: `❌ Erro de autenticação WooCommerce (HTTP ${wcRestResponse.status}).
+
+🔑 VERIFIQUE AS CREDENCIAIS:
+
+1️⃣ **GERAR NOVAS CHAVES API**
+   • Acesse: WooCommerce → Configurações → Avançado → REST API
+   • Clique em "Adicionar chave"
+   • Descrição: "Lucaya Griffe Integration"
+   • Usuário: Selecione um administrador
+   • Permissões: Leitura/Gravação
+   • Clique em "Gerar chave API"
+   • Copie Consumer Key e Consumer Secret
+
+2️⃣ **ATUALIZAR CREDENCIAIS**
+   • Consumer Key deve começar com "ck_"
+   • Consumer Secret deve começar com "cs_"
+   • Cole as novas credenciais no sistema
+
+🔍 Endpoint testado: ${wcRestEndpoint}`
           }
         }
+
         return {
           success: false,
-          error: `Erro ao acessar API: HTTP ${testResponse.status} - ${errorText.substring(0, 100)}`
+          error: `Erro ao acessar WooCommerce API: HTTP ${wcRestResponse.status} - ${errorText.substring(0, 100)}`
         }
       }
+
+      console.log('✅ WooCommerce Sync - WooCommerce REST API OK!')
 
       const payload: any = {
         name: product.name,
