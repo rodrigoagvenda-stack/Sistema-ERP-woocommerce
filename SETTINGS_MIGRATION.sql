@@ -6,10 +6,10 @@
 -- Criar tabela settings
 CREATE TABLE IF NOT EXISTS settings (
   id INTEGER PRIMARY KEY DEFAULT 1,
-  whatsapp_number TEXT DEFAULT '+5511986751552',
   store_name TEXT DEFAULT 'Lukaya Griffe',
   store_email TEXT,
   store_address TEXT,
+  whatsapp_number TEXT DEFAULT '+5511986751552',
   min_stock_alert INTEGER DEFAULT 5,
   auto_publish_products BOOLEAN DEFAULT false,
   enable_dark_mode BOOLEAN DEFAULT false,
@@ -22,19 +22,14 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 -- Inserir configurações padrão
-INSERT INTO settings (id, whatsapp_number, store_name)
-VALUES (1, '+5511986751552', 'Lukaya Griffe')
+INSERT INTO settings (id, store_name, whatsapp_number)
+VALUES (1, 'Lukaya Griffe', '+5511986751552')
 ON CONFLICT (id) DO NOTHING;
 
 -- Criar índice
 CREATE INDEX IF NOT EXISTS idx_settings_updated_at ON settings(updated_at);
 
 -- =====================================================
--- VERIFICAR SE A TABELA FOI CRIADA
+-- VERIFICAR
 -- =====================================================
-
 SELECT * FROM settings;
-
--- =====================================================
--- FIM DA MIGRATION
--- =====================================================
