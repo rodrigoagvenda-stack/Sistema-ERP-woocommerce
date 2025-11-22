@@ -13,6 +13,7 @@ import MarketplaceSyncLogs from './components/MarketplaceSyncLogs';
 import BannerManagement from './components/BannerManagement';
 import ProductGallery from './components/ProductGallery';
 import SettingsPage from './components/Settings';
+import TrackingPage from './components/Tracking';
 
 const SUPABASE_URL = ENV.SUPABASE_URL;
 const SUPABASE_ANON_KEY = ENV.SUPABASE_ANON_KEY;
@@ -2889,6 +2890,16 @@ export default function LukayaGriffeERP() {
             <Sliders size={20} />
             {sidebarOpen && <span>Configurações</span>}
           </button>
+          <button
+            onClick={() => {
+              setCurrentPage('tracking');
+              if (window.innerWidth < 768) setSidebarOpen(false);
+            }}
+            className={'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ' + (currentPage === 'tracking' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800')}
+          >
+            <TrendingUp size={20} />
+            {sidebarOpen && <span>Tracking</span>}
+          </button>
         </nav>
 
         {sidebarOpen && (
@@ -2944,6 +2955,9 @@ export default function LukayaGriffeERP() {
         )}
         {currentPage === 'settings' && (
           <SettingsPage />
+        )}
+        {currentPage === 'tracking' && (
+          <TrackingPage />
         )}
       </main>
 
