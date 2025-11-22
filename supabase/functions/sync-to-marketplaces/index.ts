@@ -228,11 +228,13 @@ class WooCommerceService extends MarketplaceService {
         }
       }
 
-      // Validar URL
+      // Validar e normalizar URL
       let url = credentials.store_url.trim()
       if (!url.startsWith('http')) {
         url = 'https://' + url
       }
+      // Remover trailing slash para evitar URLs com //
+      url = url.replace(/\/+$/, '')
 
       const payload = {
         name: product.name,
@@ -253,8 +255,11 @@ class WooCommerceService extends MarketplaceService {
       console.log('🔍 WooCommerce Sync - Payload:', JSON.stringify(payload).substring(0, 200) + '...')
 
       const auth = btoa(`${credentials.consumer_key}:${credentials.consumer_secret}`)
+      const endpoint = `${url}/wp-json/wc/v3/products`
 
-      const response = await fetch(`${url}/wp-json/wc/v3/products`, {
+      console.log('🔍 WooCommerce Sync - URL completa:', endpoint)
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${auth}`,
@@ -264,11 +269,24 @@ class WooCommerceService extends MarketplaceService {
       })
 
       console.log('🔍 WooCommerce Sync - Response status:', response.status)
+      console.log('🔍 WooCommerce Sync - Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())))
 
       if (!response.ok) {
-        const error = await response.text()
-        console.error('❌ WooCommerce Sync - Erro:', error)
-        return { success: false, error: `HTTP ${response.status}: ${error}` }
+        const errorText = await response.text()
+        console.error('❌ WooCommerce Sync - Erro completo:', errorText.substring(0, 500))
+
+        // Tentar parsear como JSON para pegar mensagem de erro específica do WooCommerce
+        try {
+          const errorJson = JSON.parse(errorText)
+          const errorMsg = errorJson.message || errorJson.code || 'Erro desconhecido'
+          return { success: false, error: `HTTP ${response.status}: ${errorMsg}` }
+        } catch {
+          // Se não for JSON, retornar trecho do erro
+          const shortError = errorText.includes('<!doctype') || errorText.includes('<html')
+            ? 'Página HTML retornada (404) - Verifique se a API WooCommerce está habilitada'
+            : errorText.substring(0, 200)
+          return { success: false, error: `HTTP ${response.status}: ${shortError}` }
+        }
       }
 
       const data = await response.json()
