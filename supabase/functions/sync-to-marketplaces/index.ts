@@ -290,13 +290,12 @@ class WooCommerceService extends MarketplaceService {
    • Verifique se há chaves API criadas
    • Consumer Key e Secret devem estar corretos
 
-💡 **WOOCOMMERCE 9.0+**
-   • Se você usa WooCommerce 9.0 ou superior:
-   • Instale o plugin "WooCommerce Legacy REST API"
-   • Disponível em: WordPress.org/plugins/woocommerce-legacy-rest-api/
-   • O plugin restaura a funcionalidade da API REST removida da v9.0
+4️⃣ **HTTPS/SSL**
+   • A API REST WooCommerce funciona melhor com HTTPS
+   • Verifique se seu site tem certificado SSL ativo
+   • Se usar HTTP, pode haver problemas de autenticação
 
-4️⃣ **URL DA LOJA**
+5️⃣ **URL DA LOJA**
    • URL testada: ${url}
    • Deve ser a raiz do WordPress (ex: https://seusite.com)
    • Não deve incluir /loja, /shop, etc.

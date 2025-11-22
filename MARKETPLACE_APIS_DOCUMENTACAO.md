@@ -27,21 +27,40 @@
 4. Permissions: Read/Write
 5. Generate API Key
 
-### ⚠️ WooCommerce 9.0+ - Plugin Legacy REST API
-A partir do **WooCommerce 9.0** (lançado em 2024), a Legacy REST API foi **removida do núcleo**.
+### ⚠️ Diferença: Legacy API vs API REST v3
 
-**Solução:**
-- Instalar o plugin **"WooCommerce Legacy REST API"**
-- Disponível em: https://wordpress.org/plugins/woocommerce-legacy-rest-api/
-- Mais de 400.000 instalações ativas
-- Última atualização: 23 de janeiro de 2025
-- É instalado automaticamente em upgrades do WooCommerce 8.8+
+**IMPORTANTE:** Este sistema usa a **WooCommerce REST API v3** (`/wp-json/wc/v3/`), que é a API **moderna e recomendada**.
 
-**Importante:**
-- O plugin restaura a funcionalidade completa da API REST removida
-- Chaves existentes continuam funcionando
-- WooCommerce não planeja suportar indefinidamente - recomenda migrar para API v3
-- Não compatível com High-Performance Order Storage (HPOS)
+**Não confundir com:**
+- **Legacy REST API** (`/wc-api/v1`, `/wc-api/v2`, `/wc-api/v3`) - API antiga removida no WooCommerce 9.0
+- Essa API legada precisa do plugin "WooCommerce Legacy REST API" para funcionar
+- **NÃO é necessário** instalar esse plugin para usar este sistema!
+
+**API REST v3 (que estamos usando):**
+- Endpoint: `/wp-json/wc/v3/`
+- Funciona nativamente no WooCommerce 3.0 até 10.x+ (incluindo 10.3.5)
+- Não precisa de plugin adicional
+- Compatível com HPOS (High-Performance Order Storage)
+- Recomendada pelo WooCommerce
+
+### Requisitos para API REST v3 Funcionar
+
+1. **Permalinks configurados**
+   - WordPress Admin → Configurações → Links Permanentes
+   - Escolha QUALQUER opção EXCETO "Simples"
+   - Recomendado: "Nome do post"
+
+2. **WooCommerce instalado e ativo**
+   - Versão 3.0 ou superior (testado com 10.3.5)
+
+3. **Credenciais API geradas**
+   - WooCommerce → Configurações → Avançado → REST API
+   - Consumer Key (começa com `ck_`)
+   - Consumer Secret (começa com `cs_`)
+   - Permissões: Leitura/Gravação
+
+4. **HTTPS recomendado**
+   - A API funciona melhor com SSL/HTTPS ativo
 
 ### Endpoint de Teste
 ```
