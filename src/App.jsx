@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, ShoppingBag, Menu, X, TrendingUp, DollarSign, Plus, Edit2, Trash2, Save, ArrowLeft, Eye, Upload, LogOut, Lock, Home, ChevronRight, ShoppingCart, MessageCircle, Minus, Tag, Copy, Check, Moon, Sun, Sparkles, Flame, Settings } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, Menu, X, TrendingUp, DollarSign, Plus, Edit2, Trash2, Save, ArrowLeft, Eye, Upload, LogOut, Lock, Home, ChevronRight, ShoppingCart, MessageCircle, Minus, Tag, Copy, Check, Moon, Sun, Sparkles, Flame, Settings, Sliders } from 'lucide-react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ENV } from './config/env';
@@ -12,6 +12,7 @@ import ProductMarketplaces from './components/ProductMarketplaces';
 import MarketplaceSyncLogs from './components/MarketplaceSyncLogs';
 import BannerManagement from './components/BannerManagement';
 import ProductGallery from './components/ProductGallery';
+import SettingsPage from './components/Settings';
 
 const SUPABASE_URL = ENV.SUPABASE_URL;
 const SUPABASE_ANON_KEY = ENV.SUPABASE_ANON_KEY;
@@ -237,8 +238,34 @@ const supabaseAPI = {
     return true;
   },
 
-  async incrementViews(id, currentViews) {
-    await this.updateProduct(id, { views: currentViews + 1 });
+  async incrementViews(productId) {
+    // Gerar ou recuperar session_id
+    let sessionId = localStorage.getItem('session_id');
+    if (!sessionId) {
+      sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('session_id', sessionId);
+    }
+
+    try {
+      await supabase.rpc('increment_product_view', {
+        p_product_id: productId,
+        p_session_id: sessionId,
+        p_user_agent: navigator.userAgent
+      });
+    } catch (error) {
+      console.error('Erro ao registrar visualização:', error);
+    }
+  },
+
+  async getProductViews(productId) {
+    const { data, error } = await supabase
+      .from('product_view_counts')
+      .select('total_views')
+      .eq('product_id', productId)
+      .single();
+
+    if (error) return 0;
+    return data?.total_views || 0;
   },
 
   // Banner APIs usando cliente Supabase
@@ -1210,7 +1237,7 @@ export default function LukayaGriffeERP() {
         const data = await supabaseAPI.getProductById(selectedProductId);
         setProduct(data);
         if (data) {
-          await supabaseAPI.incrementViews(selectedProductId, data.views || 0);
+          await supabaseAPI.incrementViews(selectedProductId);
         }
       } catch (error) {
         console.error('Erro:', error);
@@ -2069,7 +2096,7 @@ export default function LukayaGriffeERP() {
 
     return (
       <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Gestão de Produtos</h1>
           <button
             onClick={() => setShowForm(true)}
@@ -2356,11 +2383,11 @@ export default function LukayaGriffeERP() {
 
     return (
       <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Gestão de Categorias</h1>
           <button
             onClick={() => setShowForm(true)}
-            className="px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center gap-2 font-medium"
+            className="w-full md:w-auto min-h-[44px] px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center justify-center gap-2 font-medium transition-colors"
           >
             <Plus className="w-5 h-5" />
             Nova Categoria
@@ -2615,6 +2642,16 @@ export default function LukayaGriffeERP() {
             <Sparkles size={20} />
             {sidebarOpen && <span>Banners</span>}
           </button>
+          <button
+            onClick={() => {
+              setCurrentPage('settings');
+              if (window.innerWidth < 768) setSidebarOpen(false);
+            }}
+            className={'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ' + (currentPage === 'settings' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800')}
+          >
+            <Sliders size={20} />
+            {sidebarOpen && <span>Configurações</span>}
+          </button>
         </nav>
 
         {sidebarOpen && (
@@ -2667,6 +2704,9 @@ export default function LukayaGriffeERP() {
         )}
         {currentPage === 'banners' && (
           <BannerManagement />
+        )}
+        {currentPage === 'settings' && (
+          <SettingsPage />
         )}
       </main>
 
