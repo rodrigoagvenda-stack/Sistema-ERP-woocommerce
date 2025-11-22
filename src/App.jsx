@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, ShoppingBag, Menu, X, TrendingUp, DollarSign, Plus, Edit2, Trash2, Save, ArrowLeft, Eye, Upload, LogOut, Lock, Home, ChevronRight, ShoppingCart, MessageCircle, Minus, Tag, Copy, Check, Moon, Sun, Sparkles, Flame, Settings, Sliders } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, Menu, X, TrendingUp, DollarSign, Plus, Edit2, Trash2, Save, ArrowLeft, Eye, Upload, LogOut, Lock, Home, ChevronRight, ShoppingCart, MessageCircle, Minus, Tag, Copy, Check, Moon, Sun, Sparkles, Flame, Settings, Sliders, AlertTriangle, Loader } from 'lucide-react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ENV } from './config/env';
@@ -1535,17 +1535,116 @@ export default function LukayaGriffeERP() {
   };
 
   const Dashboard = () => {
+    const [dateRange, setDateRange] = useState('7days'); // hoje, 7days, 30days, custom
+    const [customStartDate, setCustomStartDate] = useState('');
+    const [customEndDate, setCustomEndDate] = useState('');
+    const [dashboardMetrics, setDashboardMetrics] = useState({
+      totalViews: 0,
+      uniqueSessions: 0,
+      topProducts: [],
+      viewsByDate: []
+    });
+    const [loadingMetrics, setLoadingMetrics] = useState(true);
+
+    useEffect(() => {
+      loadDashboardMetrics();
+    }, [dateRange, customStartDate, customEndDate]);
+
+    const getDateRange = () => {
+      const now = new Date();
+      let startDate, endDate;
+
+      if (dateRange === 'hoje') {
+        startDate = new Date(now.setHours(0, 0, 0, 0));
+        endDate = new Date();
+      } else if (dateRange === '7days') {
+        startDate = new Date(now.setDate(now.getDate() - 7));
+        endDate = new Date();
+      } else if (dateRange === '30days') {
+        startDate = new Date(now.setDate(now.getDate() - 30));
+        endDate = new Date();
+      } else if (dateRange === 'custom' && customStartDate && customEndDate) {
+        startDate = new Date(customStartDate);
+        endDate = new Date(customEndDate);
+      } else {
+        // Default: últimos 7 dias
+        startDate = new Date(now.setDate(now.getDate() - 7));
+        endDate = new Date();
+      }
+
+      return { startDate, endDate };
+    };
+
+    const loadDashboardMetrics = async () => {
+      setLoadingMetrics(true);
+      try {
+        const { startDate, endDate } = getDateRange();
+
+        // Buscar views do período
+        const { data: viewsData, error: viewsError } = await supabase
+          .from('product_views')
+          .select('product_id, session_id, viewed_date, viewed_at')
+          .gte('viewed_at', startDate.toISOString())
+          .lte('viewed_at', endDate.toISOString());
+
+        if (viewsError) throw viewsError;
+
+        // Calcular métricas
+        const totalViews = viewsData?.length || 0;
+        const uniqueSessions = new Set(viewsData?.map(v => v.session_id) || []).size;
+
+        // Top produtos por views
+        const productViewCounts = {};
+        viewsData?.forEach(view => {
+          productViewCounts[view.product_id] = (productViewCounts[view.product_id] || 0) + 1;
+        });
+
+        const topProductIds = Object.entries(productViewCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([id, count]) => ({ id: parseInt(id), views: count }));
+
+        // Enriquecer com dados dos produtos
+        const topProducts = topProductIds
+          .map(tp => {
+            const product = products.find(p => p.id === tp.id);
+            return product ? { ...product, period_views: tp.views } : null;
+          })
+          .filter(Boolean);
+
+        // Views por dia (últimos 7 dias)
+        const viewsByDate = {};
+        viewsData?.forEach(view => {
+          const date = new Date(view.viewed_at).toLocaleDateString('pt-BR');
+          viewsByDate[date] = (viewsByDate[date] || 0) + 1;
+        });
+
+        setDashboardMetrics({
+          totalViews,
+          uniqueSessions,
+          topProducts,
+          viewsByDate: Object.entries(viewsByDate).sort((a, b) => new Date(a[0]) - new Date(b[0]))
+        });
+      } catch (error) {
+        console.error('Erro ao carregar métricas:', error);
+        toast.error('❌ Erro ao carregar métricas');
+      } finally {
+        setLoadingMetrics(false);
+      }
+    };
+
     const totalProducts = products.length;
     const activeProducts = products.filter(p => p.status === 'active').length;
     const totalValue = products.reduce((sum, p) => sum + p.price, 0);
-    const totalViews = products.reduce((sum, p) => sum + (p.views || 0), 0);
+    const lowStockProducts = products.filter(p => (p.stock || 0) <= (p.min_stock || 5)).length;
 
-    const MetricCard = ({ title, value, icon, bgColor }) => (
-      <div className="bg-white rounded-xl shadow-md p-6">
+    const MetricCard = ({ title, value, icon, bgColor, subtitle }) => (
+      <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
         <div className="flex justify-between items-start">
           <div>
             <p className="text-sm text-gray-600 font-medium mb-1">{title}</p>
             <p className="text-3xl font-bold text-gray-800">{value}</p>
+            {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
           </div>
           <div className={bgColor + ' p-3 rounded-lg'}>{icon}</div>
         </div>
@@ -1553,43 +1652,181 @@ export default function LukayaGriffeERP() {
     );
 
     return (
-      <div className="p-6 space-y-6">
-        <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
+      <div className="p-4 md:p-6 space-y-6">
+        {/* Header com Título e Filtro de Data */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
+            <p className="text-sm text-gray-600">Visão geral do seu negócio</p>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <MetricCard title="Total de Produtos" value={totalProducts} icon={<Package className="w-8 h-8 text-yellow-500" />} bgColor="bg-yellow-50" />
-          <MetricCard title="Produtos Ativos" value={activeProducts} icon={<Eye className="w-8 h-8 text-green-500" />} bgColor="bg-green-50" />
-          <MetricCard title="Valor Total" value={'R$ ' + totalValue.toFixed(2)} icon={<DollarSign className="w-8 h-8 text-blue-500" />} bgColor="bg-blue-50" />
-          <MetricCard title="Visualizações" value={totalViews} icon={<TrendingUp className="w-8 h-8 text-purple-500" />} bgColor="bg-purple-50" />
+          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <select
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+            >
+              <option value="hoje">Hoje</option>
+              <option value="7days">Últimos 7 dias</option>
+              <option value="30days">Últimos 30 dias</option>
+              <option value="custom">Personalizado</option>
+            </select>
+
+            {dateRange === 'custom' && (
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 text-sm"
+                  placeholder="Data inicial"
+                />
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 text-sm"
+                  placeholder="Data final"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Produtos Mais Vistos</h2>
-          {products.length > 0 ? (
-            <div className="space-y-4">
-              {products.sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5).map(product => (
-                <div key={product.id} className="flex items-center gap-4 p-4 border rounded-lg">
-                  <img src={product.image_urls?.[0] || 'https://via.placeholder.com/100'} alt={product.name} className="w-16 h-16 object-cover rounded" />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800">{product.name}</h3>
-                    <p className="text-sm text-gray-600">R$ {product.price.toFixed(2)}</p>
+        {/* Cards de Métricas Principais */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <MetricCard
+            title="Total de Produtos"
+            value={totalProducts}
+            icon={<Package className="w-8 h-8 text-yellow-500" />}
+            bgColor="bg-yellow-50"
+            subtitle={`${activeProducts} ativos`}
+          />
+          <MetricCard
+            title="Visualizações"
+            value={loadingMetrics ? '...' : dashboardMetrics.totalViews}
+            icon={<Eye className="w-8 h-8 text-blue-500" />}
+            bgColor="bg-blue-50"
+            subtitle="No período selecionado"
+          />
+          <MetricCard
+            title="Sessões Únicas"
+            value={loadingMetrics ? '...' : dashboardMetrics.uniqueSessions}
+            icon={<TrendingUp className="w-8 h-8 text-green-500" />}
+            bgColor="bg-green-50"
+            subtitle="Visitantes únicos"
+          />
+          <MetricCard
+            title="Valor Total"
+            value={'R$ ' + totalValue.toFixed(2)}
+            icon={<DollarSign className="w-8 h-8 text-purple-500" />}
+            bgColor="bg-purple-50"
+            subtitle={lowStockProducts > 0 ? `${lowStockProducts} com estoque baixo` : 'Estoque OK'}
+          />
+        </div>
+
+        {/* Grid de Conteúdo */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Produtos Mais Vistos (Período) */}
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Mais Vistos no Período</h2>
+              {loadingMetrics && <Loader className="w-5 h-5 animate-spin text-yellow-500" />}
+            </div>
+
+            {loadingMetrics ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader className="w-8 h-8 animate-spin text-yellow-500" />
+              </div>
+            ) : dashboardMetrics.topProducts.length > 0 ? (
+              <div className="space-y-3">
+                {dashboardMetrics.topProducts.map((product, index) => (
+                  <div key={product.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-yellow-300 transition-colors">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                      <span className="text-sm font-bold text-yellow-600">#{index + 1}</span>
+                    </div>
+                    <img
+                      src={product.image_urls?.[0] || 'https://via.placeholder.com/60'}
+                      alt={product.name}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-800 text-sm truncate">{product.name}</h3>
+                      <p className="text-xs text-gray-600">R$ {product.price.toFixed(2)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-yellow-600">{product.period_views}</p>
+                      <p className="text-xs text-gray-500">views</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500">{product.views || 0} views</p>
-                    <span className={product.status === 'active' ? 'px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700' : 'px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700'}>
-                      {product.status === 'active' ? 'Ativo' : 'Inativo'}
-                    </span>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Eye className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-500">Nenhuma visualização no período</p>
+              </div>
+            )}
+          </div>
+
+          {/* Alertas de Estoque */}
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Alertas de Estoque</h2>
+
+            {products.filter(p => (p.stock || 0) <= (p.min_stock || 5)).length > 0 ? (
+              <div className="space-y-3">
+                {products
+                  .filter(p => (p.stock || 0) <= (p.min_stock || 5))
+                  .slice(0, 5)
+                  .map(product => (
+                    <div key={product.id} className="flex items-center gap-3 p-3 border border-red-200 bg-red-50 rounded-lg">
+                      <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                      <img
+                        src={product.image_urls?.[0] || 'https://via.placeholder.com/60'}
+                        alt={product.name}
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-800 text-sm truncate">{product.name}</h3>
+                        <p className="text-xs text-gray-600">R$ {product.price.toFixed(2)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-red-600">{product.stock || 0}</p>
+                        <p className="text-xs text-gray-500">unidades</p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Package className="w-12 h-12 text-green-300 mx-auto mb-2" />
+                <p className="text-gray-500">Todos os produtos com estoque adequado</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Gráfico de Views por Dia (Lista simples) */}
+        {!loadingMetrics && dashboardMetrics.viewsByDate.length > 0 && (
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Visualizações por Dia</h2>
+            <div className="space-y-2">
+              {dashboardMetrics.viewsByDate.map(([date, count]) => (
+                <div key={date} className="flex items-center gap-4">
+                  <span className="text-sm text-gray-600 w-24">{date}</span>
+                  <div className="flex-1 bg-gray-200 rounded-full h-6 overflow-hidden">
+                    <div
+                      className="bg-yellow-500 h-full flex items-center justify-end pr-2 rounded-full transition-all"
+                      style={{ width: `${(count / Math.max(...dashboardMetrics.viewsByDate.map(v => v[1]))) * 100}%` }}
+                    >
+                      <span className="text-xs font-bold text-white">{count}</span>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <Package className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500">Nenhum produto cadastrado ainda</p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     );
   };
