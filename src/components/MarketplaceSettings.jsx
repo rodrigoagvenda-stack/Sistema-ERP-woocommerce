@@ -1,13 +1,43 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Store, Key, Check, X, AlertCircle, Save, Eye, EyeOff, Zap, Loader } from 'lucide-react'
+import { Store, Key, Check, X, AlertCircle, Save, Eye, EyeOff, Zap, Loader, ShoppingCart, ShoppingBag, Video, Package, ExternalLink } from 'lucide-react'
 
 const MARKETPLACES = [
-  { id: 'mercado_livre', name: 'Mercado Livre', color: 'yellow', icon: '🛒' },
-  { id: 'shopee', name: 'Shopee', color: 'orange', icon: '🛍️' },
-  { id: 'tiktok', name: 'TikTok Shop', color: 'pink', icon: '🎵' },
-  { id: 'amazon', name: 'Amazon', color: 'blue', icon: '📦' },
-  { id: 'woocommerce', name: 'WooCommerce', color: 'purple', icon: '🌐' }
+  {
+    id: 'mercado_livre',
+    name: 'Mercado Livre',
+    color: 'yellow',
+    Icon: ShoppingCart,
+    docsUrl: 'https://developers.mercadolivre.com.br/pt_br/api-docs-pt-br'
+  },
+  {
+    id: 'shopee',
+    name: 'Shopee',
+    color: 'orange',
+    Icon: ShoppingBag,
+    docsUrl: 'https://open.shopee.com/documents'
+  },
+  {
+    id: 'tiktok',
+    name: 'TikTok Shop',
+    color: 'pink',
+    Icon: Video,
+    docsUrl: 'https://partner.tiktokshop.com/doc'
+  },
+  {
+    id: 'amazon',
+    name: 'Amazon',
+    color: 'blue',
+    Icon: Package,
+    docsUrl: 'https://developer-docs.amazon.com/sp-api/'
+  },
+  {
+    id: 'woocommerce',
+    name: 'WooCommerce',
+    color: 'purple',
+    Icon: Store,
+    docsUrl: 'https://woocommerce.github.io/woocommerce-rest-api-docs/'
+  }
 ]
 
 export default function MarketplaceSettings({ darkMode }) {
@@ -122,9 +152,9 @@ export default function MarketplaceSettings({ darkMode }) {
       }))
 
       if (data.success) {
-        setMessage({ type: 'success', text: `✅ ${data.message}` })
+        setMessage({ type: 'success', text: data.message })
       } else {
-        setMessage({ type: 'error', text: `❌ ${data.error}` })
+        setMessage({ type: 'error', text: data.error })
       }
 
       setTimeout(() => setMessage(null), 5000)
@@ -192,16 +222,49 @@ export default function MarketplaceSettings({ darkMode }) {
             className={`${darkMode ? 'bg-[#202020] border-gray-800' : 'bg-white border-gray-200'} rounded-xl border-2 p-6 shadow-sm`}
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
               <div className="flex items-center gap-3">
-                <span className="text-3xl">{marketplace.icon}</span>
+                <div className={`p-3 rounded-lg ${
+                  marketplace.color === 'yellow' ? 'bg-yellow-100' :
+                  marketplace.color === 'orange' ? 'bg-orange-100' :
+                  marketplace.color === 'pink' ? 'bg-pink-100' :
+                  marketplace.color === 'blue' ? 'bg-blue-100' :
+                  'bg-purple-100'
+                }`}>
+                  <marketplace.Icon className={`w-6 h-6 ${
+                    marketplace.color === 'yellow' ? 'text-yellow-600' :
+                    marketplace.color === 'orange' ? 'text-orange-600' :
+                    marketplace.color === 'pink' ? 'text-pink-600' :
+                    marketplace.color === 'blue' ? 'text-blue-600' :
+                    'text-purple-600'
+                  }`} />
+                </div>
                 <div>
                   <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     {marketplace.name}
                   </h3>
-                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {isActive ? '✅ Ativo' : '⚪ Inativo'}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {isActive ? (
+                        <span className="flex items-center gap-1">
+                          <Check className="w-4 h-4 text-green-500" /> Ativo
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">Inativo</span>
+                      )}
+                    </p>
+                    <span className={`text-sm ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>•</span>
+                    <a
+                      href={marketplace.docsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`text-sm flex items-center gap-1 hover:underline ${
+                        darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
+                      }`}
+                    >
+                      Documentação <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
                 </div>
               </div>
 
