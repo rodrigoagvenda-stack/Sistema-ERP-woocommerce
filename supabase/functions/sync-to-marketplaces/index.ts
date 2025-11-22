@@ -240,6 +240,17 @@ class WooCommerceService extends MarketplaceService {
       // Remover trailing slash para evitar URLs com //
       url = url.replace(/\/+$/, '')
 
+      // Remover caminhos comuns de loja que não devem fazer parte da URL base do WordPress
+      // A API REST do WordPress está na raiz, não em subpastas como /loja, /shop, etc.
+      const commonShopPaths = ['/loja', '/shop', '/store', '/tienda', '/boutique']
+      for (const path of commonShopPaths) {
+        if (url.endsWith(path)) {
+          console.log(`⚠️ WooCommerce Sync - Removendo caminho "${path}" da URL da loja`)
+          url = url.slice(0, -path.length)
+          break
+        }
+      }
+
       // Testar se a API WooCommerce está acessível
       console.log('🔍 WooCommerce Sync - Testando acesso à API...')
       const auth = btoa(`${credentials.consumer_key}:${credentials.consumer_secret}`)
@@ -259,8 +270,12 @@ class WooCommerceService extends MarketplaceService {
         if (errorText.includes('<!doctype') || errorText.includes('<html')) {
           return {
             success: false,
-            error: 'API REST do WooCommerce não está acessível. Verifique: 1) WooCommerce instalado e ativo, 2) Permalinks configurados (não podem ser "simples"), 3) API REST habilitada em WooCommerce → Configurações → Avançado → API REST'
+            error: `API REST do WooCommerce não está acessível (testando: ${testEndpoint}). Verifique: 1) A URL da loja está correta (deve ser a raiz do WordPress, ex: https://seusite.com), 2) WooCommerce instalado e ativo, 3) Permalinks configurados (não podem ser "simples"), 4) API REST habilitada em WooCommerce → Configurações → Avançado`
           }
+        }
+        return {
+          success: false,
+          error: `Erro ao acessar API: HTTP ${testResponse.status} - ${errorText.substring(0, 100)}`
         }
       }
 
