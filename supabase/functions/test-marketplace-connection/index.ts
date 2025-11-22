@@ -408,27 +408,142 @@ async function testWooCommerce(credentials: any) {
 
     const auth = btoa(`${credentials.consumer_key}:${credentials.consumer_secret}`)
 
-    // Testar autenticação buscando informações do sistema
+    // ETAPA 1: Verificar se WordPress REST API está funcionando
+    console.log('🔍 WooCommerce - Testando WordPress REST API:', `${url}/wp-json/`)
+    const wpRestResponse = await fetch(`${url}/wp-json/`, {
+      method: 'GET'
+    })
+
+    console.log('🔍 WooCommerce - WordPress REST API status:', wpRestResponse.status)
+
+    if (!wpRestResponse.ok) {
+      const errorText = await wpRestResponse.text()
+      console.error('❌ WooCommerce - WordPress REST API não acessível:', errorText.substring(0, 200))
+
+      // Verificar se é um problema de permalinks
+      if (wpRestResponse.status === 404 || errorText.includes('<!doctype') || errorText.includes('<html')) {
+        return {
+          success: false,
+          error: `❌ API REST do WooCommerce não está acessível.
+
+📋 INSTRUÇÕES PARA CORRIGIR:
+
+1️⃣ **PERMALINKS (Causa mais comum)**
+   • Acesse: WordPress Admin → Configurações → Links Permanentes
+   • Escolha QUALQUER opção EXCETO "Simples"
+   • Recomendado: "Nome do post" ou "Dia e nome"
+   • Clique em "Salvar alterações"
+
+2️⃣ **VERIFICAR WOOCOMMERCE**
+   • Acesse: WordPress Admin → Plugins
+   • Confirme que WooCommerce está instalado e ativo
+
+3️⃣ **API REST DO WOOCOMMERCE**
+   • Acesse: WooCommerce → Configurações → Avançado → REST API
+   • Verifique se há chaves API criadas
+   • Consumer Key e Secret devem estar corretos
+
+💡 **WOOCOMMERCE 9.0+**
+   • Se você usa WooCommerce 9.0 ou superior:
+   • Instale o plugin "WooCommerce Legacy REST API"
+   • Disponível em: WordPress.org/plugins/woocommerce-legacy-rest-api/
+   • O plugin restaura a funcionalidade da API REST removida da v9.0
+
+4️⃣ **URL DA LOJA**
+   • URL testada: ${url}
+   • Deve ser a raiz do WordPress (ex: https://seusite.com)
+   • Não deve incluir /loja, /shop, etc.
+
+🔍 Endpoint testado: ${url}/wp-json/
+📊 Status HTTP: ${wpRestResponse.status}
+
+Após fazer as correções, teste novamente a conexão.`,
+          debug: {
+            url: url,
+            endpoint: `${url}/wp-json/`,
+            status: wpRestResponse.status,
+            error: errorText.substring(0, 200)
+          }
+        }
+      }
+
+      return {
+        success: false,
+        error: `Erro ao acessar WordPress REST API: HTTP ${wpRestResponse.status}. Verifique se WordPress está funcionando corretamente.`,
+        debug: {
+          status: wpRestResponse.status,
+          error: errorText.substring(0, 100)
+        }
+      }
+    }
+
+    console.log('✅ WooCommerce - WordPress REST API OK!')
+
+    // ETAPA 2: Testar autenticação na API WooCommerce
+    console.log('🔍 WooCommerce - Testando autenticação WooCommerce API...')
     const response = await fetch(`${url}/wp-json/wc/v3/system_status`, {
       headers: {
         'Authorization': `Basic ${auth}`
       }
     })
 
+    console.log('🔍 WooCommerce - WooCommerce API status:', response.status)
+
     if (!response.ok) {
       const error = await response.text()
-      return { success: false, error: `HTTP ${response.status}: ${error}` }
+      console.error('❌ WooCommerce - Erro na autenticação:', error.substring(0, 200))
+
+      // Verificar se é problema de autenticação
+      if (response.status === 401 || response.status === 403) {
+        return {
+          success: false,
+          error: `❌ Erro de autenticação WooCommerce (HTTP ${response.status}).
+
+🔑 VERIFIQUE AS CREDENCIAIS:
+
+1️⃣ **GERAR NOVAS CHAVES API**
+   • Acesse: WooCommerce → Configurações → Avançado → REST API
+   • Clique em "Adicionar chave"
+   • Descrição: "Lucaya Griffe Integration"
+   • Usuário: Selecione um administrador
+   • Permissões: Leitura/Gravação
+   • Clique em "Gerar chave API"
+   • Copie Consumer Key e Consumer Secret
+
+2️⃣ **ATUALIZAR CREDENCIAIS**
+   • Consumer Key deve começar com "ck_"
+   • Consumer Secret deve começar com "cs_"
+   • Cole as novas credenciais no sistema
+
+🔍 Endpoint testado: ${url}/wp-json/wc/v3/system_status`,
+          debug: {
+            status: response.status,
+            endpoint: `${url}/wp-json/wc/v3/system_status`
+          }
+        }
+      }
+
+      return {
+        success: false,
+        error: `HTTP ${response.status}: ${error.substring(0, 100)}`,
+        debug: {
+          status: response.status,
+          error: error.substring(0, 200)
+        }
+      }
     }
 
     const data = await response.json()
+    console.log('✅ WooCommerce - Conectado com sucesso!')
 
     return {
       success: true,
-      message: `Conectado à loja: ${data.settings?.title?.value || 'WooCommerce'}`,
+      message: `✅ Conectado à loja: ${data.settings?.title?.value || 'WooCommerce'}`,
       userData: {
         storeUrl: url,
         wcVersion: data.environment?.version || 'desconhecida',
-        wpVersion: data.environment?.wp_version || 'desconhecida'
+        wpVersion: data.environment?.wp_version || 'desconhecida',
+        restApiEnabled: true
       }
     }
 
