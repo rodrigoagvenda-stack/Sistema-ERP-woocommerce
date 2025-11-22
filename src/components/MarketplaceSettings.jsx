@@ -381,27 +381,32 @@ export default function MarketplaceSettings({ darkMode }) {
 
             {/* Resultado do Teste */}
             {testResults[marketplace.id] && (
-              <div className={`p-4 rounded-lg flex items-start gap-3 mb-4 border-2 ${
+              <div className={`p-3 sm:p-4 rounded-lg flex items-start gap-2 sm:gap-3 mb-4 border-2 ${
                 testResults[marketplace.id].success
                   ? 'bg-green-50 text-green-700 border-green-200'
                   : 'bg-red-50 text-red-700 border-red-200'
               }`}>
                 {testResults[marketplace.id].success ? (
-                  <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <Check className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 mt-0.5" />
                 ) : (
-                  <X className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 mt-0.5" />
                 )}
-                <div className="flex-1">
-                  <p className="text-sm font-medium">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium">
                     {testResults[marketplace.id].success ? 'Conexão bem-sucedida!' : 'Erro na conexão'}
                   </p>
-                  <p className="text-xs mt-1 opacity-90">
+                  <p className="text-xs mt-1 opacity-90 break-words">
                     {testResults[marketplace.id].message || testResults[marketplace.id].error}
                   </p>
                   {testResults[marketplace.id].userData && (
-                    <pre className="text-xs mt-2 opacity-75 bg-white/50 p-2 rounded overflow-x-auto">
-                      {JSON.stringify(testResults[marketplace.id].userData, null, 2)}
-                    </pre>
+                    <div className="mt-2 space-y-1">
+                      {Object.entries(testResults[marketplace.id].userData).map(([key, value]) => (
+                        <div key={key} className="text-xs opacity-75 bg-white/50 px-2 py-1 rounded break-words">
+                          <span className="font-semibold">{key}:</span>{' '}
+                          <span className="break-all">{value}</span>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
