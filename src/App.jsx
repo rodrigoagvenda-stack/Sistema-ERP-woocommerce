@@ -2316,6 +2316,16 @@ export default function LukayaGriffeERP() {
               </div>
             </div>
 
+            {/* Sincronização com Marketplaces - Só aparece ao editar produto existente */}
+            {editingProduct && editingProduct.id && (
+              <div className="pt-6 border-t">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">
+                  Publicar em Marketplaces
+                </h3>
+                <ProductMarketplaces productId={editingProduct.id} darkMode={false} />
+              </div>
+            )}
+
             <div className="flex gap-4 justify-end pt-6 border-t">
               <button
                 onClick={() => setShowForm(false)}

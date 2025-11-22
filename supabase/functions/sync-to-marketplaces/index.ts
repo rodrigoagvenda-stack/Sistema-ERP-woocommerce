@@ -214,8 +214,26 @@ class AmazonService extends MarketplaceService {
 
 // Implementação WooCommerce
 class WooCommerceService extends MarketplaceService {
-  async sync(product: Product, credentials: MarketplaceCredentials) {
+  async sync(product: Product, credentials: any) {
     try {
+      console.log('🔍 WooCommerce Sync - Produto:', product.id, product.name)
+      console.log('🔍 WooCommerce Sync - store_url:', credentials.store_url)
+      console.log('🔍 WooCommerce Sync - consumer_key:', credentials.consumer_key ? 'presente' : 'ausente')
+      console.log('🔍 WooCommerce Sync - consumer_secret:', credentials.consumer_secret ? 'presente' : 'ausente')
+
+      if (!credentials.store_url || !credentials.consumer_key || !credentials.consumer_secret) {
+        return {
+          success: false,
+          error: 'URL da loja, Consumer Key e Consumer Secret são obrigatórios'
+        }
+      }
+
+      // Validar URL
+      let url = credentials.store_url.trim()
+      if (!url.startsWith('http')) {
+        url = 'https://' + url
+      }
+
       const payload = {
         name: product.name,
         type: 'simple',
@@ -232,9 +250,11 @@ class WooCommerceService extends MarketplaceService {
         }
       }
 
-      const auth = btoa(`${credentials.client_id}:${credentials.client_secret}`)
+      console.log('🔍 WooCommerce Sync - Payload:', JSON.stringify(payload).substring(0, 200) + '...')
 
-      const response = await fetch(`${credentials.store_url}/wp-json/wc/v3/products`, {
+      const auth = btoa(`${credentials.consumer_key}:${credentials.consumer_secret}`)
+
+      const response = await fetch(`${url}/wp-json/wc/v3/products`, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${auth}`,
@@ -243,15 +263,21 @@ class WooCommerceService extends MarketplaceService {
         body: JSON.stringify(payload)
       })
 
+      console.log('🔍 WooCommerce Sync - Response status:', response.status)
+
       if (!response.ok) {
         const error = await response.text()
-        return { success: false, error }
+        console.error('❌ WooCommerce Sync - Erro:', error)
+        return { success: false, error: `HTTP ${response.status}: ${error}` }
       }
 
       const data = await response.json()
+      console.log('✅ WooCommerce Sync - Produto criado! ID:', data.id)
+
       return { success: true, marketplaceId: data.id?.toString() }
 
     } catch (error) {
+      console.error('❌ WooCommerce Sync - Exception:', error)
       return { success: false, error: error.message }
     }
   }
