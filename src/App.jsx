@@ -2069,7 +2069,7 @@ export default function LukayaGriffeERP() {
 
     return (
       <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Gestão de Produtos</h1>
           <button
             onClick={() => setShowForm(true)}
@@ -2356,11 +2356,11 @@ export default function LukayaGriffeERP() {
 
     return (
       <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Gestão de Categorias</h1>
           <button
             onClick={() => setShowForm(true)}
-            className="px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center gap-2 font-medium"
+            className="w-full md:w-auto min-h-[44px] px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 flex items-center justify-center gap-2 font-medium transition-colors"
           >
             <Plus className="w-5 h-5" />
             Nova Categoria
