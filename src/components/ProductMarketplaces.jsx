@@ -15,6 +15,7 @@ export default function ProductMarketplaces({ productId, darkMode }) {
   const [activeMarketplaces, setActiveMarketplaces] = useState([])
   const [syncing, setSyncing] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [errorNotification, setErrorNotification] = useState(null)
 
   useEffect(() => {
     loadMarketplaceStatus()
@@ -108,6 +109,9 @@ export default function ProductMarketplaces({ productId, darkMode }) {
 
     } catch (error) {
       console.error('Erro ao sincronizar:', error)
+
+      const marketplaceName = MARKETPLACES.find(m => m.id === marketplace)?.name || marketplace
+
       // Atualizar estado com o erro para mostrar na UI
       setMarketplaceStatus(prev => ({
         ...prev,
@@ -117,6 +121,15 @@ export default function ProductMarketplaces({ productId, darkMode }) {
           lastError: error.message
         }
       }))
+
+      // Mostrar notificação de erro visível ao usuário
+      setErrorNotification({
+        marketplace: marketplaceName,
+        message: error.message
+      })
+
+      // Auto-remover notificação após 10 segundos
+      setTimeout(() => setErrorNotification(null), 10000)
     } finally {
       setSyncing(null)
       loadMarketplaceStatus()
@@ -177,11 +190,11 @@ export default function ProductMarketplaces({ productId, darkMode }) {
 
     if (status.syncStatus === 'error') {
       return (
-        <span className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${
-          darkMode ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-700'
+        <span className={`text-xs px-2 py-1 rounded flex items-center gap-1 font-bold border-2 ${
+          darkMode ? 'bg-red-900/30 border-red-500 text-red-400' : 'bg-red-100 border-red-500 text-red-700'
         }`} title={status.lastError}>
           <X className="w-3 h-3" />
-          Erro
+          Erro na sincronização
         </span>
       )
     }
@@ -241,6 +254,35 @@ export default function ProductMarketplaces({ productId, darkMode }) {
           </button>
         )}
       </div>
+
+      {/* Notificação de erro visível */}
+      {errorNotification && (
+        <div className={`p-4 rounded-lg border-2 animate-pulse ${
+          darkMode ? 'bg-red-900/30 border-red-500 text-red-300' : 'bg-red-50 border-red-500 text-red-900'
+        }`}>
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-6 h-6 flex-shrink-0 mt-1" />
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <h5 className="font-bold text-lg mb-2">
+                  ❌ Erro ao sincronizar com {errorNotification.marketplace}
+                </h5>
+                <button
+                  onClick={() => setErrorNotification(null)}
+                  className={`text-xl ${darkMode ? 'hover:text-red-200' : 'hover:text-red-700'}`}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className={`p-3 rounded text-sm font-mono whitespace-pre-wrap ${
+                darkMode ? 'bg-black/40' : 'bg-white/60'
+              }`}>
+                {errorNotification.message}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {MARKETPLACES.filter(m => activeMarketplaces.includes(m.id)).map(marketplace => {
         const status = marketplaceStatus[marketplace.id]
@@ -322,10 +364,16 @@ export default function ProductMarketplaces({ productId, darkMode }) {
             </div>
 
             {status?.lastError && (
-              <div className={`mt-3 p-3 rounded text-xs ${
-                darkMode ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-700'
+              <div className={`mt-3 p-3 rounded-lg border-2 ${
+                darkMode ? 'bg-red-900/20 border-red-500/50 text-red-300' : 'bg-red-50 border-red-300 text-red-800'
               }`}>
-                <pre className="whitespace-pre-wrap font-mono text-xs">{status.lastError}</pre>
+                <div className="flex items-start gap-2 mb-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span className="font-bold text-sm">Detalhes do erro:</span>
+                </div>
+                <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed overflow-x-auto">
+                  {status.lastError}
+                </pre>
               </div>
             )}
           </div>
