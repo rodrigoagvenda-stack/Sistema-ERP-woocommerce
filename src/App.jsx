@@ -1531,11 +1531,9 @@ export default function LukayaGriffeERP() {
       description: '',
       price: 0,
       category_id: categories.length > 0 ? categories[0].id : 1,
-      image_urls: '',
-      views: 0,
       status: 'active',
-      available_sizes: []
     });
+    const [imageFile, setImageFile] = useState(null); // NOVO: guardar File ao invés de base64
     const [imagePreview, setImagePreview] = useState('');
     const [saving, setSaving] = useState(false);
     const [priceInput, setPriceInput] = useState('R$ 0,00');
@@ -1543,10 +1541,17 @@ export default function LukayaGriffeERP() {
 
     const handleEdit = (product) => {
       setEditingProduct(product);
-      setFormData(product);
-      setImagePreview(product.image_urls);
+      setFormData({
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        category_id: product.category_id,
+        status: product.status
+      });
+      setImagePreview(product.image_urls || product.image_url); // Suporta ambos
       setPriceInput(formatCurrency(String(product.price * 100)));
       setSelectedSizes(product.available_sizes || []);
+      setImageFile(null); // Resetar file ao editar
       setShowForm(true);
     };
 
@@ -1567,16 +1572,17 @@ export default function LukayaGriffeERP() {
         ? selectedSizes.filter(s => s !== size)
         : [...selectedSizes, size];
       setSelectedSizes(newSizes);
-      setFormData(Object.assign({}, formData, { available_sizes: newSizes }));
     };
 
     const handleDelete = async (id) => {
       if (!confirm('Tem certeza que deseja deletar este produto?')) return;
       try {
         await supabaseAPI.deleteProduct(id);
+        toast.success('✅ Produto deletado com sucesso!');
         await loadAllProducts();
       } catch (error) {
-        alert('Erro ao deletar produto');
+        console.error('❌ Erro ao deletar:', error);
+        toast.error('❌ Erro ao deletar produto');
       }
     };
 
@@ -1584,38 +1590,103 @@ export default function LukayaGriffeERP() {
       try {
         const newStatus = product.status === 'active' ? 'inactive' : 'active';
         await supabaseAPI.updateProduct(product.id, { status: newStatus });
+        toast.success(`✅ Produto ${newStatus === 'active' ? 'ativado' : 'desativado'}!`);
         await loadAllProducts();
       } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        toast.error('❌ Erro ao alterar status');
       }
     };
 
     const handleSubmit = async (e) => {
       e.preventDefault();
-      console.log('🔄 Iniciando salvamento de produto...');
-      console.log('📦 Dados do produto:', formData);
+      console.group('💾 Salvando Produto');
+      console.log('📦 FormData:', formData);
+      console.log('🖼️ ImageFile:', imageFile);
 
       // Validar campos obrigatórios
       if (!formData.name || !formData.name.trim()) {
         toast.warning('⚠️ Nome do produto é obrigatório');
+        console.groupEnd();
         return;
       }
 
       if (!formData.price || formData.price <= 0) {
         toast.warning('⚠️ Preço do produto é obrigatório e deve ser maior que zero');
+        console.groupEnd();
         return;
       }
 
       setSaving(true);
       try {
+        let imageUrl = editingProduct?.image_url || editingProduct?.image_urls || null;
+
+        // 1. FAZER UPLOAD DA IMAGEM PRIMEIRO (se houver arquivo novo)
+        if (imageFile && imageFile instanceof File) {
+          console.log('📸 Fazendo upload da imagem...');
+
+          const fileExt = imageFile.name.split('.').pop();
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `products/${fileName}`;
+
+          // Upload para storage
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('product-images')
+            .upload(filePath, imageFile);
+
+          if (uploadError) {
+            console.error('❌ Erro no upload:', uploadError);
+
+            // Se o erro for que o bucket não existe, avisar
+            if (uploadError.message.includes('not found')) {
+              toast.error('❌ Bucket "product-images" não existe! Crie no Supabase Storage.');
+            } else {
+              toast.error('❌ Erro ao fazer upload da imagem: ' + uploadError.message);
+            }
+            console.groupEnd();
+            setSaving(false);
+            return;
+          }
+
+          // Pegar URL pública
+          const { data: urlData } = supabase.storage
+            .from('product-images')
+            .getPublicUrl(filePath);
+
+          imageUrl = urlData.publicUrl;
+          console.log('✅ Imagem enviada:', imageUrl);
+        }
+
+        // 2. PREPARAR DADOS DO PRODUTO (apenas campos que existem na tabela)
+        const productData = {
+          name: formData.name.trim(),
+          description: formData.description?.trim() || '',
+          price: parseFloat(formData.price), // GARANTIR que é número
+          category_id: formData.category_id || null,
+          image_urls: imageUrl, // Manter compatibilidade com campo atual
+          status: formData.status || 'active',
+          available_sizes: selectedSizes.length > 0 ? selectedSizes : null,
+        };
+
+        // Remover campos null/undefined
+        Object.keys(productData).forEach(key => {
+          if (productData[key] === null || productData[key] === undefined || productData[key] === '') {
+            delete productData[key];
+          }
+        });
+
+        console.log('📤 Dados a enviar:', productData);
+        console.log('📏 Tamanho:', JSON.stringify(productData).length, 'bytes');
+
+        // 3. CRIAR ou ATUALIZAR
         if (editingProduct) {
-          console.log('✏️ Editando produto:', editingProduct.id);
-          const result = await supabaseAPI.updateProduct(editingProduct.id, formData);
+          console.log('✏️ Atualizando produto:', editingProduct.id);
+          const result = await supabaseAPI.updateProduct(editingProduct.id, productData);
           console.log('✅ Resultado:', result);
           toast.success('✅ Produto atualizado com sucesso!');
         } else {
           console.log('➕ Criando novo produto');
-          const result = await supabaseAPI.createProduct(formData);
+          const result = await supabaseAPI.createProduct(productData);
           console.log('✅ Resultado:', result);
 
           if (result && result[0]) {
@@ -1625,6 +1696,7 @@ export default function LukayaGriffeERP() {
           }
         }
 
+        // Limpar form
         await loadAllProducts();
         setShowForm(false);
         setEditingProduct(null);
@@ -1633,17 +1705,21 @@ export default function LukayaGriffeERP() {
           description: '',
           price: 0,
           category_id: categories.length > 0 ? categories[0].id : 1,
-          image_urls: '',
-          views: 0,
           status: 'active',
-          available_sizes: []
         });
         setPriceInput('R$ 0,00');
         setSelectedSizes([]);
         setImagePreview('');
+        setImageFile(null);
+
+        console.log('✅ Produto salvo e form resetado');
+        console.groupEnd();
+
       } catch (error) {
         console.error('❌ Erro ao salvar produto:', error);
+        console.error('📋 Detalhes:', error.message, error.details, error.hint);
         toast.error('❌ Erro ao salvar produto: ' + (error.message || 'Erro desconhecido'));
+        console.groupEnd();
       } finally {
         setSaving(false);
       }
@@ -1652,13 +1728,30 @@ export default function LukayaGriffeERP() {
     const handleImageUpload = (e) => {
       if (e.target.files && e.target.files.length > 0) {
         const file = e.target.files[0];
+
+        // Validar tipo
+        if (!file.type.startsWith('image/')) {
+          toast.error('❌ Por favor, selecione uma imagem válida');
+          return;
+        }
+
+        // Validar tamanho (máx 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error('❌ Imagem deve ter no máximo 5MB');
+          return;
+        }
+
+        // Guardar FILE (não base64!)
+        setImageFile(file);
+
+        // Criar preview para mostrar na tela
         const reader = new FileReader();
         reader.onloadend = () => {
-          const result = reader.result;
-          setImagePreview(result);
-          setFormData(Object.assign({}, formData, { image_urls: result }));
+          setImagePreview(reader.result);
         };
         reader.readAsDataURL(file);
+
+        console.log('📸 Imagem selecionada:', file.name, '(', (file.size / 1024).toFixed(2), 'KB)');
       }
     };
 
