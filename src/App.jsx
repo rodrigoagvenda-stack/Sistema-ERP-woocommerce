@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, ShoppingBag, Menu, X, TrendingUp, DollarSign, Plus, Edit2, Trash2, Save, ArrowLeft, Eye, Upload, LogOut, Lock, Home, ChevronRight, ShoppingCart, MessageCircle, Minus, Tag, Copy, Check, Moon, Sun, Sparkles, Flame, Settings } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, Menu, X, TrendingUp, DollarSign, Plus, Edit2, Trash2, Save, ArrowLeft, Eye, Upload, LogOut, Lock, Home, ChevronRight, ShoppingCart, MessageCircle, Minus, Tag, Copy, Check, Moon, Sun, Sparkles, Flame, Settings, Sliders } from 'lucide-react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ENV } from './config/env';
@@ -12,6 +12,7 @@ import ProductMarketplaces from './components/ProductMarketplaces';
 import MarketplaceSyncLogs from './components/MarketplaceSyncLogs';
 import BannerManagement from './components/BannerManagement';
 import ProductGallery from './components/ProductGallery';
+import SettingsPage from './components/Settings';
 
 const SUPABASE_URL = ENV.SUPABASE_URL;
 const SUPABASE_ANON_KEY = ENV.SUPABASE_ANON_KEY;
@@ -2615,6 +2616,16 @@ export default function LukayaGriffeERP() {
             <Sparkles size={20} />
             {sidebarOpen && <span>Banners</span>}
           </button>
+          <button
+            onClick={() => {
+              setCurrentPage('settings');
+              if (window.innerWidth < 768) setSidebarOpen(false);
+            }}
+            className={'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ' + (currentPage === 'settings' ? 'bg-yellow-500 text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800')}
+          >
+            <Sliders size={20} />
+            {sidebarOpen && <span>Configurações</span>}
+          </button>
         </nav>
 
         {sidebarOpen && (
@@ -2667,6 +2678,9 @@ export default function LukayaGriffeERP() {
         )}
         {currentPage === 'banners' && (
           <BannerManagement />
+        )}
+        {currentPage === 'settings' && (
+          <SettingsPage />
         )}
       </main>
 
