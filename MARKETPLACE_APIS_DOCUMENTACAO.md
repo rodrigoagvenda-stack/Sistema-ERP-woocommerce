@@ -27,6 +27,22 @@
 4. Permissions: Read/Write
 5. Generate API Key
 
+### ⚠️ WooCommerce 9.0+ - Plugin Legacy REST API
+A partir do **WooCommerce 9.0** (lançado em 2024), a Legacy REST API foi **removida do núcleo**.
+
+**Solução:**
+- Instalar o plugin **"WooCommerce Legacy REST API"**
+- Disponível em: https://wordpress.org/plugins/woocommerce-legacy-rest-api/
+- Mais de 400.000 instalações ativas
+- Última atualização: 23 de janeiro de 2025
+- É instalado automaticamente em upgrades do WooCommerce 8.8+
+
+**Importante:**
+- O plugin restaura a funcionalidade completa da API REST removida
+- Chaves existentes continuam funcionando
+- WooCommerce não planeja suportar indefinidamente - recomenda migrar para API v3
+- Não compatível com High-Performance Order Storage (HPOS)
+
 ### Endpoint de Teste
 ```
 GET /wp-json/wc/v3/system_status
@@ -43,7 +59,7 @@ fetch(`${store_url}/wp-json/wc/v3/system_status`, {
 })
 ```
 
-✅ **Status:** Implementação atual está correta!
+✅ **Status:** Implementação atual está correta! Usa API REST v3 (versão atual e suportada)
 
 ---
 
