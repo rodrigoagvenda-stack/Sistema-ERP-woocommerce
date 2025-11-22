@@ -59,7 +59,14 @@ const MARKETPLACES = [
     Icon: Store,
     docsUrl: 'https://woocommerce.github.io/woocommerce-rest-api-docs/',
     fields: [
-      { key: 'store_url', label: 'URL da Loja', type: 'url', required: true },
+      {
+        key: 'store_url',
+        label: 'URL da Loja',
+        type: 'url',
+        required: true,
+        description: 'Insira a URL raiz do seu WordPress (ex: https://seusite.com) - NÃO inclua caminhos como /loja ou /shop',
+        placeholder: 'https://seusite.com'
+      },
       { key: 'consumer_key', label: 'Consumer Key', type: 'text', required: true },
       { key: 'consumer_secret', label: 'Consumer Secret', type: 'password', required: true }
     ]
@@ -318,7 +325,7 @@ export default function MarketplaceSettings({ darkMode }) {
                       type={field.type === 'password' && !showSecret ? 'password' : 'text'}
                       value={cred[field.key] || ''}
                       onChange={(e) => updateCredential(marketplace.id, field.key, e.target.value)}
-                      placeholder={`Insira o ${field.label}`}
+                      placeholder={field.placeholder || `Insira o ${field.label}`}
                       className="w-full px-4 py-2.5 pr-12 rounded-lg border-2 border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 transition-colors"
                     />
                     {field.type === 'password' && (
@@ -331,6 +338,12 @@ export default function MarketplaceSettings({ darkMode }) {
                       </button>
                     )}
                   </div>
+                  {field.description && (
+                    <p className="mt-1.5 text-sm text-gray-600 flex items-start gap-1">
+                      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      {field.description}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
