@@ -213,7 +213,17 @@ async function testWooCommerce(credentials: any) {
   }
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
     const { marketplace, credentials }: TestConnectionRequest = await req.json()
 
@@ -223,7 +233,7 @@ serve(async (req) => {
         error: 'Marketplace e credenciais são obrigatórios'
       }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -250,13 +260,13 @@ serve(async (req) => {
           error: 'Marketplace não suportado'
         }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
     }
 
     return new Response(JSON.stringify(result), {
       status: result.success ? 200 : 400,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (error) {
@@ -265,7 +275,7 @@ serve(async (req) => {
       error: error.message
     }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 })
