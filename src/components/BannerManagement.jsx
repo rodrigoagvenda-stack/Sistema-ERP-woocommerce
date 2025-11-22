@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../lib/supabase';
 import { toast } from 'react-toastify';
 import { Upload, Image as ImageIcon, X, Eye, EyeOff, Plus, Edit2, Trash2, Save, Monitor, Tablet, Smartphone } from 'lucide-react';
 

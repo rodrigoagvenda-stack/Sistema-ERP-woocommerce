@@ -15,146 +15,272 @@ import BannerManagement from './components/BannerManagement';
 const SUPABASE_URL = ENV.SUPABASE_URL;
 const SUPABASE_ANON_KEY = ENV.SUPABASE_ANON_KEY;
 
+// API usando cliente Supabase nativo (mais confiável que fetch)
 const supabaseAPI = {
-  headers: {
-    'apikey': SUPABASE_ANON_KEY,
-    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-    'Content-Type': 'application/json',
-    'Prefer': 'return=representation'
-  },
-
   async getProducts() {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/products?order=created_at.desc&status=eq.active', {
-      headers: this.headers
-    });
-    return response.json();
+    console.group('📦 GET Products (Active)');
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Retornados:', data?.length || 0, 'produtos');
+    console.groupEnd();
+    return data || [];
   },
 
   async getProductById(id) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/products?id=eq.' + id, {
-      headers: this.headers
-    });
-    const data = await response.json();
-    return data[0];
+    console.group('📦 GET Product by ID:', id);
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Produto encontrado:', data?.name);
+    console.groupEnd();
+    return data;
   },
 
   async getAllProducts() {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/products?order=created_at.desc', {
-      headers: this.headers
-    });
-    return response.json();
+    console.group('📦 GET All Products');
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Retornados:', data?.length || 0, 'produtos');
+    console.groupEnd();
+    return data || [];
   },
 
   async getCategories() {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/categories?status=eq.active&select=id,name', {
-      headers: this.headers
-    });
-    return response.json();
+    console.group('🏷️ GET Categories (Active)');
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('status', 'active');
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Retornadas:', data?.length || 0, 'categorias');
+    console.groupEnd();
+    return data || [];
   },
 
   async getAllCategories() {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/categories?order=created_at.desc', {
-      headers: this.headers
-    });
-    return response.json();
+    console.group('🏷️ GET All Categories');
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Retornadas:', data?.length || 0, 'categorias');
+    console.groupEnd();
+    return data || [];
   },
 
   async createProduct(product) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/products', {
-      method: 'POST',
-      headers: this.headers,
-      body: JSON.stringify(product)
-    });
-    return response.json();
+    console.group('➕ CREATE Product');
+    console.log('📤 Dados enviados:', product);
+
+    const { data, error } = await supabase
+      .from('products')
+      .insert([product])
+      .select();
+
+    console.log('📥 Resposta completa:', { data, error });
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      console.error('❌ Nenhum dado retornado!');
+      console.groupEnd();
+      throw new Error('Nenhum dado retornado do servidor');
+    }
+
+    console.log('✅ Produto criado:', data[0]);
+    console.groupEnd();
+    return data;
   },
 
   async updateProduct(id, product) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/products?id=eq.' + id, {
-      method: 'PATCH',
-      headers: this.headers,
-      body: JSON.stringify(product)
-    });
-    return response.json();
+    console.group('✏️ UPDATE Product:', id);
+    console.log('📤 Dados enviados:', product);
+
+    const { data, error } = await supabase
+      .from('products')
+      .update(product)
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Produto atualizado:', data);
+    console.groupEnd();
+    return data;
   },
 
   async deleteProduct(id) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/products?id=eq.' + id, {
-      method: 'DELETE',
-      headers: this.headers
-    });
-    return response.ok;
+    console.group('🗑️ DELETE Product:', id);
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Produto deletado');
+    console.groupEnd();
+    return true;
   },
 
   async createCategory(category) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/categories', {
-      method: 'POST',
-      headers: this.headers,
-      body: JSON.stringify(category)
-    });
-    return response.json();
+    console.group('➕ CREATE Category');
+    console.log('📤 Dados enviados:', category);
+
+    const { data, error } = await supabase
+      .from('categories')
+      .insert([category])
+      .select();
+
+    console.log('📥 Resposta completa:', { data, error });
+
+    if (error) {
+      console.error('❌ Erro Supabase:', error);
+      console.error('📋 Detalhes:', error.message, error.details, error.hint);
+      console.groupEnd();
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      console.error('❌ Nenhum dado retornado!');
+      console.groupEnd();
+      throw new Error('Nenhum dado retornado do servidor');
+    }
+
+    console.log('✅ Categoria criada:', data[0]);
+    console.groupEnd();
+    return data;
   },
 
   async updateCategory(id, category) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/categories?id=eq.' + id, {
-      method: 'PATCH',
-      headers: this.headers,
-      body: JSON.stringify(category)
-    });
-    return response.json();
+    console.group('✏️ UPDATE Category:', id);
+    console.log('📤 Dados enviados:', category);
+
+    const { data, error } = await supabase
+      .from('categories')
+      .update(category)
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Categoria atualizada:', data);
+    console.groupEnd();
+    return data;
   },
 
   async deleteCategory(id) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/categories?id=eq.' + id, {
-      method: 'DELETE',
-      headers: this.headers
-    });
-    return response.ok;
+    console.group('🗑️ DELETE Category:', id);
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Categoria deletada');
+    console.groupEnd();
+    return true;
   },
 
   async incrementViews(id, currentViews) {
     await this.updateProduct(id, { views: currentViews + 1 });
   },
 
-  // Banner APIs
+  // Banner APIs usando cliente Supabase
   async getBanners() {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/banners?order=order_index.asc', {
-      headers: this.headers
-    });
-    return response.json();
+    console.group('📸 GET All Banners');
+    const { data, error } = await supabase
+      .from('banners')
+      .select('*')
+      .order('order_index', { ascending: true });
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Retornados:', data?.length || 0, 'banners');
+    console.groupEnd();
+    return data || [];
   },
 
   async getActiveBanner() {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/banners?is_active=eq.true&order=order_index.asc&limit=1', {
-      headers: this.headers
-    });
-    const data = await response.json();
-    return data[0] || null;
-  },
+    console.group('📸 GET Active Banner');
+    const { data, error } = await supabase
+      .from('banners')
+      .select('*')
+      .eq('is_active', true)
+      .order('order_index', { ascending: true })
+      .limit(1)
+      .single();
 
-  async createBanner(banner) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/banners', {
-      method: 'POST',
-      headers: this.headers,
-      body: JSON.stringify(banner)
-    });
-    return response.json();
-  },
-
-  async updateBanner(id, banner) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/banners?id=eq.' + id, {
-      method: 'PATCH',
-      headers: this.headers,
-      body: JSON.stringify(banner)
-    });
-    return response.json();
-  },
-
-  async deleteBanner(id) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/banners?id=eq.' + id, {
-      method: 'DELETE',
-      headers: this.headers
-    });
-    return response.ok;
+    if (error) {
+      // Se não encontrar nenhum, não é erro crítico
+      if (error.code === 'PGRST116') {
+        console.log('ℹ️ Nenhum banner ativo encontrado');
+        console.groupEnd();
+        return null;
+      }
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Banner ativo:', data?.title);
+    console.groupEnd();
+    return data;
   },
 
   // Settings API
@@ -204,16 +330,7 @@ export default function LukayaGriffeERP() {
   const [user, setUser] = useState(null);
   const [banners, setBanners] = useState([]);
   const [darkMode, setDarkMode] = useState(false);
-  const [activeBanner, setActiveBanner] = useState({
-    id: 1,
-    title: 'Coleção Verão 2025',
-    description: 'Novas peças exclusivas chegando! Aproveite os lançamentos com até 30% OFF',
-    image_url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&h=600&fit=crop',
-    image_url_mobile: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=800&fit=crop',
-    button_text: 'Ver Coleção',
-    link_url: '#',
-    is_active: true
-  });
+  const [activeBanner, setActiveBanner] = useState(null); // Será carregado do banco
 
   // Verificar sessão do Supabase ao carregar
   useEffect(() => {
@@ -310,21 +427,19 @@ export default function LukayaGriffeERP() {
   };
 
   const loadBanners = async () => {
+    console.log('🔄 Carregando banners...');
     try {
       if (mode === 'admin' && isAuthenticated) {
         const data = await supabaseAPI.getBanners();
         setBanners(data || []);
       } else {
         const banner = await supabaseAPI.getActiveBanner();
-        // Se não encontrar banner no Supabase, mantém o banner fake
-        if (banner) {
-          setActiveBanner(banner);
-        }
-        // Se não encontrar, o banner fake inicial permanece
+        console.log('📸 Banner ativo encontrado:', banner);
+        setActiveBanner(banner); // null se não encontrar nenhum
       }
     } catch (error) {
-      console.error('Erro ao carregar banners:', error);
-      // Em caso de erro, mantém o banner fake
+      console.error('❌ Erro ao carregar banners:', error);
+      setActiveBanner(null); // Em caso de erro, não mostra banner
     }
   };
 
@@ -1407,22 +1522,34 @@ export default function LukayaGriffeERP() {
       description: '',
       price: 0,
       category_id: categories.length > 0 ? categories[0].id : 1,
-      image_urls: '',
-      views: 0,
       status: 'active',
-      available_sizes: []
     });
-    const [imagePreview, setImagePreview] = useState('');
+    const [imageFiles, setImageFiles] = useState([]); // ARRAY de Files
+    const [imagePreviews, setImagePreviews] = useState([]); // ARRAY de previews
     const [saving, setSaving] = useState(false);
     const [priceInput, setPriceInput] = useState('R$ 0,00');
     const [selectedSizes, setSelectedSizes] = useState([]);
 
     const handleEdit = (product) => {
       setEditingProduct(product);
-      setFormData(product);
-      setImagePreview(product.image_urls);
+      setFormData({
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        category_id: product.category_id,
+        status: product.status
+      });
+      // Se tiver imagens existentes, mostrar previews
+      if (product.image_urls && Array.isArray(product.image_urls)) {
+        setImagePreviews(product.image_urls);
+      } else if (product.image_urls) {
+        setImagePreviews([product.image_urls]);
+      } else {
+        setImagePreviews([]);
+      }
       setPriceInput(formatCurrency(String(product.price * 100)));
       setSelectedSizes(product.available_sizes || []);
+      setImageFiles([]); // Resetar files ao editar
       setShowForm(true);
     };
 
@@ -1443,16 +1570,17 @@ export default function LukayaGriffeERP() {
         ? selectedSizes.filter(s => s !== size)
         : [...selectedSizes, size];
       setSelectedSizes(newSizes);
-      setFormData(Object.assign({}, formData, { available_sizes: newSizes }));
     };
 
     const handleDelete = async (id) => {
       if (!confirm('Tem certeza que deseja deletar este produto?')) return;
       try {
         await supabaseAPI.deleteProduct(id);
+        toast.success('✅ Produto deletado com sucesso!');
         await loadAllProducts();
       } catch (error) {
-        alert('Erro ao deletar produto');
+        console.error('❌ Erro ao deletar:', error);
+        toast.error('❌ Erro ao deletar produto');
       }
     };
 
@@ -1460,38 +1588,116 @@ export default function LukayaGriffeERP() {
       try {
         const newStatus = product.status === 'active' ? 'inactive' : 'active';
         await supabaseAPI.updateProduct(product.id, { status: newStatus });
+        toast.success(`✅ Produto ${newStatus === 'active' ? 'ativado' : 'desativado'}!`);
         await loadAllProducts();
       } catch (error) {
-        console.error('Erro:', error);
+        console.error('❌ Erro:', error);
+        toast.error('❌ Erro ao alterar status');
       }
     };
 
     const handleSubmit = async (e) => {
       e.preventDefault();
-      console.log('🔄 Iniciando salvamento de produto...');
-      console.log('📦 Dados do produto:', formData);
+      console.group('💾 Salvando Produto');
+      console.log('📦 FormData:', formData);
+      console.log('🖼️ ImageFiles:', imageFiles.length, 'arquivos');
 
       // Validar campos obrigatórios
       if (!formData.name || !formData.name.trim()) {
         toast.warning('⚠️ Nome do produto é obrigatório');
+        console.groupEnd();
         return;
       }
 
       if (!formData.price || formData.price <= 0) {
         toast.warning('⚠️ Preço do produto é obrigatório e deve ser maior que zero');
+        console.groupEnd();
         return;
       }
 
       setSaving(true);
       try {
+        // Começar com as imagens existentes (se estiver editando)
+        let imageUrls = [];
+        if (editingProduct && editingProduct.image_urls) {
+          imageUrls = Array.isArray(editingProduct.image_urls)
+            ? [...editingProduct.image_urls]
+            : [editingProduct.image_urls];
+        }
+
+        // 1. FAZER UPLOAD DE TODAS AS NOVAS IMAGENS
+        if (imageFiles && imageFiles.length > 0) {
+          console.log(`📸 Fazendo upload de ${imageFiles.length} imagens...`);
+
+          for (let i = 0; i < imageFiles.length; i++) {
+            const file = imageFiles[i];
+
+            if (!(file instanceof File)) continue;
+
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}-${i}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const filePath = `products/${fileName}`;
+
+            // Upload para storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('product-images')
+              .upload(filePath, file);
+
+            if (uploadError) {
+              console.error(`❌ Erro upload imagem ${i + 1}:`, uploadError);
+
+              // Se o erro for que o bucket não existe, avisar
+              if (uploadError.message.includes('not found')) {
+                toast.error('❌ Bucket "product-images" não existe! Crie no Supabase Storage.');
+              } else {
+                toast.error(`❌ Erro ao fazer upload da imagem ${i + 1}: ` + uploadError.message);
+              }
+              console.groupEnd();
+              setSaving(false);
+              return;
+            }
+
+            // Pegar URL pública
+            const { data: urlData } = supabase.storage
+              .from('product-images')
+              .getPublicUrl(filePath);
+
+            imageUrls.push(urlData.publicUrl);
+            console.log(`✅ Imagem ${i + 1}/${imageFiles.length} enviada:`, urlData.publicUrl);
+          }
+        }
+
+        // 2. PREPARAR DADOS DO PRODUTO (apenas campos que existem na tabela)
+        const productData = {
+          name: formData.name.trim(),
+          description: formData.description?.trim() || '',
+          price: parseFloat(formData.price), // GARANTIR que é número
+          category_id: formData.category_id || null,
+          image_urls: imageUrls, // ✅ ARRAY de URLs (não string!)
+          status: formData.status || 'active',
+          available_sizes: selectedSizes.length > 0 ? selectedSizes : [], // ✅ ARRAY também
+        };
+
+        // Remover campos null/undefined
+        Object.keys(productData).forEach(key => {
+          if (productData[key] === null || productData[key] === undefined) {
+            delete productData[key];
+          }
+        });
+
+        console.log('📤 Dados a enviar:', productData);
+        console.log('📏 URLs de imagens:', imageUrls.length);
+        console.log('🔢 Tamanhos disponíveis:', selectedSizes);
+
+        // 3. CRIAR ou ATUALIZAR
         if (editingProduct) {
-          console.log('✏️ Editando produto:', editingProduct.id);
-          const result = await supabaseAPI.updateProduct(editingProduct.id, formData);
+          console.log('✏️ Atualizando produto:', editingProduct.id);
+          const result = await supabaseAPI.updateProduct(editingProduct.id, productData);
           console.log('✅ Resultado:', result);
           toast.success('✅ Produto atualizado com sucesso!');
         } else {
           console.log('➕ Criando novo produto');
-          const result = await supabaseAPI.createProduct(formData);
+          const result = await supabaseAPI.createProduct(productData);
           console.log('✅ Resultado:', result);
 
           if (result && result[0]) {
@@ -1501,6 +1707,7 @@ export default function LukayaGriffeERP() {
           }
         }
 
+        // Limpar form
         await loadAllProducts();
         setShowForm(false);
         setEditingProduct(null);
@@ -1509,17 +1716,21 @@ export default function LukayaGriffeERP() {
           description: '',
           price: 0,
           category_id: categories.length > 0 ? categories[0].id : 1,
-          image_urls: '',
-          views: 0,
           status: 'active',
-          available_sizes: []
         });
         setPriceInput('R$ 0,00');
         setSelectedSizes([]);
-        setImagePreview('');
+        setImagePreviews([]);
+        setImageFiles([]);
+
+        console.log('✅ Produto salvo e form resetado');
+        console.groupEnd();
+
       } catch (error) {
         console.error('❌ Erro ao salvar produto:', error);
+        console.error('📋 Detalhes:', error.message, error.details, error.hint);
         toast.error('❌ Erro ao salvar produto: ' + (error.message || 'Erro desconhecido'));
+        console.groupEnd();
       } finally {
         setSaving(false);
       }
@@ -1527,15 +1738,62 @@ export default function LukayaGriffeERP() {
 
     const handleImageUpload = (e) => {
       if (e.target.files && e.target.files.length > 0) {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const result = reader.result;
-          setImagePreview(result);
-          setFormData(Object.assign({}, formData, { image_urls: result }));
-        };
-        reader.readAsDataURL(file);
+        const files = Array.from(e.target.files);
+
+        // Validar quantidade (máx 6 imagens)
+        if (files.length > 6) {
+          toast.error('❌ Máximo de 6 imagens por produto');
+          return;
+        }
+
+        // Validar cada arquivo
+        const validFiles = [];
+        const newPreviews = [];
+
+        for (const file of files) {
+          // Validar tipo
+          if (!file.type.startsWith('image/')) {
+            toast.error(`❌ ${file.name} não é uma imagem válida`);
+            continue;
+          }
+
+          // Validar tamanho (máx 5MB cada)
+          if (file.size > 5 * 1024 * 1024) {
+            toast.error(`❌ ${file.name} excede 5MB`);
+            continue;
+          }
+
+          validFiles.push(file);
+
+          // Criar preview
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            newPreviews.push(reader.result);
+            // Só atualizar quando todas estiverem prontas
+            if (newPreviews.length === validFiles.length) {
+              setImagePreviews(newPreviews);
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+
+        setImageFiles(validFiles);
+
+        if (validFiles.length > 0) {
+          console.log(`📸 ${validFiles.length} imagens selecionadas`);
+          validFiles.forEach((f, i) => {
+            console.log(`  ${i + 1}. ${f.name} (${(f.size / 1024).toFixed(2)} KB)`);
+          });
+        }
       }
+    };
+
+    const removeImage = (index) => {
+      const newFiles = imageFiles.filter((_, i) => i !== index);
+      const newPreviews = imagePreviews.filter((_, i) => i !== index);
+      setImageFiles(newFiles);
+      setImagePreviews(newPreviews);
+      toast.info(`🗑️ Imagem ${index + 1} removida`);
     };
 
     if (showForm) {
@@ -1552,17 +1810,56 @@ export default function LukayaGriffeERP() {
 
           <div className="bg-white rounded-xl shadow-md p-6 space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Imagem do Produto</label>
-              <div className="flex flex-col sm:flex-row gap-4">
-                {imagePreview && (
-                  <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover rounded-lg" />
-                )}
-                <label className="flex-1 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-yellow-500">
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <span className="text-sm text-gray-600">Clique para fazer upload</span>
-                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                </label>
-              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Imagens do Produto *
+                <span className="text-xs text-gray-500 font-normal ml-2">(Máximo 6 imagens)</span>
+              </label>
+
+              {/* Preview das imagens selecionadas */}
+              {imagePreviews.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={14} />
+                      </button>
+                      <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+                        {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Área de upload */}
+              <label className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-yellow-500 hover:bg-yellow-50 transition-colors block">
+                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <span className="text-sm text-gray-600 block mb-1">
+                  Clique para selecionar imagens
+                </span>
+                <span className="text-xs text-gray-500">
+                  Você pode selecionar múltiplas imagens (frente, costas, detalhes, etc)
+                </span>
+                <span className="text-xs text-gray-400 block mt-1">
+                  PNG, JPG, WEBP - Máximo 5MB cada
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </label>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
