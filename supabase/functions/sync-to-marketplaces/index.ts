@@ -236,6 +236,30 @@ class WooCommerceService extends MarketplaceService {
       // Remover trailing slash para evitar URLs com //
       url = url.replace(/\/+$/, '')
 
+      // Testar se a API WooCommerce está acessível
+      console.log('🔍 WooCommerce Sync - Testando acesso à API...')
+      const auth = btoa(`${credentials.consumer_key}:${credentials.consumer_secret}`)
+      const testEndpoint = `${url}/wp-json/wc/v3`
+
+      const testResponse = await fetch(testEndpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${auth}`
+        }
+      })
+
+      console.log('🔍 WooCommerce Sync - Teste API status:', testResponse.status)
+
+      if (!testResponse.ok) {
+        const errorText = await testResponse.text()
+        if (errorText.includes('<!doctype') || errorText.includes('<html')) {
+          return {
+            success: false,
+            error: 'API REST do WooCommerce não está acessível. Verifique: 1) WooCommerce instalado e ativo, 2) Permalinks configurados (não podem ser "simples"), 3) API REST habilitada em WooCommerce → Configurações → Avançado → API REST'
+          }
+        }
+      }
+
       const payload = {
         name: product.name,
         type: 'simple',
@@ -254,7 +278,6 @@ class WooCommerceService extends MarketplaceService {
 
       console.log('🔍 WooCommerce Sync - Payload:', JSON.stringify(payload).substring(0, 200) + '...')
 
-      const auth = btoa(`${credentials.consumer_key}:${credentials.consumer_secret}`)
       const endpoint = `${url}/wp-json/wc/v3/products`
 
       console.log('🔍 WooCommerce Sync - URL completa:', endpoint)
