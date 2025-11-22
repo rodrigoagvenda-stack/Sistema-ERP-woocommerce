@@ -108,7 +108,15 @@ export default function ProductMarketplaces({ productId, darkMode }) {
 
     } catch (error) {
       console.error('Erro ao sincronizar:', error)
-      alert(`❌ Erro ao sincronizar: ${error.message}`)
+      // Atualizar estado com o erro para mostrar na UI
+      setMarketplaceStatus(prev => ({
+        ...prev,
+        [marketplace]: {
+          ...prev[marketplace],
+          syncStatus: 'error',
+          lastError: error.message
+        }
+      }))
     } finally {
       setSyncing(null)
       loadMarketplaceStatus()
@@ -314,10 +322,10 @@ export default function ProductMarketplaces({ productId, darkMode }) {
             </div>
 
             {status?.lastError && (
-              <div className={`mt-3 p-2 rounded text-xs ${
+              <div className={`mt-3 p-3 rounded text-xs ${
                 darkMode ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-700'
               }`}>
-                <strong>Erro:</strong> {status.lastError}
+                <pre className="whitespace-pre-wrap font-mono text-xs">{status.lastError}</pre>
               </div>
             )}
           </div>
