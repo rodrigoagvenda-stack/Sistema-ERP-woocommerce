@@ -12,6 +12,10 @@ interface TestConnectionRequest {
     shop_id?: string
     partner_id?: string
     partner_key?: string
+    consumer_key?: string
+    consumer_secret?: string
+    app_key?: string
+    app_secret?: string
   }
 }
 
@@ -172,7 +176,7 @@ async function testAmazon(credentials: any) {
 // Testar conexão com WooCommerce
 async function testWooCommerce(credentials: any) {
   try {
-    if (!credentials.store_url || !credentials.client_id || !credentials.client_secret) {
+    if (!credentials.store_url || !credentials.consumer_key || !credentials.consumer_secret) {
       return { success: false, error: 'URL da loja, Consumer Key e Consumer Secret são obrigatórios' }
     }
 
@@ -182,7 +186,7 @@ async function testWooCommerce(credentials: any) {
       url = 'https://' + url
     }
 
-    const auth = btoa(`${credentials.client_id}:${credentials.client_secret}`)
+    const auth = btoa(`${credentials.consumer_key}:${credentials.consumer_secret}`)
 
     // Testar autenticação buscando informações do sistema
     const response = await fetch(`${url}/wp-json/wc/v3/system_status`, {
