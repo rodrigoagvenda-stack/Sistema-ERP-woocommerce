@@ -1524,8 +1524,8 @@ export default function LukayaGriffeERP() {
       category_id: categories.length > 0 ? categories[0].id : 1,
       status: 'active',
     });
-    const [imageFile, setImageFile] = useState(null); // NOVO: guardar File ao invés de base64
-    const [imagePreview, setImagePreview] = useState('');
+    const [imageFiles, setImageFiles] = useState([]); // ARRAY de Files
+    const [imagePreviews, setImagePreviews] = useState([]); // ARRAY de previews
     const [saving, setSaving] = useState(false);
     const [priceInput, setPriceInput] = useState('R$ 0,00');
     const [selectedSizes, setSelectedSizes] = useState([]);
@@ -1539,10 +1539,17 @@ export default function LukayaGriffeERP() {
         category_id: product.category_id,
         status: product.status
       });
-      setImagePreview(product.image_urls || product.image_url); // Suporta ambos
+      // Se tiver imagens existentes, mostrar previews
+      if (product.image_urls && Array.isArray(product.image_urls)) {
+        setImagePreviews(product.image_urls);
+      } else if (product.image_urls) {
+        setImagePreviews([product.image_urls]);
+      } else {
+        setImagePreviews([]);
+      }
       setPriceInput(formatCurrency(String(product.price * 100)));
       setSelectedSizes(product.available_sizes || []);
-      setImageFile(null); // Resetar file ao editar
+      setImageFiles([]); // Resetar files ao editar
       setShowForm(true);
     };
 
@@ -1593,7 +1600,7 @@ export default function LukayaGriffeERP() {
       e.preventDefault();
       console.group('💾 Salvando Produto');
       console.log('📦 FormData:', formData);
-      console.log('🖼️ ImageFile:', imageFile);
+      console.log('🖼️ ImageFiles:', imageFiles.length, 'arquivos');
 
       // Validar campos obrigatórios
       if (!formData.name || !formData.name.trim()) {
@@ -1610,42 +1617,54 @@ export default function LukayaGriffeERP() {
 
       setSaving(true);
       try {
-        let imageUrl = editingProduct?.image_url || editingProduct?.image_urls || null;
+        // Começar com as imagens existentes (se estiver editando)
+        let imageUrls = [];
+        if (editingProduct && editingProduct.image_urls) {
+          imageUrls = Array.isArray(editingProduct.image_urls)
+            ? [...editingProduct.image_urls]
+            : [editingProduct.image_urls];
+        }
 
-        // 1. FAZER UPLOAD DA IMAGEM PRIMEIRO (se houver arquivo novo)
-        if (imageFile && imageFile instanceof File) {
-          console.log('📸 Fazendo upload da imagem...');
+        // 1. FAZER UPLOAD DE TODAS AS NOVAS IMAGENS
+        if (imageFiles && imageFiles.length > 0) {
+          console.log(`📸 Fazendo upload de ${imageFiles.length} imagens...`);
 
-          const fileExt = imageFile.name.split('.').pop();
-          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-          const filePath = `products/${fileName}`;
+          for (let i = 0; i < imageFiles.length; i++) {
+            const file = imageFiles[i];
 
-          // Upload para storage
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('product-images')
-            .upload(filePath, imageFile);
+            if (!(file instanceof File)) continue;
 
-          if (uploadError) {
-            console.error('❌ Erro no upload:', uploadError);
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}-${i}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+            const filePath = `products/${fileName}`;
 
-            // Se o erro for que o bucket não existe, avisar
-            if (uploadError.message.includes('not found')) {
-              toast.error('❌ Bucket "product-images" não existe! Crie no Supabase Storage.');
-            } else {
-              toast.error('❌ Erro ao fazer upload da imagem: ' + uploadError.message);
+            // Upload para storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('product-images')
+              .upload(filePath, file);
+
+            if (uploadError) {
+              console.error(`❌ Erro upload imagem ${i + 1}:`, uploadError);
+
+              // Se o erro for que o bucket não existe, avisar
+              if (uploadError.message.includes('not found')) {
+                toast.error('❌ Bucket "product-images" não existe! Crie no Supabase Storage.');
+              } else {
+                toast.error(`❌ Erro ao fazer upload da imagem ${i + 1}: ` + uploadError.message);
+              }
+              console.groupEnd();
+              setSaving(false);
+              return;
             }
-            console.groupEnd();
-            setSaving(false);
-            return;
+
+            // Pegar URL pública
+            const { data: urlData } = supabase.storage
+              .from('product-images')
+              .getPublicUrl(filePath);
+
+            imageUrls.push(urlData.publicUrl);
+            console.log(`✅ Imagem ${i + 1}/${imageFiles.length} enviada:`, urlData.publicUrl);
           }
-
-          // Pegar URL pública
-          const { data: urlData } = supabase.storage
-            .from('product-images')
-            .getPublicUrl(filePath);
-
-          imageUrl = urlData.publicUrl;
-          console.log('✅ Imagem enviada:', imageUrl);
         }
 
         // 2. PREPARAR DADOS DO PRODUTO (apenas campos que existem na tabela)
@@ -1654,20 +1673,21 @@ export default function LukayaGriffeERP() {
           description: formData.description?.trim() || '',
           price: parseFloat(formData.price), // GARANTIR que é número
           category_id: formData.category_id || null,
-          image_urls: imageUrl, // Manter compatibilidade com campo atual
+          image_urls: imageUrls, // ✅ ARRAY de URLs (não string!)
           status: formData.status || 'active',
-          available_sizes: selectedSizes.length > 0 ? selectedSizes : null,
+          available_sizes: selectedSizes.length > 0 ? selectedSizes : [], // ✅ ARRAY também
         };
 
         // Remover campos null/undefined
         Object.keys(productData).forEach(key => {
-          if (productData[key] === null || productData[key] === undefined || productData[key] === '') {
+          if (productData[key] === null || productData[key] === undefined) {
             delete productData[key];
           }
         });
 
         console.log('📤 Dados a enviar:', productData);
-        console.log('📏 Tamanho:', JSON.stringify(productData).length, 'bytes');
+        console.log('📏 URLs de imagens:', imageUrls.length);
+        console.log('🔢 Tamanhos disponíveis:', selectedSizes);
 
         // 3. CRIAR ou ATUALIZAR
         if (editingProduct) {
@@ -1700,8 +1720,8 @@ export default function LukayaGriffeERP() {
         });
         setPriceInput('R$ 0,00');
         setSelectedSizes([]);
-        setImagePreview('');
-        setImageFile(null);
+        setImagePreviews([]);
+        setImageFiles([]);
 
         console.log('✅ Produto salvo e form resetado');
         console.groupEnd();
@@ -1718,32 +1738,62 @@ export default function LukayaGriffeERP() {
 
     const handleImageUpload = (e) => {
       if (e.target.files && e.target.files.length > 0) {
-        const file = e.target.files[0];
+        const files = Array.from(e.target.files);
 
-        // Validar tipo
-        if (!file.type.startsWith('image/')) {
-          toast.error('❌ Por favor, selecione uma imagem válida');
+        // Validar quantidade (máx 6 imagens)
+        if (files.length > 6) {
+          toast.error('❌ Máximo de 6 imagens por produto');
           return;
         }
 
-        // Validar tamanho (máx 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error('❌ Imagem deve ter no máximo 5MB');
-          return;
+        // Validar cada arquivo
+        const validFiles = [];
+        const newPreviews = [];
+
+        for (const file of files) {
+          // Validar tipo
+          if (!file.type.startsWith('image/')) {
+            toast.error(`❌ ${file.name} não é uma imagem válida`);
+            continue;
+          }
+
+          // Validar tamanho (máx 5MB cada)
+          if (file.size > 5 * 1024 * 1024) {
+            toast.error(`❌ ${file.name} excede 5MB`);
+            continue;
+          }
+
+          validFiles.push(file);
+
+          // Criar preview
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            newPreviews.push(reader.result);
+            // Só atualizar quando todas estiverem prontas
+            if (newPreviews.length === validFiles.length) {
+              setImagePreviews(newPreviews);
+            }
+          };
+          reader.readAsDataURL(file);
         }
 
-        // Guardar FILE (não base64!)
-        setImageFile(file);
+        setImageFiles(validFiles);
 
-        // Criar preview para mostrar na tela
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImagePreview(reader.result);
-        };
-        reader.readAsDataURL(file);
-
-        console.log('📸 Imagem selecionada:', file.name, '(', (file.size / 1024).toFixed(2), 'KB)');
+        if (validFiles.length > 0) {
+          console.log(`📸 ${validFiles.length} imagens selecionadas`);
+          validFiles.forEach((f, i) => {
+            console.log(`  ${i + 1}. ${f.name} (${(f.size / 1024).toFixed(2)} KB)`);
+          });
+        }
       }
+    };
+
+    const removeImage = (index) => {
+      const newFiles = imageFiles.filter((_, i) => i !== index);
+      const newPreviews = imagePreviews.filter((_, i) => i !== index);
+      setImageFiles(newFiles);
+      setImagePreviews(newPreviews);
+      toast.info(`🗑️ Imagem ${index + 1} removida`);
     };
 
     if (showForm) {
@@ -1760,17 +1810,56 @@ export default function LukayaGriffeERP() {
 
           <div className="bg-white rounded-xl shadow-md p-6 space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Imagem do Produto</label>
-              <div className="flex flex-col sm:flex-row gap-4">
-                {imagePreview && (
-                  <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover rounded-lg" />
-                )}
-                <label className="flex-1 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-yellow-500">
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <span className="text-sm text-gray-600">Clique para fazer upload</span>
-                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                </label>
-              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Imagens do Produto *
+                <span className="text-xs text-gray-500 font-normal ml-2">(Máximo 6 imagens)</span>
+              </label>
+
+              {/* Preview das imagens selecionadas */}
+              {imagePreviews.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={14} />
+                      </button>
+                      <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+                        {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Área de upload */}
+              <label className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-yellow-500 hover:bg-yellow-50 transition-colors block">
+                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <span className="text-sm text-gray-600 block mb-1">
+                  Clique para selecionar imagens
+                </span>
+                <span className="text-xs text-gray-500">
+                  Você pode selecionar múltiplas imagens (frente, costas, detalhes, etc)
+                </span>
+                <span className="text-xs text-gray-400 block mt-1">
+                  PNG, JPG, WEBP - Máximo 5MB cada
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </label>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
