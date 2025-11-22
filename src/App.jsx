@@ -238,8 +238,34 @@ const supabaseAPI = {
     return true;
   },
 
-  async incrementViews(id, currentViews) {
-    await this.updateProduct(id, { views: currentViews + 1 });
+  async incrementViews(productId) {
+    // Gerar ou recuperar session_id
+    let sessionId = localStorage.getItem('session_id');
+    if (!sessionId) {
+      sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('session_id', sessionId);
+    }
+
+    try {
+      await supabase.rpc('increment_product_view', {
+        p_product_id: productId,
+        p_session_id: sessionId,
+        p_user_agent: navigator.userAgent
+      });
+    } catch (error) {
+      console.error('Erro ao registrar visualização:', error);
+    }
+  },
+
+  async getProductViews(productId) {
+    const { data, error } = await supabase
+      .from('product_view_counts')
+      .select('total_views')
+      .eq('product_id', productId)
+      .single();
+
+    if (error) return 0;
+    return data?.total_views || 0;
   },
 
   // Banner APIs usando cliente Supabase
@@ -1211,7 +1237,7 @@ export default function LukayaGriffeERP() {
         const data = await supabaseAPI.getProductById(selectedProductId);
         setProduct(data);
         if (data) {
-          await supabaseAPI.incrementViews(selectedProductId, data.views || 0);
+          await supabaseAPI.incrementViews(selectedProductId);
         }
       } catch (error) {
         console.error('Erro:', error);
