@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS product_views (
   id BIGSERIAL PRIMARY KEY,
   product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   session_id TEXT NOT NULL,
+  viewed_date DATE NOT NULL DEFAULT CURRENT_DATE,
   user_agent TEXT,
   ip_address TEXT,
   viewed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -15,19 +16,20 @@ CREATE TABLE IF NOT EXISTS product_views (
 
 -- Criar índice único (1 view por session por produto por dia)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_view_per_session_day 
-ON product_views (product_id, session_id, DATE(viewed_at));
+ON product_views (product_id, session_id, viewed_date);
 
 -- Criar índices para performance
 CREATE INDEX IF NOT EXISTS idx_product_views_product_id ON product_views(product_id);
 CREATE INDEX IF NOT EXISTS idx_product_views_session_id ON product_views(session_id);
 CREATE INDEX IF NOT EXISTS idx_product_views_viewed_at ON product_views(viewed_at);
+CREATE INDEX IF NOT EXISTS idx_product_views_viewed_date ON product_views(viewed_date);
 
 -- View para contagem
 CREATE OR REPLACE VIEW product_view_counts AS
 SELECT 
   product_id,
   COUNT(DISTINCT session_id) as total_views,
-  COUNT(DISTINCT DATE(viewed_at)) as unique_days,
+  COUNT(DISTINCT viewed_date) as unique_days,
   MAX(viewed_at) as last_viewed
 FROM product_views
 GROUP BY product_id;
@@ -41,9 +43,9 @@ CREATE OR REPLACE FUNCTION increment_product_view(
 )
 RETURNS VOID AS $$
 BEGIN
-  INSERT INTO product_views (product_id, session_id, user_agent, ip_address)
-  VALUES (p_product_id, p_session_id, p_user_agent, p_ip_address)
-  ON CONFLICT ON CONSTRAINT idx_unique_view_per_session_day DO NOTHING;
+  INSERT INTO product_views (product_id, session_id, viewed_date, user_agent, ip_address)
+  VALUES (p_product_id, p_session_id, CURRENT_DATE, p_user_agent, p_ip_address)
+  ON CONFLICT (product_id, session_id, viewed_date) DO NOTHING;
 END;
 $$ LANGUAGE plpgsql;
 
