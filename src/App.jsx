@@ -239,46 +239,48 @@ const supabaseAPI = {
     await this.updateProduct(id, { views: currentViews + 1 });
   },
 
-  // Banner APIs
+  // Banner APIs usando cliente Supabase
   async getBanners() {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/banners?order=order_index.asc', {
-      headers: this.headers
-    });
-    return response.json();
+    console.group('📸 GET All Banners');
+    const { data, error } = await supabase
+      .from('banners')
+      .select('*')
+      .order('order_index', { ascending: true });
+
+    if (error) {
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Retornados:', data?.length || 0, 'banners');
+    console.groupEnd();
+    return data || [];
   },
 
   async getActiveBanner() {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/banners?is_active=eq.true&order=order_index.asc&limit=1', {
-      headers: this.headers
-    });
-    const data = await response.json();
-    return data[0] || null;
-  },
+    console.group('📸 GET Active Banner');
+    const { data, error } = await supabase
+      .from('banners')
+      .select('*')
+      .eq('is_active', true)
+      .order('order_index', { ascending: true })
+      .limit(1)
+      .single();
 
-  async createBanner(banner) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/banners', {
-      method: 'POST',
-      headers: this.headers,
-      body: JSON.stringify(banner)
-    });
-    return response.json();
-  },
-
-  async updateBanner(id, banner) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/banners?id=eq.' + id, {
-      method: 'PATCH',
-      headers: this.headers,
-      body: JSON.stringify(banner)
-    });
-    return response.json();
-  },
-
-  async deleteBanner(id) {
-    const response = await fetch(SUPABASE_URL + '/rest/v1/banners?id=eq.' + id, {
-      method: 'DELETE',
-      headers: this.headers
-    });
-    return response.ok;
+    if (error) {
+      // Se não encontrar nenhum, não é erro crítico
+      if (error.code === 'PGRST116') {
+        console.log('ℹ️ Nenhum banner ativo encontrado');
+        console.groupEnd();
+        return null;
+      }
+      console.error('❌ Erro:', error);
+      console.groupEnd();
+      throw error;
+    }
+    console.log('✅ Banner ativo:', data?.title);
+    console.groupEnd();
+    return data;
   },
 
   // Settings API
@@ -328,16 +330,7 @@ export default function LukayaGriffeERP() {
   const [user, setUser] = useState(null);
   const [banners, setBanners] = useState([]);
   const [darkMode, setDarkMode] = useState(false);
-  const [activeBanner, setActiveBanner] = useState({
-    id: 1,
-    title: 'Coleção Verão 2025',
-    description: 'Novas peças exclusivas chegando! Aproveite os lançamentos com até 30% OFF',
-    image_url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&h=600&fit=crop',
-    image_url_mobile: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=800&fit=crop',
-    button_text: 'Ver Coleção',
-    link_url: '#',
-    is_active: true
-  });
+  const [activeBanner, setActiveBanner] = useState(null); // Será carregado do banco
 
   // Verificar sessão do Supabase ao carregar
   useEffect(() => {
@@ -434,21 +427,19 @@ export default function LukayaGriffeERP() {
   };
 
   const loadBanners = async () => {
+    console.log('🔄 Carregando banners...');
     try {
       if (mode === 'admin' && isAuthenticated) {
         const data = await supabaseAPI.getBanners();
         setBanners(data || []);
       } else {
         const banner = await supabaseAPI.getActiveBanner();
-        // Se não encontrar banner no Supabase, mantém o banner fake
-        if (banner) {
-          setActiveBanner(banner);
-        }
-        // Se não encontrar, o banner fake inicial permanece
+        console.log('📸 Banner ativo encontrado:', banner);
+        setActiveBanner(banner); // null se não encontrar nenhum
       }
     } catch (error) {
-      console.error('Erro ao carregar banners:', error);
-      // Em caso de erro, mantém o banner fake
+      console.error('❌ Erro ao carregar banners:', error);
+      setActiveBanner(null); // Em caso de erro, não mostra banner
     }
   };
 
