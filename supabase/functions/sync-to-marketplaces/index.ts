@@ -253,7 +253,6 @@ class WooCommerceService extends MarketplaceService {
 
       // Testar em duas etapas: 1) WordPress REST API, 2) WooCommerce REST API
       console.log('🔍 WooCommerce Sync - Testando acesso à API REST do WordPress...')
-      const auth = btoa(`${credentials.consumer_key}:${credentials.consumer_secret}`)
 
       // ETAPA 1: Verificar se WordPress REST API está funcionando
       const wpRestEndpoint = `${url}/wp-json/`
@@ -290,13 +289,12 @@ class WooCommerceService extends MarketplaceService {
    • Verifique se há chaves API criadas
    • Consumer Key e Secret devem estar corretos
 
-💡 **WOOCOMMERCE 9.0+**
-   • Se você usa WooCommerce 9.0 ou superior:
-   • Instale o plugin "WooCommerce Legacy REST API"
-   • Disponível em: WordPress.org/plugins/woocommerce-legacy-rest-api/
-   • O plugin restaura a funcionalidade da API REST removida da v9.0
+4️⃣ **HTTPS/SSL**
+   • A API REST WooCommerce funciona melhor com HTTPS
+   • Verifique se seu site tem certificado SSL ativo
+   • Se usar HTTP, pode haver problemas de autenticação
 
-4️⃣ **URL DA LOJA**
+5️⃣ **URL DA LOJA**
    • URL testada: ${url}
    • Deve ser a raiz do WordPress (ex: https://seusite.com)
    • Não deve incluir /loja, /shop, etc.
@@ -318,12 +316,9 @@ Após fazer as correções, teste novamente a conexão.`
       console.log('✅ WooCommerce Sync - WordPress REST API OK!')
       console.log('🔍 WooCommerce Sync - Testando acesso à API do WooCommerce...')
 
-      const wcRestEndpoint = `${url}/wp-json/wc/v3`
+      const wcRestEndpoint = `${url}/wp-json/wc/v3?consumer_key=${encodeURIComponent(credentials.consumer_key)}&consumer_secret=${encodeURIComponent(credentials.consumer_secret)}`
       const wcRestResponse = await fetch(wcRestEndpoint, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Basic ${auth}`
-        }
+        method: 'GET'
       })
 
       console.log('🔍 WooCommerce Sync - WooCommerce REST API status:', wcRestResponse.status)
@@ -388,10 +383,9 @@ Após fazer as correções, teste novamente a conexão.`
 
         // Buscar categoria pelo nome
         const searchCatResponse = await fetch(
-          `${url}/wp-json/wc/v3/products/categories?search=${encodeURIComponent(product.category.name)}`,
+          `${url}/wp-json/wc/v3/products/categories?search=${encodeURIComponent(product.category.name)}&consumer_key=${encodeURIComponent(credentials.consumer_key)}&consumer_secret=${encodeURIComponent(credentials.consumer_secret)}`,
           {
-            method: 'GET',
-            headers: { 'Authorization': `Basic ${auth}` }
+            method: 'GET'
           }
         )
 
@@ -411,11 +405,10 @@ Após fazer as correções, teste novamente a conexão.`
         if (!categoryId) {
           console.log('🔍 WooCommerce Sync - Criando categoria...')
           const createCatResponse = await fetch(
-            `${url}/wp-json/wc/v3/products/categories`,
+            `${url}/wp-json/wc/v3/products/categories?consumer_key=${encodeURIComponent(credentials.consumer_key)}&consumer_secret=${encodeURIComponent(credentials.consumer_secret)}`,
             {
               method: 'POST',
               headers: {
-                'Authorization': `Basic ${auth}`,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({ name: product.category.name })
@@ -449,14 +442,13 @@ Após fazer as correções, teste novamente a conexão.`
 
       console.log('🔍 WooCommerce Sync - Payload:', JSON.stringify(payload).substring(0, 200) + '...')
 
-      const endpoint = `${url}/wp-json/wc/v3/products`
+      const endpoint = `${url}/wp-json/wc/v3/products?consumer_key=${encodeURIComponent(credentials.consumer_key)}&consumer_secret=${encodeURIComponent(credentials.consumer_secret)}`
 
-      console.log('🔍 WooCommerce Sync - URL completa:', endpoint)
+      console.log('🔍 WooCommerce Sync - URL completa:', endpoint.replace(credentials.consumer_secret, '***'))
 
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)

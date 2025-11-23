@@ -406,8 +406,6 @@ async function testWooCommerce(credentials: any) {
       url = 'https://' + url
     }
 
-    const auth = btoa(`${credentials.consumer_key}:${credentials.consumer_secret}`)
-
     // ETAPA 1: Verificar se WordPress REST API está funcionando
     console.log('🔍 WooCommerce - Testando WordPress REST API:', `${url}/wp-json/`)
     const wpRestResponse = await fetch(`${url}/wp-json/`, {
@@ -443,13 +441,12 @@ async function testWooCommerce(credentials: any) {
    • Verifique se há chaves API criadas
    • Consumer Key e Secret devem estar corretos
 
-💡 **WOOCOMMERCE 9.0+**
-   • Se você usa WooCommerce 9.0 ou superior:
-   • Instale o plugin "WooCommerce Legacy REST API"
-   • Disponível em: WordPress.org/plugins/woocommerce-legacy-rest-api/
-   • O plugin restaura a funcionalidade da API REST removida da v9.0
+4️⃣ **HTTPS/SSL**
+   • A API REST WooCommerce funciona melhor com HTTPS
+   • Verifique se seu site tem certificado SSL ativo
+   • Se usar HTTP, pode haver problemas de autenticação
 
-4️⃣ **URL DA LOJA**
+5️⃣ **URL DA LOJA**
    • URL testada: ${url}
    • Deve ser a raiz do WordPress (ex: https://seusite.com)
    • Não deve incluir /loja, /shop, etc.
@@ -479,12 +476,16 @@ Após fazer as correções, teste novamente a conexão.`,
 
     console.log('✅ WooCommerce - WordPress REST API OK!')
 
-    // ETAPA 2: Testar autenticação na API WooCommerce
-    console.log('🔍 WooCommerce - Testando autenticação WooCommerce API...')
-    const response = await fetch(`${url}/wp-json/wc/v3/system_status`, {
-      headers: {
-        'Authorization': `Basic ${auth}`
-      }
+    // ETAPA 2: Testar autenticação na API WooCommerce usando Query Parameters (método JetEngine)
+    console.log('🔍 WooCommerce - Testando autenticação WooCommerce API com query parameters...')
+
+    // Construir URL com consumer_key e consumer_secret como query parameters
+    const testUrl = `${url}/wp-json/wc/v3/system_status?consumer_key=${encodeURIComponent(credentials.consumer_key)}&consumer_secret=${encodeURIComponent(credentials.consumer_secret)}`
+
+    console.log('🔍 WooCommerce - URL de teste:', testUrl.replace(credentials.consumer_secret, '***'))
+
+    const response = await fetch(testUrl, {
+      method: 'GET'
     })
 
     console.log('🔍 WooCommerce - WooCommerce API status:', response.status)
