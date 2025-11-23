@@ -216,15 +216,13 @@ class AmazonService extends MarketplaceService {
   }
 }
 
-// Implementação WooCommerce
+// Implementação WooCommerce - ABORDAGEM SIMPLES (como Jet Engine)
 class WooCommerceService extends MarketplaceService {
   async sync(product: Product, credentials: any) {
     try {
       console.log('🔍 WooCommerce Sync - Produto:', product.id, product.name)
-      console.log('🔍 WooCommerce Sync - store_url:', credentials.store_url)
-      console.log('🔍 WooCommerce Sync - consumer_key:', credentials.consumer_key ? 'presente' : 'ausente')
-      console.log('🔍 WooCommerce Sync - consumer_secret:', credentials.consumer_secret ? 'presente' : 'ausente')
 
+      // Validação básica de credenciais
       if (!credentials.store_url || !credentials.consumer_key || !credentials.consumer_secret) {
         return {
           success: false,
@@ -232,135 +230,13 @@ class WooCommerceService extends MarketplaceService {
         }
       }
 
-      // Validar e normalizar URL
-      let url = credentials.store_url.trim()
+      // Normalizar URL - remover trailing slash
+      let url = credentials.store_url.trim().replace(/\/+$/, '')
       if (!url.startsWith('http')) {
         url = 'https://' + url
       }
-      // Remover trailing slash para evitar URLs com //
-      url = url.replace(/\/+$/, '')
 
-      // Remover caminhos comuns de loja que não devem fazer parte da URL base do WordPress
-      // A API REST do WordPress está na raiz, não em subpastas como /loja, /shop, etc.
-      const commonShopPaths = ['/loja', '/shop', '/store', '/tienda', '/boutique']
-      for (const path of commonShopPaths) {
-        if (url.endsWith(path)) {
-          console.log(`⚠️ WooCommerce Sync - Removendo caminho "${path}" da URL da loja`)
-          url = url.slice(0, -path.length)
-          break
-        }
-      }
-
-      // Testar em duas etapas: 1) WordPress REST API, 2) WooCommerce REST API
-      console.log('🔍 WooCommerce Sync - Testando acesso à API REST do WordPress...')
-
-      // ETAPA 1: Verificar se WordPress REST API está funcionando
-      const wpRestEndpoint = `${url}/wp-json/`
-      const wpRestResponse = await fetch(wpRestEndpoint, {
-        method: 'GET'
-      })
-
-      console.log('🔍 WooCommerce Sync - WordPress REST API status:', wpRestResponse.status)
-
-      if (!wpRestResponse.ok) {
-        const errorText = await wpRestResponse.text()
-        console.error('❌ WooCommerce Sync - WordPress REST API não acessível:', errorText.substring(0, 200))
-
-        // Verificar se é um problema de permalinks
-        if (wpRestResponse.status === 404 || errorText.includes('<!doctype') || errorText.includes('<html')) {
-          return {
-            success: false,
-            error: `❌ API REST do WooCommerce não está acessível.
-
-📋 INSTRUÇÕES PARA CORRIGIR:
-
-1️⃣ **PERMALINKS (Causa mais comum)**
-   • Acesse: WordPress Admin → Configurações → Links Permanentes
-   • Escolha QUALQUER opção EXCETO "Simples"
-   • Recomendado: "Nome do post" ou "Dia e nome"
-   • Clique em "Salvar alterações"
-
-2️⃣ **VERIFICAR WOOCOMMERCE**
-   • Acesse: WordPress Admin → Plugins
-   • Confirme que WooCommerce está instalado e ativo
-
-3️⃣ **API REST DO WOOCOMMERCE**
-   • Acesse: WooCommerce → Configurações → Avançado → REST API
-   • Verifique se há chaves API criadas
-   • Consumer Key e Secret devem estar corretos
-
-4️⃣ **HTTPS/SSL**
-   • A API REST WooCommerce funciona melhor com HTTPS
-   • Verifique se seu site tem certificado SSL ativo
-   • Se usar HTTP, pode haver problemas de autenticação
-
-5️⃣ **URL DA LOJA**
-   • URL testada: ${url}
-   • Deve ser a raiz do WordPress (ex: https://seusite.com)
-   • Não deve incluir /loja, /shop, etc.
-
-🔍 Endpoint testado: ${wpRestEndpoint}
-📊 Status HTTP: ${wpRestResponse.status}
-
-Após fazer as correções, teste novamente a conexão.`
-          }
-        }
-
-        return {
-          success: false,
-          error: `Erro ao acessar WordPress REST API: HTTP ${wpRestResponse.status}. Verifique se WordPress está funcionando corretamente em ${url}`
-        }
-      }
-
-      // ETAPA 2: Verificar se WooCommerce REST API está funcionando
-      console.log('✅ WooCommerce Sync - WordPress REST API OK!')
-      console.log('🔍 WooCommerce Sync - Testando acesso à API do WooCommerce...')
-
-      const wcRestEndpoint = `${url}/wp-json/wc/v3?consumer_key=${encodeURIComponent(credentials.consumer_key)}&consumer_secret=${encodeURIComponent(credentials.consumer_secret)}`
-      const wcRestResponse = await fetch(wcRestEndpoint, {
-        method: 'GET'
-      })
-
-      console.log('🔍 WooCommerce Sync - WooCommerce REST API status:', wcRestResponse.status)
-
-      if (!wcRestResponse.ok) {
-        const errorText = await wcRestResponse.text()
-        console.error('❌ WooCommerce Sync - WooCommerce API erro:', errorText.substring(0, 200))
-
-        // Verificar se é problema de autenticação
-        if (wcRestResponse.status === 401 || wcRestResponse.status === 403) {
-          return {
-            success: false,
-            error: `❌ Erro de autenticação WooCommerce (HTTP ${wcRestResponse.status}).
-
-🔑 VERIFIQUE AS CREDENCIAIS:
-
-1️⃣ **GERAR NOVAS CHAVES API**
-   • Acesse: WooCommerce → Configurações → Avançado → REST API
-   • Clique em "Adicionar chave"
-   • Descrição: "Lucaya Griffe Integration"
-   • Usuário: Selecione um administrador
-   • Permissões: Leitura/Gravação
-   • Clique em "Gerar chave API"
-   • Copie Consumer Key e Consumer Secret
-
-2️⃣ **ATUALIZAR CREDENCIAIS**
-   • Consumer Key deve começar com "ck_"
-   • Consumer Secret deve começar com "cs_"
-   • Cole as novas credenciais no sistema
-
-🔍 Endpoint testado: ${wcRestEndpoint}`
-          }
-        }
-
-        return {
-          success: false,
-          error: `Erro ao acessar WooCommerce API: HTTP ${wcRestResponse.status} - ${errorText.substring(0, 100)}`
-        }
-      }
-
-      console.log('✅ WooCommerce Sync - WooCommerce REST API OK!')
-
+      // Montar o payload do produto
       const payload: any = {
         name: product.name,
         type: 'simple',
@@ -377,75 +253,17 @@ Após fazer as correções, teste novamente a conexão.`
         }
       }
 
-      // Buscar/criar categoria se existir
+      // Adicionar categoria se existir (opcional)
       if (product.category?.name) {
-        console.log('🔍 WooCommerce Sync - Buscando categoria:', product.category.name)
-
-        // Buscar categoria pelo nome
-        const searchCatResponse = await fetch(
-          `${url}/wp-json/wc/v3/products/categories?search=${encodeURIComponent(product.category.name)}&consumer_key=${encodeURIComponent(credentials.consumer_key)}&consumer_secret=${encodeURIComponent(credentials.consumer_secret)}`,
-          {
-            method: 'GET'
-          }
-        )
-
-        let categoryId = null
-
-        if (searchCatResponse.ok) {
-          const categories = await searchCatResponse.json()
-          const exactMatch = categories.find((c: any) => c.name.toLowerCase() === product.category.name.toLowerCase())
-
-          if (exactMatch) {
-            categoryId = exactMatch.id
-            console.log('✅ WooCommerce Sync - Categoria encontrada, ID:', categoryId)
-          }
-        }
-
-        // Se não encontrou, criar categoria
-        if (!categoryId) {
-          console.log('🔍 WooCommerce Sync - Criando categoria...')
-          const createCatResponse = await fetch(
-            `${url}/wp-json/wc/v3/products/categories?consumer_key=${encodeURIComponent(credentials.consumer_key)}&consumer_secret=${encodeURIComponent(credentials.consumer_secret)}`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ name: product.category.name })
-            }
-          )
-
-          if (createCatResponse.ok) {
-            const newCat = await createCatResponse.json()
-            categoryId = newCat.id
-            console.log('✅ WooCommerce Sync - Categoria criada, ID:', categoryId)
-          } else {
-            const errorText = await createCatResponse.text()
-            console.error('❌ WooCommerce Sync - Erro ao criar categoria:', errorText)
-
-            // Tentar extrair ID se categoria já existe
-            try {
-              const errorJson = JSON.parse(errorText)
-              if (errorJson.code === 'term_exists' && errorJson.data?.resource_id) {
-                categoryId = errorJson.data.resource_id
-                console.log('✅ WooCommerce Sync - Categoria já existe, ID:', categoryId)
-              }
-            } catch {}
-          }
-        }
-
-        // Adicionar ID da categoria ao payload
-        if (categoryId) {
-          payload.categories = [{ id: categoryId }]
-        }
+        payload.categories = [{ name: product.category.name }]
       }
 
-      console.log('🔍 WooCommerce Sync - Payload:', JSON.stringify(payload).substring(0, 200) + '...')
-
+      // Montar URL da API com credenciais direto na query string (como Jet Engine faz)
       const endpoint = `${url}/wp-json/wc/v3/products?consumer_key=${encodeURIComponent(credentials.consumer_key)}&consumer_secret=${encodeURIComponent(credentials.consumer_secret)}`
 
-      console.log('🔍 WooCommerce Sync - URL completa:', endpoint.replace(credentials.consumer_secret, '***'))
+      console.log('🔍 WooCommerce Sync - Enviando requisição...')
 
+      // Fazer requisição POST simples e direta
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -454,27 +272,24 @@ Após fazer as correções, teste novamente a conexão.`
         body: JSON.stringify(payload)
       })
 
-      console.log('🔍 WooCommerce Sync - Response status:', response.status)
-      console.log('🔍 WooCommerce Sync - Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())))
+      console.log('🔍 WooCommerce Sync - Status:', response.status)
 
+      // Tratar erro
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('❌ WooCommerce Sync - Erro completo:', errorText.substring(0, 500))
+        console.error('❌ WooCommerce Sync - Erro:', errorText.substring(0, 300))
 
-        // Tentar parsear como JSON para pegar mensagem de erro específica do WooCommerce
+        // Tentar extrair mensagem de erro do WooCommerce
         try {
           const errorJson = JSON.parse(errorText)
           const errorMsg = errorJson.message || errorJson.code || 'Erro desconhecido'
           return { success: false, error: `HTTP ${response.status}: ${errorMsg}` }
         } catch {
-          // Se não for JSON, retornar trecho do erro
-          const shortError = errorText.includes('<!doctype') || errorText.includes('<html')
-            ? 'Página HTML retornada (404) - Verifique se a API WooCommerce está habilitada'
-            : errorText.substring(0, 200)
-          return { success: false, error: `HTTP ${response.status}: ${shortError}` }
+          return { success: false, error: `HTTP ${response.status}: ${errorText.substring(0, 100)}` }
         }
       }
 
+      // Sucesso!
       const data = await response.json()
       console.log('✅ WooCommerce Sync - Produto criado! ID:', data.id)
 
