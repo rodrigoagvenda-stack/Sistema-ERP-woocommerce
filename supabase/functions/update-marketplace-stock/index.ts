@@ -76,14 +76,18 @@ async function updateTikTokStock(marketplaceProductId: string, stock: number, cr
 // Atualizar estoque no WooCommerce
 async function updateWooCommerceStock(marketplaceProductId: string, stock: number, credentials: any) {
   try {
-    const auth = btoa(`${credentials.client_id}:${credentials.client_secret}`)
+    // Validar e normalizar URL
+    let url = credentials.store_url.trim()
+    if (!url.startsWith('http')) {
+      url = 'https://' + url
+    }
+    url = url.replace(/\/+$/, '')
 
     const response = await fetch(
-      `${credentials.store_url}/wp-json/wc/v3/products/${marketplaceProductId}`,
+      `${url}/wp-json/wc/v3/products/${marketplaceProductId}?consumer_key=${encodeURIComponent(credentials.consumer_key)}&consumer_secret=${encodeURIComponent(credentials.consumer_secret)}`,
       {
         method: 'PUT',
         headers: {
-          'Authorization': `Basic ${auth}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ stock_quantity: stock })
