@@ -143,11 +143,31 @@ export default function Products() {
       if (dialog === 'create') {
         const created = await api.createProduct(payload)
         setProducts(prev => [created, ...prev])
-        showAlert('success', `Produto "${created.name}" criado com sucesso!`)
+        showAlert('success', `Produto "${created.name}" criado! Use o botão de sync para enviar ao WooCommerce.`)
       } else {
         const updated = await api.updateProduct(current.id, payload)
-        setProducts(prev => prev.map(p => p.id === updated.id ? updated : p))
-        showAlert('success', `Produto "${updated.name}" atualizado!`)
+        setProducts(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p))
+        // Sincronizar com WooCommerce se tiver woo_id
+        if (current.woo_id) {
+          const images = (payload.image_urls || []).filter(url => url.startsWith('http')).map(src => ({ src }))
+          const wooPayload = {
+            name: payload.name,
+            regular_price: String(payload.price || 0),
+            description: payload.description || '',
+            manage_stock: true,
+            stock_quantity: Number(payload.stock) || 0,
+            status: payload.status === 'active' ? 'publish' : 'draft',
+            ...(images.length > 0 && { images }),
+          }
+          try {
+            await wooProxy({ method: 'PUT', endpoint: `products/${current.woo_id}`, body: wooPayload })
+            showAlert('success', `Produto "${updated.name}" atualizado e sincronizado com WooCommerce!`)
+          } catch {
+            showAlert('success', `Produto "${updated.name}" atualizado no ERP (falha ao sincronizar WooCommerce).`)
+          }
+        } else {
+          showAlert('success', `Produto "${updated.name}" atualizado!`)
+        }
       }
       closeDialog()
     } catch (e) {
@@ -194,6 +214,14 @@ export default function Products() {
   const handleDelete = async () => {
     setSaving(true)
     try {
+      // Deletar do WooCommerce primeiro se tiver woo_id
+      if (current.woo_id) {
+        try {
+          await wooProxy({ method: 'DELETE', endpoint: `products/${current.woo_id}?force=true` })
+        } catch {
+          // Continua mesmo se falhar no Woo
+        }
+      }
       await api.deleteProduct(current.id)
       setProducts(prev => prev.filter(p => p.id !== current.id))
       showAlert('success', `Produto "${current.name}" excluído.`)
