@@ -50,7 +50,16 @@ export default function Tags() {
       } else {
         const updated = await api.updateTag(current.id, payload)
         setTags(prev => prev.map(t => t.id === updated.id ? updated : t))
-        showAlert('success', `Tag "${updated.name}" atualizada!`)
+        if (current.woo_id) {
+          try {
+            await wooProxy({ method: 'PUT', endpoint: `products/tags/${current.woo_id}`, body: { name: payload.name, slug: payload.slug } })
+            showAlert('success', `Tag "${updated.name}" atualizada e sincronizada!`)
+          } catch {
+            showAlert('success', `Tag "${updated.name}" atualizada no ERP.`)
+          }
+        } else {
+          showAlert('success', `Tag "${updated.name}" atualizada!`)
+        }
       }
       setDialog(null); setCurrent(EMPTY)
     } catch (e) {
@@ -63,6 +72,9 @@ export default function Tags() {
   const handleDelete = async () => {
     setSaving(true)
     try {
+      if (current.woo_id) {
+        try { await wooProxy({ method: 'DELETE', endpoint: `products/tags/${current.woo_id}?force=true` }) } catch {}
+      }
       await api.deleteTag(current.id)
       setTags(prev => prev.filter(t => t.id !== current.id))
       showAlert('success', `Tag "${current.name}" excluída.`)

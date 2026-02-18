@@ -55,7 +55,18 @@ export default function Brands() {
       } else {
         const updated = await api.updateBrand(current.id, payload)
         setBrands(prev => prev.map(b => b.id === updated.id ? updated : b))
-        showAlert('success', `Marca "${updated.name}" atualizada!`)
+        if (current.woo_id) {
+          try {
+            const attrs = await wooProxy({ endpoint: 'products/attributes?slug=pa_marca' })
+            const attrId = Array.isArray(attrs) && attrs.length > 0 ? attrs[0].id : null
+            if (attrId) await wooProxy({ method: 'PUT', endpoint: `products/attributes/${attrId}/terms/${current.woo_id}`, body: { name: payload.name, slug: payload.slug } })
+            showAlert('success', `Marca "${updated.name}" atualizada e sincronizada!`)
+          } catch {
+            showAlert('success', `Marca "${updated.name}" atualizada no ERP.`)
+          }
+        } else {
+          showAlert('success', `Marca "${updated.name}" atualizada!`)
+        }
       }
       closeDialog()
     } catch (e) {
@@ -68,6 +79,13 @@ export default function Brands() {
   const handleDelete = async () => {
     setSaving(true)
     try {
+      if (current.woo_id) {
+        try {
+          const attrs = await wooProxy({ endpoint: 'products/attributes?slug=pa_marca' })
+          const attrId = Array.isArray(attrs) && attrs.length > 0 ? attrs[0].id : null
+          if (attrId) await wooProxy({ method: 'DELETE', endpoint: `products/attributes/${attrId}/terms/${current.woo_id}?force=true` })
+        } catch {}
+      }
       await api.deleteBrand(current.id)
       setBrands(prev => prev.filter(b => b.id !== current.id))
       showAlert('success', `Marca "${current.name}" excluída.`)

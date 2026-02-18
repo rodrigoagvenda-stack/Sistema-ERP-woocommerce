@@ -59,7 +59,16 @@ export default function Categories() {
       } else {
         const updated = await api.updateCategory(current.id, payload)
         setCategories(prev => prev.map(c => c.id === updated.id ? updated : c))
-        showAlert('success', `Categoria "${updated.name}" atualizada!`)
+        if (current.woo_id) {
+          try {
+            await wooProxy({ method: 'PUT', endpoint: `products/categories/${current.woo_id}`, body: { name: payload.name, slug: payload.slug } })
+            showAlert('success', `Categoria "${updated.name}" atualizada e sincronizada!`)
+          } catch {
+            showAlert('success', `Categoria "${updated.name}" atualizada no ERP.`)
+          }
+        } else {
+          showAlert('success', `Categoria "${updated.name}" atualizada!`)
+        }
       }
       closeDialog()
     } catch (e) {
@@ -72,6 +81,9 @@ export default function Categories() {
   const handleDelete = async () => {
     setSaving(true)
     try {
+      if (current.woo_id) {
+        try { await wooProxy({ method: 'DELETE', endpoint: `products/categories/${current.woo_id}?force=true` }) } catch {}
+      }
       await api.deleteCategory(current.id)
       setCategories(prev => prev.filter(c => c.id !== current.id))
       showAlert('success', `Categoria "${current.name}" excluída.`)

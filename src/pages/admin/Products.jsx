@@ -186,12 +186,17 @@ export default function Products() {
         .filter(url => url.startsWith('http'))
         .map(src => ({ src }))
 
+      const cat = categories.find(c => c.id === product.category_id)
       const payload = {
         name: product.name,
         regular_price: String(product.price || 0),
         description: product.description || '',
         manage_stock: true,
         stock_quantity: Number(product.stock) || 0,
+        status: product.status === 'active' ? 'publish' : 'draft',
+        ...(cat?.woo_id && { categories: [{ id: cat.woo_id }] }),
+        ...(product.weight && { weight: String(product.weight) }),
+        ...(product.width && { dimensions: { width: String(product.width), height: String(product.height || 0), length: String(product.depth || 0) } }),
         ...(images.length > 0 && { images }),
       }
 
