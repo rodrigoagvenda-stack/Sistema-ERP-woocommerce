@@ -167,7 +167,7 @@ export const api = {
   async getAllAttributes() {
     const { data, error } = await supabase
       .from('attributes')
-      .select('*, terms:attribute_terms(*)')
+      .select('*, terms:attribute_terms!attribute_terms_attribute_id_fkey(*)')
       .order('name', { ascending: true })
     if (error) throw error
     return data || []

@@ -1,30 +1,31 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute from '@/components/layout/ProtectedRoute'
 import AdminLayout from '@/components/layout/AdminLayout'
 
 // Public
-import Login from '@/pages/Login'
+const Login = lazy(() => import('@/pages/Login'))
 
 // Admin pages
-import Dashboard from '@/pages/admin/Dashboard'
-import Products from '@/pages/admin/Products'
-import Categories from '@/pages/admin/Categories'
-import Brands from '@/pages/admin/Brands'
-import Tags from '@/pages/admin/Tags'
-import Attributes from '@/pages/admin/Attributes'
-import Reviews from '@/pages/admin/Reviews'
-import WooSettings from '@/pages/admin/WooSettings'
-import SyncLogs from '@/pages/admin/SyncLogs'
+const Dashboard = lazy(() => import('@/pages/admin/Dashboard'))
+const Products = lazy(() => import('@/pages/admin/Products'))
+const Categories = lazy(() => import('@/pages/admin/Categories'))
+const Brands = lazy(() => import('@/pages/admin/Brands'))
+const Tags = lazy(() => import('@/pages/admin/Tags'))
+const Attributes = lazy(() => import('@/pages/admin/Attributes'))
+const Reviews = lazy(() => import('@/pages/admin/Reviews'))
+const WooSettings = lazy(() => import('@/pages/admin/WooSettings'))
+const SyncLogs = lazy(() => import('@/pages/admin/SyncLogs'))
 
 // Analytics
-import AnalyticsOverview from '@/pages/admin/analytics/Overview'
-import AnalyticsProducts from '@/pages/admin/analytics/ProductsAnalytics'
-import AnalyticsRevenue from '@/pages/admin/analytics/Revenue'
-import AnalyticsOrders from '@/pages/admin/analytics/Orders'
-import AnalyticsVariations from '@/pages/admin/analytics/Variations'
-import AnalyticsCategories from '@/pages/admin/analytics/CategoriesAnalytics'
-import AnalyticsStock from '@/pages/admin/analytics/Stock'
-import AnalyticsSettings from '@/pages/admin/analytics/AnalyticsSettings'
+const AnalyticsOverview = lazy(() => import('@/pages/admin/analytics/Overview'))
+const AnalyticsProducts = lazy(() => import('@/pages/admin/analytics/ProductsAnalytics'))
+const AnalyticsRevenue = lazy(() => import('@/pages/admin/analytics/Revenue'))
+const AnalyticsOrders = lazy(() => import('@/pages/admin/analytics/Orders'))
+const AnalyticsVariations = lazy(() => import('@/pages/admin/analytics/Variations'))
+const AnalyticsCategories = lazy(() => import('@/pages/admin/analytics/CategoriesAnalytics'))
+const AnalyticsStock = lazy(() => import('@/pages/admin/analytics/Stock'))
+const AnalyticsSettings = lazy(() => import('@/pages/admin/analytics/AnalyticsSettings'))
 
 function AdminPage({ children }) {
   return (
@@ -36,6 +37,7 @@ function AdminPage({ children }) {
 
 export default function App() {
   return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen text-gray-400">Carregando...</div>}>
     <Routes>
       {/* Public */}
       <Route path="/login" element={<Login />} />
@@ -66,5 +68,6 @@ export default function App() {
       <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
     </Routes>
+    </Suspense>
   )
 }
