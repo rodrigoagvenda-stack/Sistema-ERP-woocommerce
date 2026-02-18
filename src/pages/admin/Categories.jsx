@@ -63,11 +63,11 @@ export default function Categories() {
           try {
             await wooProxy({ method: 'PUT', endpoint: `products/categories/${current.woo_id}`, body: { name: payload.name, slug: payload.slug } })
             showAlert('success', `Categoria "${updated.name}" atualizada e sincronizada!`)
-          } catch {
-            showAlert('success', `Categoria "${updated.name}" atualizada no ERP.`)
+          } catch (e) {
+            showAlert('error', `Salvo no ERP, mas erro ao sincronizar com WooCommerce: ${e.message}`)
           }
         } else {
-          showAlert('success', `Categoria "${updated.name}" atualizada!`)
+          showAlert('error', `Categoria salva no ERP, mas sem woo_id — clique em "Sincronizar" primeiro para vinculá-la ao WooCommerce.`)
         }
       }
       closeDialog()
