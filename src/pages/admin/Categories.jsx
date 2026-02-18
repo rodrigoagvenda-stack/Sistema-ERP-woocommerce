@@ -59,15 +59,20 @@ export default function Categories() {
       } else {
         const updated = await api.updateCategory(current.id, payload)
         setCategories(prev => prev.map(c => c.id === updated.id ? updated : c))
-        if (current.woo_id) {
-          try {
+        try {
+          if (current.woo_id) {
             await wooProxy({ method: 'PUT', endpoint: `products/categories/${current.woo_id}`, body: { name: payload.name, slug: payload.slug } })
-            showAlert('success', `Categoria "${updated.name}" atualizada e sincronizada!`)
-          } catch (e) {
-            showAlert('error', `Salvo no ERP, mas erro ao sincronizar com WooCommerce: ${e.message}`)
+          } else {
+            const body = { name: payload.name, slug: payload.slug }
+            const parent = categories.find(c => c.id === payload.parent_id)
+            if (parent?.woo_id) body.parent = parent.woo_id
+            const wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body })
+            await api.updateCategory(current.id, { woo_id: wooData.id })
+            setCategories(prev => prev.map(c => c.id === current.id ? { ...c, woo_id: wooData.id } : c))
           }
-        } else {
-          showAlert('error', `Categoria salva no ERP, mas sem woo_id — clique em "Sincronizar" primeiro para vinculá-la ao WooCommerce.`)
+          showAlert('success', `Categoria "${updated.name}" atualizada e sincronizada!`)
+        } catch (e) {
+          showAlert('error', `Salvo no ERP, mas erro ao sincronizar: ${e.message}`)
         }
       }
       closeDialog()
