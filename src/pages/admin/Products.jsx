@@ -150,6 +150,7 @@ export default function Products() {
         // Sincronizar com WooCommerce se tiver woo_id
         if (current.woo_id) {
           const images = (payload.image_urls || []).filter(url => url.startsWith('http')).map(src => ({ src }))
+          const cat = categories.find(c => c.id === payload.category_id)
           const wooPayload = {
             name: payload.name,
             regular_price: String(payload.price || 0),
@@ -157,6 +158,7 @@ export default function Products() {
             manage_stock: true,
             stock_quantity: Number(payload.stock) || 0,
             status: payload.status === 'active' ? 'publish' : 'draft',
+            ...(cat?.woo_id && { categories: [{ id: cat.woo_id }] }),
             ...(images.length > 0 && { images }),
           }
           try {
