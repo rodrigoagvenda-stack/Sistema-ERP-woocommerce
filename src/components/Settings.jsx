@@ -31,7 +31,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
     whatsapp_number: '+5511986751552',
-    store_name: 'Lukaya Griffe',
+    store_name: 'Geezer',
     store_email: '',
     store_address: '',
     min_stock_alert: 5,
@@ -137,7 +137,7 @@ export default function Settings() {
                   value={settings.store_name || ''}
                   onChange={(e) => handleChange('store_name', e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                  placeholder="Lukaya Griffe"
+                  placeholder="Geezer"
                 />
               </div>
 
@@ -165,7 +165,7 @@ export default function Settings() {
                   value={settings.store_email || ''}
                   onChange={(e) => handleChange('store_email', e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                  placeholder="contato@lukayagriffe.com"
+                  placeholder="contato@geezer.com.br"
                 />
               </div>
 

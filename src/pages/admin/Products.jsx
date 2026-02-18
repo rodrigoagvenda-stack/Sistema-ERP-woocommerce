@@ -1,0 +1,510 @@
+import { useState, useEffect } from 'react'
+import { Plus, Pencil, Trash2, Search, CheckCircle2, AlertCircle, X, Upload, Globe } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Textarea } from '@/components/ui/textarea'
+import { api, wooProxy } from '@/lib/api'
+import { supabase } from '@/lib/supabase'
+
+const EMPTY_PRODUCT = {
+  name: '', description: '', price: '', stock: '', min_stock: 5,
+  category_id: '', brand_id: '', status: 'active', image_urls: [],
+  weight: '', width: '', height: '', depth: '', woo_tags: []
+}
+
+function AlertMsg({ alert }) {
+  if (!alert) return null
+  return (
+    <Alert variant={alert.type === 'error' ? 'destructive' : 'success'} className="mb-4">
+      {alert.type === 'error' ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+      <AlertDescription>{alert.message}</AlertDescription>
+    </Alert>
+  )
+}
+
+export default function Products() {
+  const [products, setProducts] = useState([])
+  const [categories, setCategories] = useState([])
+  const [brands, setBrands] = useState([])
+  const [tags, setTags] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [alert, setAlert] = useState(null)
+  const [dialog, setDialog] = useState(null) // null | 'create' | 'edit' | 'delete'
+  const [current, setCurrent] = useState(EMPTY_PRODUCT)
+  const [saving, setSaving] = useState(false)
+  const [imageLoading, setImageLoading] = useState(false)
+  const [syncing, setSyncing] = useState(null) // product id being synced
+
+  const showAlert = (type, message) => {
+    setAlert({ type, message })
+    setTimeout(() => setAlert(null), 4000)
+  }
+
+  useEffect(() => {
+    loadAll()
+  }, [])
+
+  const loadAll = async () => {
+    setLoading(true)
+    try {
+      const [p, c, b, t] = await Promise.all([
+        api.getAllProducts(),
+        api.getAllCategories(),
+        api.getAllBrands(),
+        api.getAllTags(),
+      ])
+      setProducts(p)
+      setCategories(c)
+      setBrands(b)
+      setTags(t)
+    } catch (e) {
+      showAlert('error', 'Erro ao carregar dados: ' + e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const openCreate = () => { setCurrent(EMPTY_PRODUCT); setDialog('create') }
+  const openEdit = (p) => { setCurrent({ ...p }); setDialog('edit') }
+  const openDelete = (p) => { setCurrent(p); setDialog('delete') }
+  const closeDialog = () => { setDialog(null); setCurrent(EMPTY_PRODUCT) }
+
+  const convertToJpeg = (file) => new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth
+      canvas.height = img.naturalHeight
+      const ctx = canvas.getContext('2d')
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(img, 0, 0)
+      URL.revokeObjectURL(url)
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Conversão falhou')), 'image/jpeg', 0.92)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Imagem inválida')) }
+    img.src = url
+  })
+
+  const handleUploadImage = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImageLoading(true)
+    try {
+      // Converte para JPEG (garante compatibilidade com WooCommerce/WordPress)
+      const jpeg = await convertToJpeg(file)
+      const path = `products/${Date.now()}.jpg`
+      const { error } = await supabase.storage.from('product-images').upload(path, jpeg, { contentType: 'image/jpeg' })
+      if (error) throw error
+      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
+      setCurrent(prev => ({ ...prev, image_urls: [...(prev.image_urls || []), publicUrl] }))
+    } catch (err) {
+      showAlert('error', 'Erro ao fazer upload: ' + err.message)
+    } finally {
+      setImageLoading(false)
+      e.target.value = ''
+    }
+  }
+
+  const removeImage = (idx) => {
+    setCurrent(prev => ({ ...prev, image_urls: prev.image_urls.filter((_, i) => i !== idx) }))
+  }
+
+  const handleSave = async () => {
+    if (!current.name?.trim()) return showAlert('error', 'Nome é obrigatório')
+    if (!current.price) return showAlert('error', 'Preço é obrigatório')
+    setSaving(true)
+    try {
+      const payload = {
+        name: current.name.trim(),
+        description: current.description || '',
+        price: parseFloat(current.price),
+        stock: parseInt(current.stock) || 0,
+        min_stock: parseInt(current.min_stock) || 5,
+        category_id: current.category_id || null,
+        brand_id: current.brand_id || null,
+        status: current.status || 'active',
+        image_urls: current.image_urls || [],
+        weight: current.weight ? parseFloat(current.weight) : null,
+        width: current.width ? parseFloat(current.width) : null,
+        height: current.height ? parseFloat(current.height) : null,
+        depth: current.depth ? parseFloat(current.depth) : null,
+        woo_tags: current.woo_tags || [],
+      }
+      if (dialog === 'create') {
+        const created = await api.createProduct(payload)
+        setProducts(prev => [created, ...prev])
+        showAlert('success', `Produto "${created.name}" criado com sucesso!`)
+      } else {
+        const updated = await api.updateProduct(current.id, payload)
+        setProducts(prev => prev.map(p => p.id === updated.id ? updated : p))
+        showAlert('success', `Produto "${updated.name}" atualizado!`)
+      }
+      closeDialog()
+    } catch (e) {
+      showAlert('error', 'Erro ao salvar: ' + e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSync = async (product) => {
+    setSyncing(product.id)
+    try {
+      const images = (product.image_urls || [])
+        .filter(url => url.startsWith('http'))
+        .map(src => ({ src }))
+
+      const payload = {
+        name: product.name,
+        regular_price: String(product.price || 0),
+        description: product.description || '',
+        manage_stock: true,
+        stock_quantity: Number(product.stock) || 0,
+        ...(images.length > 0 && { images }),
+      }
+
+      let wooData
+      if (product.woo_id) {
+        wooData = await wooProxy({ method: 'PUT', endpoint: `products/${product.woo_id}`, body: payload })
+      } else {
+        wooData = await wooProxy({ method: 'POST', endpoint: 'products', body: { ...payload, type: 'simple' } })
+        // Salvar woo_id localmente
+        await supabase.from('products').update({ woo_id: wooData.id }).eq('id', product.id)
+        setProducts(prev => prev.map(p => p.id === product.id ? { ...p, woo_id: wooData.id } : p))
+      }
+
+      showAlert('success', `"${product.name}" sincronizado com WooCommerce! ID: ${wooData.id}`)
+    } catch (e) {
+      showAlert('error', 'Erro ao sincronizar: ' + e.message)
+    } finally {
+      setSyncing(null)
+    }
+  }
+
+  const handleDelete = async () => {
+    setSaving(true)
+    try {
+      await api.deleteProduct(current.id)
+      setProducts(prev => prev.filter(p => p.id !== current.id))
+      showAlert('success', `Produto "${current.name}" excluído.`)
+      closeDialog()
+    } catch (e) {
+      showAlert('error', 'Erro ao excluir: ' + e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const filtered = products.filter(p =>
+    p.name?.toLowerCase().includes(search.toLowerCase()) ||
+    p.description?.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n)
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Produtos</h1>
+          <p className="text-sm text-gray-500">{products.length} produtos cadastrados</p>
+        </div>
+        <Button onClick={openCreate} className="gap-2">
+          <Plus className="h-4 w-4" /> Novo Produto
+        </Button>
+      </div>
+
+      <AlertMsg alert={alert} />
+
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Buscar produtos..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-8 text-center text-gray-400 text-sm">Carregando...</div>
+          ) : filtered.length === 0 ? (
+            <div className="p-8 text-center text-gray-400 text-sm">Nenhum produto encontrado</div>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produto</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Marca</TableHead>
+                      <TableHead>Preço</TableHead>
+                      <TableHead>Estoque</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-20" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map(p => (
+                      <TableRow key={p.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            {p.image_urls?.[0] ? (
+                              <img src={p.image_urls[0]} alt={p.name} className="w-8 h-8 rounded object-cover" />
+                            ) : (
+                              <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center text-gray-300 text-xs">IMG</div>
+                            )}
+                            <span className="font-medium text-sm text-gray-900">{p.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-500">{p.category?.name || '—'}</TableCell>
+                        <TableCell className="text-sm text-gray-500">{p.brand?.name || '—'}</TableCell>
+                        <TableCell className="text-sm font-medium">{fmt(p.price)}</TableCell>
+                        <TableCell>
+                          <Badge variant={(p.stock || 0) < (p.min_stock || 5) ? 'warning' : 'success'}>
+                            {p.stock ?? 0}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={p.status === 'active' ? 'success' : 'secondary'}>
+                            {p.status === 'active' ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(p)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost" size="icon"
+                              className={`h-7 w-7 ${p.woo_id ? 'text-green-500 hover:text-green-700' : 'text-gray-400 hover:text-[#f4b522]'}`}
+                              onClick={() => handleSync(p)}
+                              disabled={syncing === p.id}
+                              title={p.woo_id ? `Sincronizado (WooID: ${p.woo_id})` : 'Sincronizar com WooCommerce'}
+                            >
+                              <Globe className={`h-3.5 w-3.5 ${syncing === p.id ? 'animate-spin' : ''}`} />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600" onClick={() => openDelete(p)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {filtered.map(p => (
+                  <div key={p.id} className="p-4 flex items-center gap-3">
+                    {p.image_urls?.[0] ? (
+                      <img src={p.image_urls[0]} alt={p.name} className="w-14 h-14 rounded-lg object-cover shrink-0" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center text-gray-300 text-xs shrink-0">IMG</div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-gray-900 truncate">{p.name}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{p.category?.name || 'Sem categoria'}{p.brand?.name ? ` · ${p.brand.name}` : ''}</p>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <span className="text-sm font-bold text-gray-900">{fmt(p.price)}</span>
+                        <Badge variant={(p.stock || 0) < (p.min_stock || 5) ? 'warning' : 'success'} className="text-xs">
+                          {p.stock ?? 0} un.
+                        </Badge>
+                        <Badge variant={p.status === 'active' ? 'success' : 'secondary'} className="text-xs">
+                          {p.status === 'active' ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon"
+                        className={`h-8 w-8 ${p.woo_id ? 'text-green-500' : 'text-gray-400'}`}
+                        onClick={() => handleSync(p)}
+                        disabled={syncing === p.id}
+                      >
+                        <Globe className={`h-4 w-4 ${syncing === p.id ? 'animate-spin' : ''}`} />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400" onClick={() => openDelete(p)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={dialog === 'create' || dialog === 'edit'} onOpenChange={closeDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{dialog === 'create' ? 'Novo Produto' : 'Editar Produto'}</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 space-y-1.5">
+                <Label>Nome *</Label>
+                <Input value={current.name} onChange={e => setCurrent(p => ({ ...p, name: e.target.value }))} placeholder="Nome do produto" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Preço (R$) *</Label>
+                <Input type="number" step="0.01" value={current.price} onChange={e => setCurrent(p => ({ ...p, price: e.target.value }))} placeholder="0.00" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Estoque</Label>
+                <Input type="number" value={current.stock} onChange={e => setCurrent(p => ({ ...p, stock: e.target.value }))} placeholder="0" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Categoria</Label>
+                <Select value={current.category_id?.toString() || 'none'} onValueChange={v => setCurrent(p => ({ ...p, category_id: v === 'none' ? null : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem categoria</SelectItem>
+                    {categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Marca</Label>
+                <Select value={current.brand_id?.toString() || 'none'} onValueChange={v => setCurrent(p => ({ ...p, brand_id: v === 'none' ? null : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem marca</SelectItem>
+                    {brands.map(b => <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={current.status} onValueChange={v => setCurrent(p => ({ ...p, status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="inactive">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Estoque Mínimo</Label>
+                <Input type="number" value={current.min_stock} onChange={e => setCurrent(p => ({ ...p, min_stock: e.target.value }))} />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Descrição</Label>
+              <Textarea value={current.description} onChange={e => setCurrent(p => ({ ...p, description: e.target.value }))} rows={3} />
+            </div>
+
+            {/* Dimensions */}
+            <div className="grid grid-cols-4 gap-3">
+              {[['Peso (kg)', 'weight'], ['Largura (cm)', 'width'], ['Altura (cm)', 'height'], ['Profundidade (cm)', 'depth']].map(([label, field]) => (
+                <div key={field} className="space-y-1.5">
+                  <Label className="text-xs">{label}</Label>
+                  <Input type="number" step="0.01" value={current[field] || ''} onChange={e => setCurrent(p => ({ ...p, [field]: e.target.value }))} placeholder="0" />
+                </div>
+              ))}
+            </div>
+
+            {/* Images */}
+            <div className="space-y-3">
+              {/* Imagem principal */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-gray-700">Imagem do produto <span className="text-gray-400 font-normal">(destaque)</span></Label>
+                <div className="flex items-center gap-3">
+                  {current.image_urls?.[0] ? (
+                    <div className="relative w-20 h-20">
+                      <img src={current.image_urls[0]} alt="" className="w-full h-full object-cover rounded-lg border-2 border-[#f4b522]" />
+                      <button onClick={() => removeImage(0)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="w-20 h-20 border-2 border-dashed border-[#f4b522] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-yellow-50 transition-colors">
+                      {imageLoading ? <div className="w-4 h-4 border-2 border-[#f4b522] border-t-transparent rounded-full animate-spin" /> : <Upload className="w-5 h-5 text-[#f4b522]" />}
+                      <span className="text-[10px] text-gray-400 mt-1">Principal</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleUploadImage} disabled={imageLoading} />
+                    </label>
+                  )}
+                  <p className="text-xs text-gray-400">Primeira imagem exibida no WooCommerce como foto de destaque do produto.</p>
+                </div>
+              </div>
+
+              {/* Galeria */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-gray-700">Galeria de imagens</Label>
+                <div className="flex flex-wrap gap-2">
+                  {(current.image_urls || []).slice(1).map((img, i) => (
+                    <div key={i} className="relative w-16 h-16">
+                      <img src={img} alt="" className="w-full h-full object-cover rounded-lg border" />
+                      <button onClick={() => removeImage(i + 1)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  ))}
+                  {current.image_urls?.[0] && (
+                    <label className="w-16 h-16 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#f4b522] transition-colors">
+                      {imageLoading ? <div className="w-4 h-4 border-2 border-[#f4b522] border-t-transparent rounded-full animate-spin" /> : <Upload className="w-4 h-4 text-gray-400" />}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleUploadImage} disabled={imageLoading} />
+                    </label>
+                  )}
+                  {!(current.image_urls?.[0]) && <p className="text-xs text-gray-400 self-center">Adicione a imagem principal primeiro.</p>}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? 'Salvando...' : (dialog === 'create' ? 'Criar Produto' : 'Salvar')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={dialog === 'delete'} onOpenChange={closeDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir Produto</DialogTitle>
+          </DialogHeader>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Tem certeza que deseja excluir <strong>"{current.name}"</strong>? Esta ação não pode ser desfeita.
+            </AlertDescription>
+          </Alert>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={saving}>
+              {saving ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}

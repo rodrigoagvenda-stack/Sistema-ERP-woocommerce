@@ -1,9 +1,9 @@
 {
-  "name": "lukaya-griffe-erp",
+  "name": "geezer-erp",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Sistema ERP e Catálogo para Lukaya Griffe",
+  "description": "Geezer ERP - Sistema de Gestão WooCommerce",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -11,11 +11,23 @@
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@radix-ui/react-avatar": "^1.1.11",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-progress": "^1.1.8",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-tabs": "^1.1.13",
     "@supabase/supabase-js": "^2.83.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-toastify": "^11.0.5"
+    "react-router-dom": "^7.13.0",
+    "recharts": "^3.7.0",
+    "tailwind-merge": "^3.4.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

@@ -1,8 +1,8 @@
 // Utilitário para ler variáveis de ambiente
-// Funciona tanto em desenvolvimento (Vite) quanto em produção (Docker)
+// Funciona tanto em desenvolvimento (Vite) quanto em produção (Docker/Easypanel)
 
 const getEnvVar = (key) => {
-  // Em produção (Docker), usar window._env_
+  // Em produção (Docker/Easypanel), usar window._env_
   if (typeof window !== 'undefined' && window._env_ && window._env_[key]) {
     return window._env_[key];
   }
@@ -16,17 +16,15 @@ const getEnvVar = (key) => {
 };
 
 export const ENV = {
-  SUPABASE_URL: getEnvVar('VITE_SUPABASE_URL') || 'https://hnkhihzeqtzqzybkjype.supabase.co',
-  SUPABASE_ANON_KEY: getEnvVar('VITE_SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhua2hpaHplcXR6cXp5YmtqeXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NzAyNjMsImV4cCI6MjA3NzE0NjI2M30.FWsLnIruhnwigbjLl0dSI5Bx1sg2S_JU7ubE-fGdqaA',
-  WHATSAPP_NUMBER: getEnvVar('VITE_WHATSAPP_NUMBER') || '+5511986751552'
+  SUPABASE_URL: getEnvVar('VITE_SUPABASE_URL'),
+  SUPABASE_ANON_KEY: getEnvVar('VITE_SUPABASE_ANON_KEY'),
+  WHATSAPP_NUMBER: getEnvVar('VITE_WHATSAPP_NUMBER') || '',
 };
 
 // Validar variáveis obrigatórias
 if (!ENV.SUPABASE_URL || !ENV.SUPABASE_ANON_KEY) {
-  console.warn('⚠️ Variáveis de ambiente do Supabase não configuradas. Usando valores demo.');
+  console.error(
+    '❌ ERRO: Variáveis de ambiente obrigatórias não configuradas.\n' +
+    'Configure no Easypanel: VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY'
+  );
 }
-
-console.log('🔧 Configuração carregada:', {
-  supabaseConfigured: !!ENV.SUPABASE_URL,
-  whatsapp: ENV.WHATSAPP_NUMBER
-});

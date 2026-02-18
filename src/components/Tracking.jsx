@@ -463,7 +463,7 @@ export default function Tracking() {
           <p>&amp;utm_content=<span className="text-pink-600">banner_top</span></p>
         </div>
         <p className="text-xs text-blue-600 mt-3">
-          <strong>Exemplo completo:</strong> https://lukayagriffe.com?utm_source=instagram&amp;utm_medium=stories&amp;utm_campaign=lancamento
+          <strong>Exemplo completo:</strong> https://geezer.agenciavenda.com.br?utm_source=instagram&amp;utm_medium=stories&amp;utm_campaign=lancamento
         </p>
       </div>
     </div>

@@ -335,7 +335,7 @@ export default function SDRConfig() {
                   value={config.notification_email}
                   onChange={(e) => handleChange('notification_email', e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500"
-                  placeholder="vendas@lukayagriffe.com"
+                  placeholder="vendas@geezer.com.br"
                 />
               </div>
 
