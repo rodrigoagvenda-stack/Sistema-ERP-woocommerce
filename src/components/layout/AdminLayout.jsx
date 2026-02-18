@@ -54,6 +54,11 @@ const navItems = [
       { label: 'Logs de Sync', icon: FileText, to: '/admin/woo/logs' },
     ],
   },
+  {
+    label: 'FAQ',
+    icon: FileText,
+    to: '/admin/faq',
+  },
 ]
 
 function NavItem({ item, collapsed, onNavigate }) {
@@ -187,9 +192,8 @@ function Sidebar({ collapsed, onNavigate }) {
       {/* Developer credits */}
       {!collapsed && (
         <div className="px-3 pb-3">
-          <p className="text-[10px] text-gray-300 text-center leading-tight">
-            Desenvolvido por vend.ai &amp; Grupo Venda<br />
-            Todos os direitos reservados
+          <p className="text-[10px] text-gray-900 text-center leading-tight">
+            Desenvolvido com 💗 por Vend.ai - Grupo Venda
           </p>
         </div>
       )}
@@ -300,8 +304,8 @@ export default function AdminLayout({ children }) {
 
         {/* Mobile footer credits */}
         <footer className="md:hidden py-3 text-center">
-          <p className="text-[10px] text-gray-300">
-            Desenvolvido por vend.ai &amp; Grupo Venda — Todos os direitos reservados
+          <p className="text-[10px] text-gray-900">
+            Desenvolvido com 💗 por Vend.ai - Grupo Venda
           </p>
         </footer>
       </div>

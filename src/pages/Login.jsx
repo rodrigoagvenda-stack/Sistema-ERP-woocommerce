@@ -110,8 +110,8 @@ export default function Login() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-gray-400">
-          Desenvolvido por <span className="font-medium">vend.ai</span> &amp; Grupo Venda — © {new Date().getFullYear()}
+        <p className="text-center text-xs text-gray-900">
+          Desenvolvido com 💗 por <span className="font-medium">Vend.ai</span> - Grupo Venda
         </p>
       </div>
     </div>

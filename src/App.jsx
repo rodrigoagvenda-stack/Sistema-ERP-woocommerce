@@ -16,6 +16,7 @@ const Attributes = lazy(() => import('@/pages/admin/Attributes'))
 const Reviews = lazy(() => import('@/pages/admin/Reviews'))
 const WooSettings = lazy(() => import('@/pages/admin/WooSettings'))
 const SyncLogs = lazy(() => import('@/pages/admin/SyncLogs'))
+const FAQ = lazy(() => import('@/pages/admin/FAQ'))
 
 // Analytics
 const AnalyticsOverview = lazy(() => import('@/pages/admin/analytics/Overview'))
@@ -52,6 +53,7 @@ export default function App() {
       <Route path="/admin/reviews" element={<AdminPage><Reviews /></AdminPage>} />
       <Route path="/admin/woo/settings" element={<AdminPage><WooSettings /></AdminPage>} />
       <Route path="/admin/woo/logs" element={<AdminPage><SyncLogs /></AdminPage>} />
+      <Route path="/admin/faq" element={<AdminPage><FAQ /></AdminPage>} />
 
       {/* Analytics */}
       <Route path="/admin/analytics/overview" element={<AdminPage><AnalyticsOverview /></AdminPage>} />
