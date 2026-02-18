@@ -54,11 +54,6 @@ const navItems = [
       { label: 'Logs de Sync', icon: FileText, to: '/admin/woo/logs' },
     ],
   },
-  {
-    label: 'FAQ',
-    icon: FileText,
-    to: '/admin/faq',
-  },
 ]
 
 function NavItem({ item, collapsed, onNavigate }) {
