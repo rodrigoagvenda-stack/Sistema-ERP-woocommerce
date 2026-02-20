@@ -34,15 +34,15 @@ const faqs = [
     items: [
       {
         q: 'Como criar um novo produto?',
-        a: 'Vá em Produtos → clique em "+ Novo Produto" → preencha nome, preço, estoque, categoria e imagens → clique em "Criar Produto". O produto é salvo no ERP. Use o botão de sync (globo) para enviar ao WooCommerce.',
+        a: 'Vá em Produtos → clique em "+ Novo Produto" → preencha nome, preço, estoque, categoria e imagens → clique em "Criar Produto". O produto é salvo no ERP. IMPORTANTE: após criar, clique no botão 🌐 (globo) para enviar o produto ao WooCommerce.',
       },
       {
         q: 'Como editar um produto existente?',
-        a: 'Clique no ícone de lápis ao lado do produto. Faça as alterações e clique em "Salvar". Se o produto já está vinculado ao WooCommerce (tem Woo ID), a atualização é enviada automaticamente.',
+        a: 'Clique no ícone de lápis ao lado do produto. Faça as alterações e clique em "Salvar". Se o produto já está vinculado ao WooCommerce (tem Woo ID), a atualização é enviada automaticamente. Caso contrário, clique no botão 🌐 (globo) para sincronizar.',
       },
       {
         q: 'Como sincronizar um produto com o WooCommerce?',
-        a: 'Clique no ícone de globo (🌐) ao lado do produto. Se o produto ainda não existe no WooCommerce, ele será criado. Se já existe, será atualizado.',
+        a: 'Clique no botão 🌐 (globo) ao lado do produto. Se o produto ainda não existe no WooCommerce, ele será criado automaticamente. Se já existe, será atualizado. SEMPRE use o botão 🌐 após criar um produto novo para garantir que ele apareça na loja.',
       },
       {
         q: 'Como adicionar imagens ao produto?',
@@ -59,11 +59,11 @@ const faqs = [
     items: [
       {
         q: 'Como criar uma categoria?',
-        a: 'Vá em Produtos → Categorias → "+ Nova Categoria". Preencha nome, slug e categoria pai (opcional). Ao salvar, a categoria é criada no ERP e sincronizada automaticamente com o WooCommerce.',
+        a: 'Vá em Produtos → Categorias → "+ Nova Categoria". Preencha nome, slug e categoria pai (opcional). Ao salvar, a categoria é criada no ERP. IMPORTANTE: clique no botão 🌐 (globo) para enviar a categoria ao WooCommerce.',
       },
       {
         q: 'Como sincronizar uma categoria com o WooCommerce?',
-        a: 'Clique no ícone de globo ao lado da categoria. Caso a categoria ainda não tenha Woo ID, ela será criada no WooCommerce e o ID será salvo automaticamente.',
+        a: 'Clique no botão 🌐 (globo) ao lado da categoria. Se ela ainda não tem Woo ID, será criada no WooCommerce e o ID salvo automaticamente. Se já existe, será atualizada. Lembre-se: salvar no ERP não basta — o 🌐 é obrigatório para refletir na loja.',
       },
       {
         q: 'O que é "Categoria Pai"?',
@@ -76,7 +76,7 @@ const faqs = [
     items: [
       {
         q: 'Como cadastrar uma marca?',
-        a: 'Vá em Produtos → Marcas → "+ Nova Marca". Preencha nome e slug. Ao salvar, a marca é criada no ERP. Use o botão de sync para enviar ao WooCommerce como um atributo global (pa_marca).',
+        a: 'Vá em Produtos → Marcas → "+ Nova Marca". Preencha nome e slug. Ao salvar, a marca é criada no ERP. IMPORTANTE: clique no botão 🌐 (globo) para enviar ao WooCommerce como um atributo global (pa_marca). Sem clicar no 🌐, a marca não aparece na loja.',
       },
       {
         q: 'As marcas aparecem no WooCommerce como atributo?',
@@ -89,7 +89,7 @@ const faqs = [
     items: [
       {
         q: 'Como criar uma tag?',
-        a: 'Vá em Produtos → Tags → "+ Nova Tag". Preencha nome e slug. Ao salvar, a tag é criada no ERP e pode ser sincronizada com o WooCommerce.',
+        a: 'Vá em Produtos → Tags → "+ Nova Tag". Preencha nome e slug. Ao salvar, a tag é criada no ERP. IMPORTANTE: clique no botão 🌐 (globo) para sincronizar com o WooCommerce. Só após o 🌐 a tag estará disponível na loja.',
       },
       {
         q: 'Como vincular tags a um produto?',
@@ -183,6 +183,16 @@ export default function FAQ() {
       <div>
         <h1 className="text-xl font-bold text-gray-900">FAQ — Perguntas Frequentes</h1>
         <p className="text-sm text-gray-500 mt-1">Tire suas dúvidas sobre como usar o Geezer ERP.</p>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <span className="text-2xl">🌐</span>
+        <div>
+          <p className="text-sm font-semibold text-amber-800">Lembre-se: salvar no ERP não atualiza a loja!</p>
+          <p className="text-sm text-amber-700 mt-0.5">
+            Após criar ou editar um produto, categoria, marca ou tag, você <strong>precisa clicar no botão 🌐 (globo)</strong> para enviar as alterações ao WooCommerce. Sem isso, a loja não é atualizada.
+          </p>
+        </div>
       </div>
 
       {faqs.map(section => (
