@@ -2,33 +2,49 @@ import { supabase } from './supabase'
 
 export const api = {
   // ── Products ──────────────────────────────────
+  async _enrichProducts(products) {
+    const [catRes, brandRes] = await Promise.all([
+      supabase.from('categories').select('id, name, woo_id'),
+      supabase.from('brands').select('id, name'),
+    ])
+    const cats = catRes.data || []
+    const brands = brandRes.data || []
+    return products.map(p => ({
+      ...p,
+      category: cats.find(c => c.id === p.category_id) || null,
+      subcategory: cats.find(c => c.id === p.subcategory_id) || null,
+      brand: brands.find(b => b.id === p.brand_id) || null,
+    }))
+  },
+
   async getProducts() {
     const { data, error } = await supabase
       .from('products')
-      .select('*, category:categories!category_id(id, name, woo_id), subcategory:categories!subcategory_id(id, name, woo_id), brand:brands(id, name)')
+      .select('*')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
     if (error) throw error
-    return data || []
+    return this._enrichProducts(data || [])
   },
 
   async getAllProducts() {
     const { data, error } = await supabase
       .from('products')
-      .select('*, category:categories!category_id(id, name, woo_id), subcategory:categories!subcategory_id(id, name, woo_id), brand:brands(id, name)')
+      .select('*')
       .order('created_at', { ascending: false })
     if (error) throw error
-    return data || []
+    return this._enrichProducts(data || [])
   },
 
   async getProductById(id) {
     const { data, error } = await supabase
       .from('products')
-      .select('*, category:categories!category_id(id, name, woo_id), subcategory:categories!subcategory_id(id, name, woo_id), brand:brands(id, name)')
+      .select('*')
       .eq('id', id)
       .single()
     if (error) throw error
-    return data
+    const enriched = await this._enrichProducts([data])
+    return enriched[0]
   },
 
   async createProduct(product) {
