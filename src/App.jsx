@@ -18,6 +18,7 @@ const WooSettings = lazy(() => import('@/pages/admin/WooSettings'))
 const SyncLogs = lazy(() => import('@/pages/admin/SyncLogs'))
 const FAQ = lazy(() => import('@/pages/admin/FAQ'))
 const Coupons = lazy(() => import('@/pages/admin/Coupons'))
+const NossasCervejas = lazy(() => import('@/pages/admin/NossasCervejas'))
 
 // Analytics
 const AnalyticsOverview = lazy(() => import('@/pages/admin/analytics/Overview'))
@@ -56,6 +57,7 @@ export default function App() {
       <Route path="/admin/woo/logs" element={<AdminPage><SyncLogs /></AdminPage>} />
       <Route path="/admin/faq" element={<AdminPage><FAQ /></AdminPage>} />
       <Route path="/admin/coupons" element={<AdminPage><Coupons /></AdminPage>} />
+      <Route path="/admin/nossas-cervejas" element={<AdminPage><NossasCervejas /></AdminPage>} />
 
       {/* Analytics */}
       <Route path="/admin/analytics/overview" element={<AdminPage><AnalyticsOverview /></AdminPage>} />

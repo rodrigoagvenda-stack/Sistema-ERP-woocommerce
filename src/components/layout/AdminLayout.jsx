@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Tag, Layers, Star, BarChart2,
   Settings, ChevronDown, ChevronRight, LogOut, Menu, X,
   ShoppingBag, TrendingUp, ShoppingCart, Shuffle, FolderOpen,
-  Warehouse, SlidersHorizontal, Globe, FileText, Bookmark, Ticket
+  Warehouse, SlidersHorizontal, Globe, FileText, Bookmark, Ticket, Beer
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -58,6 +58,11 @@ const navItems = [
     label: 'Cupons',
     icon: Ticket,
     to: '/admin/coupons',
+  },
+  {
+    label: 'Nossas Cervejas',
+    icon: Beer,
+    to: '/admin/nossas-cervejas',
   },
   {
     label: 'FAQ',
