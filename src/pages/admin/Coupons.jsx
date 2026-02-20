@@ -9,7 +9,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import { wooProxy } from '@/lib/api'
 
 const EMPTY = {
@@ -391,28 +390,32 @@ export default function Coupons() {
               </div>
             </div>
 
-            {/* Switches */}
+            {/* Toggles */}
             <div className="space-y-3 pt-1">
-              <div className="flex items-center justify-between">
+              <label className="flex items-center justify-between cursor-pointer">
                 <div>
                   <p className="text-sm font-medium">Frete grátis</p>
                   <p className="text-xs text-gray-500">Libera frete grátis ao usar o cupom</p>
                 </div>
-                <Switch
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-[#c49018]"
                   checked={current.free_shipping}
-                  onCheckedChange={v => setCurrent(p => ({ ...p, free_shipping: v }))}
+                  onChange={e => setCurrent(p => ({ ...p, free_shipping: e.target.checked }))}
                 />
-              </div>
-              <div className="flex items-center justify-between">
+              </label>
+              <label className="flex items-center justify-between cursor-pointer">
                 <div>
                   <p className="text-sm font-medium">Uso individual</p>
                   <p className="text-xs text-gray-500">Não pode ser combinado com outros cupons</p>
                 </div>
-                <Switch
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-[#c49018]"
                   checked={current.individual_use}
-                  onCheckedChange={v => setCurrent(p => ({ ...p, individual_use: v }))}
+                  onChange={e => setCurrent(p => ({ ...p, individual_use: e.target.checked }))}
                 />
-              </div>
+              </label>
             </div>
           </div>
 
