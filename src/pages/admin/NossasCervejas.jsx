@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, CheckCircle2, AlertCircle, GripVertical, Save, Eye } from 'lucide-react'
+import { Plus, Pencil, Trash2, CheckCircle2, AlertCircle, GripVertical, Save, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,20 +11,18 @@ import { supabase } from '@/lib/supabase'
 
 const SUPABASE_URL = 'https://dkvznmmiiiljyrkopiqx.supabase.co'
 const BUCKET = 'product-images'
-
-const EMPTY_ITEM = { name: '', description: '', image_url: '' }
+const EMPTY_ITEM = { name: '', description: '', image_url: '', category: '', rating: 5 }
 
 export default function NossasCervejas() {
-  const [config, setConfig] = useState({ page_title: 'Nossas Cervejas', page_description: '' })
+  const [config, setConfig] = useState({ page_title: 'Nossas Cervejas', page_description: '', logo_url: '' })
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [alert, setAlert] = useState(null)
-  const [dialog, setDialog] = useState(null) // 'create' | 'edit' | 'delete'
+  const [dialog, setDialog] = useState(null)
   const [current, setCurrent] = useState(EMPTY_ITEM)
   const [saving, setSaving] = useState(false)
   const [savingConfig, setSavingConfig] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
-  const [previewMode, setPreviewMode] = useState(false)
   const fileRef = useRef(null)
 
   const showAlert = (type, message) => {
@@ -55,10 +53,15 @@ export default function NossasCervejas() {
     try {
       const { error } = await supabase
         .from('nossas_cervejas_config')
-        .update({ page_title: config.page_title, page_description: config.page_description, updated_at: new Date().toISOString() })
+        .update({
+          page_title: config.page_title,
+          page_description: config.page_description,
+          logo_url: config.logo_url,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', config.id)
       if (error) throw error
-      showAlert('success', 'Configurações da página salvas!')
+      showAlert('success', 'Configurações salvas!')
     } catch (e) {
       showAlert('error', 'Erro ao salvar: ' + e.message)
     } finally {
@@ -87,10 +90,17 @@ export default function NossasCervejas() {
     if (!current.name?.trim()) return showAlert('error', 'Nome é obrigatório')
     setSaving(true)
     try {
+      const payload = {
+        name: current.name,
+        description: current.description,
+        image_url: current.image_url,
+        category: current.category,
+        rating: parseFloat(current.rating) || 5,
+      }
       if (dialog === 'create') {
         const { data, error } = await supabase
           .from('nossas_cervejas_items')
-          .insert({ name: current.name, description: current.description, image_url: current.image_url, sort_order: items.length })
+          .insert({ ...payload, sort_order: items.length })
           .select().single()
         if (error) throw error
         setItems(prev => [...prev, data])
@@ -98,7 +108,7 @@ export default function NossasCervejas() {
       } else {
         const { data, error } = await supabase
           .from('nossas_cervejas_items')
-          .update({ name: current.name, description: current.description, image_url: current.image_url })
+          .update(payload)
           .eq('id', current.id)
           .select().single()
         if (error) throw error
@@ -141,40 +151,53 @@ export default function NossasCervejas() {
     ))
   }
 
+  const renderStars = (rating) => {
+    const r = parseFloat(rating) || 0
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star key={i} className={`h-3 w-3 ${i < r ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`} />
+    ))
+  }
+
   if (loading) return <div className="p-8 text-center text-gray-400 text-sm">Carregando...</div>
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Nossas Cervejas</h1>
-          <p className="text-sm text-gray-500">Gerencie a página pública de cervejas do site</p>
-        </div>
-        <Button variant={previewMode ? 'default' : 'outline'} onClick={() => setPreviewMode(p => !p)} className="gap-2">
-          <Eye className="h-4 w-4" />
-          {previewMode ? 'Fechar Preview' : 'Preview'}
-        </Button>
+    <div className="h-full">
+      <div className="mb-4">
+        <h1 className="text-xl font-bold text-gray-900">Nossas Cervejas</h1>
+        <p className="text-sm text-gray-500">Gerencie a página pública de cervejas do site</p>
       </div>
 
       {alert && (
-        <Alert variant={alert.type === 'error' ? 'destructive' : 'default'}>
+        <Alert variant={alert.type === 'error' ? 'destructive' : 'default'} className="mb-4">
           {alert.type === 'error' ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
           <AlertDescription>{alert.message}</AlertDescription>
         </Alert>
       )}
 
-      <div className={`grid gap-6 ${previewMode ? 'grid-cols-2' : 'grid-cols-1'}`}>
-        {/* Editor */}
-        <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-6" style={{ minHeight: 'calc(100vh - 160px)' }}>
+
+        {/* Coluna esquerda — editor */}
+        <div className="space-y-4 overflow-y-auto">
+
           {/* Config da página */}
           <Card>
             <CardHeader className="pb-3">
-              <p className="text-sm font-semibold text-gray-700">Cabeçalho da Página</p>
+              <p className="text-sm font-semibold text-gray-700">Card Principal</p>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div className="space-y-1.5">
-                <Label>Título da página</Label>
+                <Label>URL do Logo</Label>
+                <Input
+                  value={config.logo_url || ''}
+                  onChange={e => setConfig(p => ({ ...p, logo_url: e.target.value }))}
+                  placeholder="https://..."
+                />
+                {config.logo_url && (
+                  <img src={config.logo_url} alt="logo" className="h-10 object-contain mt-1" />
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Título</Label>
                 <Input
                   value={config.page_title}
                   onChange={e => setConfig(p => ({ ...p, page_title: e.target.value }))}
@@ -182,17 +205,17 @@ export default function NossasCervejas() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Descrição / subtítulo</Label>
+                <Label>Descrição</Label>
                 <Textarea
                   value={config.page_description}
                   onChange={e => setConfig(p => ({ ...p, page_description: e.target.value }))}
-                  placeholder="Uma breve descrição da seleção de cervejas..."
-                  rows={3}
+                  placeholder="Uma breve descrição..."
+                  rows={2}
                 />
               </div>
-              <Button onClick={handleSaveConfig} disabled={savingConfig} className="gap-2">
-                <Save className="h-4 w-4" />
-                {savingConfig ? 'Salvando...' : 'Salvar cabeçalho'}
+              <Button onClick={handleSaveConfig} disabled={savingConfig} size="sm" className="gap-2">
+                <Save className="h-3.5 w-3.5" />
+                {savingConfig ? 'Salvando...' : 'Salvar configurações'}
               </Button>
             </CardContent>
           </Card>
@@ -201,41 +224,33 @@ export default function NossasCervejas() {
           <Card>
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <p className="text-sm font-semibold text-gray-700">Cervejas ({items.length})</p>
-              <Button size="sm" onClick={() => { setCurrent(EMPTY_ITEM); setDialog('create') }} className="gap-2">
-                <Plus className="h-4 w-4" /> Adicionar
+              <Button size="sm" onClick={() => { setCurrent(EMPTY_ITEM); setDialog('create') }} className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" /> Adicionar
               </Button>
             </CardHeader>
             <CardContent className="p-0">
               {items.length === 0 ? (
-                <div className="p-8 text-center text-gray-400 text-sm">Nenhuma cerveja cadastrada</div>
+                <div className="p-6 text-center text-gray-400 text-sm">Nenhuma cerveja cadastrada</div>
               ) : (
                 <div className="divide-y divide-gray-100">
                   {items.map((item, index) => (
                     <div key={item.id} className="flex items-center gap-3 p-3">
                       <div className="flex flex-col gap-0.5 shrink-0">
-                        <button
-                          className="text-gray-300 hover:text-gray-500 disabled:opacity-20"
-                          onClick={() => moveItem(index, -1)}
-                          disabled={index === 0}
-                        >
+                        <button className="text-gray-300 hover:text-gray-500 disabled:opacity-20" onClick={() => moveItem(index, -1)} disabled={index === 0}>
                           <GripVertical className="h-3.5 w-3.5" />
                         </button>
-                        <button
-                          className="text-gray-300 hover:text-gray-500 disabled:opacity-20 rotate-180"
-                          onClick={() => moveItem(index, 1)}
-                          disabled={index === items.length - 1}
-                        >
+                        <button className="text-gray-300 hover:text-gray-500 disabled:opacity-20 rotate-180" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1}>
                           <GripVertical className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                      {item.image_url ? (
-                        <img src={item.image_url} alt={item.name} className="w-12 h-12 rounded-lg object-cover shrink-0 bg-gray-100" />
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg bg-gray-100 shrink-0 flex items-center justify-center text-gray-300 text-xs">sem img</div>
-                      )}
+                      {item.image_url
+                        ? <img src={item.image_url} alt={item.name} className="w-12 h-12 rounded-lg object-cover shrink-0 bg-gray-100" />
+                        : <div className="w-12 h-12 rounded-lg bg-gray-100 shrink-0 flex items-center justify-center text-gray-300 text-xs">sem img</div>
+                      }
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm text-gray-900 truncate">{item.name}</p>
-                        {item.description && <p className="text-xs text-gray-400 truncate mt-0.5">{item.description}</p>}
+                        {item.category && <p className="text-xs text-amber-600 font-medium truncate mt-0.5">{item.category}</p>}
+                        <div className="flex gap-0.5 mt-1">{renderStars(item.rating)}</div>
                       </div>
                       <div className="flex gap-1 shrink-0">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setCurrent({ ...item }); setDialog('edit') }}>
@@ -253,55 +268,53 @@ export default function NossasCervejas() {
           </Card>
         </div>
 
-        {/* Preview */}
-        {previewMode && (
-          <div className="sticky top-4">
-            <Card className="overflow-hidden">
-              <CardHeader className="pb-2 bg-gray-50 border-b">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Preview — como ficará no site</p>
-              </CardHeader>
-              <CardContent className="p-0 overflow-auto max-h-[80vh]">
-                <div style={{ fontFamily: 'sans-serif', background: '#fff' }}>
-                  {/* Hero da seção */}
-                  <div style={{ background: '#1a1a1a', color: '#fff', padding: '40px 24px', textAlign: 'center' }}>
-                    <h1 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '12px', color: '#c49018' }}>
-                      {config.page_title || 'Nossas Cervejas'}
-                    </h1>
-                    {config.page_description && (
-                      <p style={{ fontSize: '14px', color: '#aaa', maxWidth: '480px', margin: '0 auto' }}>
-                        {config.page_description}
-                      </p>
-                    )}
-                  </div>
-                  {/* Grid de cervejas */}
-                  <div style={{ padding: '32px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '20px' }}>
-                    {items.length === 0 ? (
-                      <p style={{ gridColumn: '1/-1', textAlign: 'center', color: '#aaa', fontSize: '13px' }}>
-                        Nenhuma cerveja cadastrada ainda
-                      </p>
-                    ) : items.map(item => (
-                      <div key={item.id} style={{ borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', background: '#fff' }}>
-                        {item.image_url ? (
-                          <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '160px', objectFit: 'cover' }} />
-                        ) : (
-                          <div style={{ width: '100%', height: '160px', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: '12px' }}>
-                            sem imagem
-                          </div>
-                        )}
-                        <div style={{ padding: '12px' }}>
-                          <p style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px', color: '#1a1a1a' }}>{item.name}</p>
-                          {item.description && (
-                            <p style={{ fontSize: '12px', color: '#666', lineHeight: '1.4' }}>{item.description}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+        {/* Coluna direita — preview */}
+        <div className="sticky top-0">
+          <div className="rounded-xl border border-gray-200 overflow-hidden shadow-sm" style={{ height: 'calc(100vh - 160px)' }}>
+            <div className="bg-gray-100 border-b border-gray-200 px-4 py-2 flex items-center gap-2">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-red-400" />
+                <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                <div className="w-3 h-3 rounded-full bg-green-400" />
+              </div>
+              <span className="text-xs text-gray-400 ml-2">Preview</span>
+            </div>
+            <div className="overflow-auto bg-white" style={{ height: 'calc(100% - 37px)', padding: '24px 16px' }}>
+              {/* Preview do slider */}
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'stretch', height: '340px' }}>
+                {/* Card preto */}
+                <div style={{ width: '200px', minWidth: '200px', background: '#111', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', color: '#fff' }}>
+                  {config.logo_url
+                    ? <img src={config.logo_url} alt="logo" style={{ height: '36px', objectFit: 'contain', objectPosition: 'left' }} />
+                    : <div style={{ height: '36px', background: '#333', borderRadius: '6px' }} />
+                  }
+                  <div>
+                    <p style={{ fontWeight: 700, fontSize: '15px', marginBottom: '8px' }}>{config.page_title || 'Nossas Cervejas'}</p>
+                    <p style={{ fontSize: '11px', color: '#888', lineHeight: '1.5' }}>{config.page_description}</p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                {/* Cards das cervejas */}
+                {items.slice(0, 3).map(item => (
+                  <div key={item.id} style={{ width: '140px', minWidth: '140px', background: '#f8f8f8', borderRadius: '16px', overflow: 'hidden', border: '1px solid #eee' }}>
+                    {item.image_url
+                      ? <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '200px', objectFit: 'cover', display: 'block' }} />
+                      : <div style={{ width: '100%', height: '200px', background: '#e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: '11px' }}>sem img</div>
+                    }
+                    <div style={{ padding: '10px' }}>
+                      <p style={{ fontWeight: 700, fontSize: '12px', marginBottom: '3px' }}>{item.name}</p>
+                      <p style={{ fontSize: '10px', color: '#888' }}>{item.category}</p>
+                      <div style={{ display: 'flex', gap: '2px', marginTop: '6px' }}>
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <span key={i} style={{ fontSize: '10px', color: i < (item.rating || 0) ? '#f59e0b' : '#e5e7eb' }}>★</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Dialog create/edit */}
@@ -316,40 +329,48 @@ export default function NossasCervejas() {
               <Input value={current.name} onChange={e => setCurrent(p => ({ ...p, name: e.target.value }))} autoFocus placeholder="Ex: IPA Artesanal" />
             </div>
             <div className="space-y-1.5">
+              <Label>Categoria <span className="text-gray-400 font-normal text-xs">(ex: IPA, Lager, Stout)</span></Label>
+              <Input value={current.category || ''} onChange={e => setCurrent(p => ({ ...p, category: e.target.value }))} placeholder="Ex: IPA Artesanal" />
+            </div>
+            <div className="space-y-1.5">
               <Label>Descrição</Label>
               <Textarea
                 value={current.description}
                 onChange={e => setCurrent(p => ({ ...p, description: e.target.value }))}
                 placeholder="Uma breve descrição da cerveja..."
-                rows={3}
+                rows={2}
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Avaliação <span className="text-gray-400 font-normal text-xs">(1 a 5 estrelas)</span></Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="number"
+                  min="1" max="5" step="0.5"
+                  value={current.rating ?? 5}
+                  onChange={e => setCurrent(p => ({ ...p, rating: e.target.value }))}
+                  className="w-24"
+                />
+                <div className="flex gap-1">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star key={i} className={`h-4 w-4 cursor-pointer ${i < (current.rating || 0) ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`}
+                      onClick={() => setCurrent(p => ({ ...p, rating: i + 1 }))} />
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Imagem</Label>
               <div className="flex gap-3 items-start">
-                {current.image_url ? (
-                  <img src={current.image_url} alt="preview" className="w-20 h-20 rounded-lg object-cover bg-gray-100 shrink-0" />
-                ) : (
-                  <div className="w-20 h-20 rounded-lg bg-gray-100 shrink-0 flex items-center justify-center text-gray-300 text-xs text-center leading-tight p-1">sem imagem</div>
-                )}
+                {current.image_url
+                  ? <img src={current.image_url} alt="preview" className="w-20 h-20 rounded-lg object-cover bg-gray-100 shrink-0" />
+                  : <div className="w-20 h-20 rounded-lg bg-gray-100 shrink-0 flex items-center justify-center text-gray-300 text-xs text-center leading-tight p-1">sem imagem</div>
+                }
                 <div className="space-y-2 flex-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => fileRef.current?.click()}
-                    disabled={uploadingImage}
-                  >
+                  <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => fileRef.current?.click()} disabled={uploadingImage}>
                     {uploadingImage ? 'Enviando...' : 'Fazer upload'}
                   </Button>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={e => handleUploadImage(e.target.files?.[0])}
-                  />
+                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => handleUploadImage(e.target.files?.[0])} />
                   <Input
                     value={current.image_url}
                     onChange={e => setCurrent(p => ({ ...p, image_url: e.target.value }))}
@@ -375,7 +396,7 @@ export default function NossasCervejas() {
           <DialogHeader><DialogTitle>Remover Cerveja</DialogTitle></DialogHeader>
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>Remover <strong>"{current.name}"</strong> da lista? Esta ação não pode ser desfeita.</AlertDescription>
+            <AlertDescription>Remover <strong>"{current.name}"</strong>? Esta ação não pode ser desfeita.</AlertDescription>
           </Alert>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setDialog(null); setCurrent(EMPTY_ITEM) }}>Cancelar</Button>

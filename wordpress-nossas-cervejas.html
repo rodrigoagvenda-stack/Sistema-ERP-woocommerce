@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nossas Cervejas</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+
+.nc-section{
+  font-family:'Montserrat',sans-serif;
+  background:#fff;
+  padding:56px 40px;
+  max-width:1200px;
+  margin:0 auto;
+}
+
+/* cabeçalho da seção */
+.nc-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  margin-bottom:32px;
+}
+.nc-header h2{
+  font-size:clamp(22px,3vw,36px);
+  font-weight:800;
+  color:#111;
+  line-height:1.2;
+  max-width:420px;
+}
+.nc-arrows{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-shrink:0;
+}
+.nc-arrow{
+  width:42px;height:42px;
+  border-radius:50%;
+  border:none;
+  background:#111;
+  color:#fff;
+  font-size:18px;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s,transform .15s;
+  flex-shrink:0;
+}
+.nc-arrow:hover{background:#f4b522;transform:scale(1.08);}
+.nc-arrow:disabled{background:#e0e0e0;color:#aaa;cursor:default;transform:none;}
+
+/* trilho do slider */
+.nc-track-wrap{
+  overflow:hidden;
+}
+.nc-track{
+  display:flex;
+  gap:16px;
+  transition:transform .45s cubic-bezier(.4,0,.2,1);
+  align-items:stretch;
+}
+
+/* card preto (fixo, fora do track) */
+.nc-featured{
+  width:240px;
+  min-width:240px;
+  background:#111;
+  border-radius:20px;
+  padding:28px 24px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  color:#fff;
+  flex-shrink:0;
+}
+.nc-featured img.nc-logo{
+  height:44px;
+  object-fit:contain;
+  object-position:left;
+  margin-bottom:auto;
+  display:block;
+}
+.nc-featured-text{margin-top:24px;}
+.nc-featured-text h3{
+  font-size:18px;
+  font-weight:800;
+  color:#fff;
+  line-height:1.3;
+  margin-bottom:10px;
+}
+.nc-featured-text p{
+  font-size:13px;
+  color:#888;
+  line-height:1.65;
+}
+
+/* cards de cerveja */
+.nc-card{
+  min-width:190px;
+  width:190px;
+  background:#f7f7f7;
+  border-radius:20px;
+  overflow:hidden;
+  flex-shrink:0;
+  display:flex;
+  flex-direction:column;
+  transition:transform .25s ease,box-shadow .25s ease;
+  cursor:default;
+}
+.nc-card:hover{
+  transform:translateY(-6px);
+  box-shadow:0 12px 32px rgba(0,0,0,0.10);
+}
+.nc-card img{
+  width:100%;
+  height:220px;
+  object-fit:cover;
+  display:block;
+}
+.nc-card-no-img{
+  width:100%;height:220px;
+  background:#e8e8e8;
+  display:flex;align-items:center;justify-content:center;
+  color:#ccc;font-size:36px;
+}
+.nc-card-body{
+  padding:14px 16px 18px;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+}
+.nc-card-name{
+  font-size:14px;
+  font-weight:700;
+  color:#111;
+  margin-bottom:3px;
+}
+.nc-card-cat{
+  font-size:11px;
+  color:#999;
+  margin-bottom:8px;
+}
+.nc-stars{
+  display:flex;
+  gap:2px;
+}
+.nc-star{
+  font-size:13px;
+  color:#e5e7eb;
+}
+.nc-star.on{color:#f59e0b;}
+
+/* row = featured + track */
+.nc-row{
+  display:flex;
+  gap:16px;
+  align-items:stretch;
+}
+
+@media(max-width:700px){
+  .nc-section{padding:36px 16px;}
+  .nc-featured{width:200px;min-width:200px;padding:20px 18px;}
+  .nc-card{min-width:160px;width:160px;}
+  .nc-card img{height:180px;}
+}
+@media(max-width:480px){
+  .nc-header h2{font-size:20px;}
+  .nc-featured{width:170px;min-width:170px;}
+  .nc-card{min-width:140px;width:140px;}
+}
+</style>
+</head>
+<body>
+
+<div class="nc-section">
+
+  <div class="nc-header">
+    <h2 id="nc-title">Nossas Cervejas</h2>
+    <div class="nc-arrows">
+      <button class="nc-arrow" id="nc-prev" disabled>&#8592;</button>
+      <button class="nc-arrow" id="nc-next">&#8594;</button>
+    </div>
+  </div>
+
+  <div class="nc-row">
+    <!-- Card preto fixo -->
+    <div class="nc-featured" id="nc-featured">
+      <img class="nc-logo" id="nc-logo" alt="Logo" style="display:none;" onerror="this.style.display='none'">
+      <div class="nc-featured-text">
+        <h3 id="nc-feat-title">Nossas Cervejas</h3>
+        <p id="nc-feat-desc"></p>
+      </div>
+    </div>
+
+    <!-- Slider -->
+    <div class="nc-track-wrap" style="flex:1;overflow:hidden;">
+      <div class="nc-track" id="nc-track"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var RPC = 'https://dkvznmmiiiljyrkopiqx.supabase.co/rest/v1/rpc/get_nossas_cervejas';
+  var KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrdnpubW1paWlsanlya29waXF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwODI3NzEsImV4cCI6MjA4MTY1ODc3MX0.fDfad8H_91BPgM3pHQFZ2vadIrqdSuElwlT_i4JBdB4';
+
+  var offset = 0;
+  var cardW = 190 + 16; // card width + gap
+  var visibleCount = 3;
+  var totalCards = 0;
+
+  function stars(rating){
+    var r = parseFloat(rating) || 0;
+    var html = '';
+    for(var i=0;i<5;i++){
+      html += '<span class="nc-star'+(i<r?' on':'')+'">&#9733;</span>';
+    }
+    return html;
+  }
+
+  function updateArrows(){
+    var prev = document.getElementById('nc-prev');
+    var next = document.getElementById('nc-next');
+    prev.disabled = offset <= 0;
+    next.disabled = offset >= totalCards - visibleCount;
+  }
+
+  function slide(dir){
+    offset = Math.max(0, Math.min(offset + dir, totalCards - visibleCount));
+    document.getElementById('nc-track').style.transform = 'translateX(-'+(offset * cardW)+'px)';
+    updateArrows();
+  }
+
+  document.getElementById('nc-prev').onclick = function(){ slide(-1); };
+  document.getElementById('nc-next').onclick = function(){ slide(1); };
+
+  function calcVisible(){
+    var wrap = document.querySelector('.nc-track-wrap');
+    if(wrap) visibleCount = Math.max(1, Math.floor(wrap.offsetWidth / cardW));
+    updateArrows();
+  }
+  window.addEventListener('resize', calcVisible);
+
+  fetch(RPC, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY}
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    var cfg = data.config || {};
+    var items = data.items || [];
+
+    // Card preto
+    if(cfg.logo_url){
+      var logo = document.getElementById('nc-logo');
+      logo.src = cfg.logo_url;
+      logo.style.display = 'block';
+    }
+    document.getElementById('nc-title').textContent = cfg.page_title || 'Nossas Cervejas';
+    document.getElementById('nc-feat-title').textContent = cfg.page_title || 'Nossas Cervejas';
+    if(cfg.page_description) document.getElementById('nc-feat-desc').textContent = cfg.page_description;
+
+    // Cards
+    totalCards = items.length;
+    var track = document.getElementById('nc-track');
+    track.innerHTML = items.map(function(item){
+      var img = item.image_url
+        ? '<img src="'+item.image_url+'" alt="'+item.name+'" loading="lazy">'
+        : '<div class="nc-card-no-img">🍺</div>';
+      return '<div class="nc-card">'
+        + img
+        + '<div class="nc-card-body">'
+        + '<div class="nc-card-name">'+item.name+'</div>'
+        + (item.category ? '<div class="nc-card-cat">'+item.category+'</div>' : '')
+        + '<div class="nc-stars">'+stars(item.rating)+'</div>'
+        + '</div></div>';
+    }).join('');
+
+    calcVisible();
+  })
+  .catch(function(){
+    document.getElementById('nc-track').innerHTML =
+      '<p style="color:#aaa;font-size:14px;padding:20px;">Erro ao carregar.</p>';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home Geezer</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+
+/* ── MOSAICO ── */
+.gz-mosaic-section{
+  font-family:'Montserrat',sans-serif;
+  background:#fff;
+  padding:0;
+  position:relative;
+}
+.gz-mosaic-grid{
+  columns:5 180px;
+  column-gap:8px;
+  padding:8px;
+}
+.gz-mosaic-grid img{
+  width:100%;
+  display:block;
+  border-radius:12px;
+  margin-bottom:8px;
+  object-fit:cover;
+  break-inside:avoid;
+}
+.gz-mosaic-footer{
+  text-align:center;
+  padding:40px 24px 48px;
+  background:#fff;
+}
+.gz-mosaic-footer img.gz-logo{
+  height:56px;
+  object-fit:contain;
+  margin-bottom:20px;
+  display:block;
+  margin-left:auto;
+  margin-right:auto;
+}
+.gz-mosaic-footer h1{
+  font-size:clamp(28px,4vw,52px);
+  font-weight:800;
+  color:#111;
+  line-height:1.15;
+  letter-spacing:-1.5px;
+  margin-bottom:16px;
+}
+.gz-mosaic-footer p{
+  font-size:16px;
+  color:#777;
+  max-width:520px;
+  margin:0 auto;
+  line-height:1.7;
+}
+@media(max-width:600px){
+  .gz-mosaic-grid{columns:3 100px;}
+}
+@media(max-width:380px){
+  .gz-mosaic-grid{columns:2 80px;}
+}
+
+/* ── SLIDER CERVEJAS ── */
+.nc-section{
+  font-family:'Montserrat',sans-serif;
+  background:#fff;
+  padding:40px 40px 60px;
+  max-width:1200px;
+  margin:0 auto;
+}
+.nc-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  margin-bottom:32px;
+}
+.nc-header h2{
+  font-size:clamp(20px,2.8vw,34px);
+  font-weight:800;
+  color:#111;
+  line-height:1.2;
+  max-width:400px;
+}
+.nc-arrows{display:flex;gap:10px;align-items:center;flex-shrink:0;}
+.nc-arrow{
+  width:42px;height:42px;border-radius:50%;border:none;
+  background:#111;color:#fff;font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s,transform .15s;flex-shrink:0;
+}
+.nc-arrow:hover{background:#f4b522;transform:scale(1.08);}
+.nc-arrow:disabled{background:#e0e0e0;color:#aaa;cursor:default;transform:none;}
+.nc-track-wrap{overflow:hidden;}
+.nc-track{
+  display:flex;gap:16px;
+  transition:transform .45s cubic-bezier(.4,0,.2,1);
+  align-items:stretch;
+}
+.nc-featured{
+  width:240px;min-width:240px;background:#111;border-radius:20px;
+  padding:28px 24px;display:flex;flex-direction:column;
+  justify-content:space-between;color:#fff;flex-shrink:0;
+}
+.nc-featured img.nc-logo{
+  height:40px;object-fit:contain;object-position:left;
+  margin-bottom:auto;display:block;
+}
+.nc-featured-text{margin-top:24px;}
+.nc-featured-text h3{font-size:17px;font-weight:800;color:#fff;line-height:1.3;margin-bottom:8px;}
+.nc-featured-text p{font-size:12px;color:#888;line-height:1.65;}
+.nc-card{
+  min-width:190px;width:190px;background:#f7f7f7;border-radius:20px;
+  overflow:hidden;flex-shrink:0;display:flex;flex-direction:column;
+  transition:transform .25s ease,box-shadow .25s ease;
+}
+.nc-card:hover{transform:translateY(-6px);box-shadow:0 12px 32px rgba(0,0,0,.10);}
+.nc-card img{width:100%;height:220px;object-fit:cover;display:block;}
+.nc-card-no-img{
+  width:100%;height:220px;background:#e8e8e8;
+  display:flex;align-items:center;justify-content:center;color:#ccc;font-size:36px;
+}
+.nc-card-body{padding:14px 16px 18px;flex:1;display:flex;flex-direction:column;justify-content:flex-end;}
+.nc-card-name{font-size:14px;font-weight:700;color:#111;margin-bottom:3px;}
+.nc-card-cat{font-size:11px;color:#999;margin-bottom:8px;}
+.nc-stars{display:flex;gap:2px;}
+.nc-star{font-size:13px;color:#e5e7eb;}
+.nc-star.on{color:#f59e0b;}
+.nc-row{display:flex;gap:16px;align-items:stretch;}
+@media(max-width:700px){
+  .nc-section{padding:28px 16px 40px;}
+  .nc-featured{width:190px;min-width:190px;}
+  .nc-card{min-width:160px;width:160px;}
+  .nc-card img{height:180px;}
+}
+</style>
+</head>
+<body>
+
+<!-- MOSAICO -->
+<div class="gz-mosaic-section">
+  <div class="gz-mosaic-grid" id="gz-grid"></div>
+  <div class="gz-mosaic-footer">
+    <img class="gz-logo" id="gz-logo" alt="Geezer" style="display:none;" onerror="this.style.display='none'">
+    <h1 id="gz-title">Nossas Cervejas</h1>
+    <p id="gz-desc"></p>
+  </div>
+</div>
+
+<!-- SLIDER CERVEJAS -->
+<div class="nc-section">
+  <div class="nc-header">
+    <h2 id="nc-title">Explore nossas cervejas</h2>
+    <div class="nc-arrows">
+      <button class="nc-arrow" id="nc-prev" disabled>&#8592;</button>
+      <button class="nc-arrow" id="nc-next">&#8594;</button>
+    </div>
+  </div>
+  <div class="nc-row">
+    <div class="nc-featured" id="nc-featured">
+      <img class="nc-logo" id="nc-logo" alt="Logo" style="display:none;" onerror="this.style.display='none'">
+      <div class="nc-featured-text">
+        <h3 id="nc-feat-title">Nossas Cervejas</h3>
+        <p id="nc-feat-desc"></p>
+      </div>
+    </div>
+    <div class="nc-track-wrap" style="flex:1;overflow:hidden;">
+      <div class="nc-track" id="nc-track"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrdnpubW1paWlsanlya29waXF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwODI3NzEsImV4cCI6MjA4MTY1ODc3MX0.fDfad8H_91BPgM3pHQFZ2vadIrqdSuElwlT_i4JBdB4';
+  var BASE = 'https://dkvznmmiiiljyrkopiqx.supabase.co/rest/v1/rpc/';
+  var heads = {'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY};
+
+  function rpc(name){ return fetch(BASE+name,{method:'POST',headers:heads}).then(function(r){return r.json();}); }
+
+  // ── MOSAICO ──
+  rpc('get_home_page').then(function(data){
+    var photos = data.photos || [];
+    var grid = document.getElementById('gz-grid');
+    if(!photos.length){
+      grid.style.display='none';
+      return;
+    }
+    grid.innerHTML = photos.map(function(p){
+      return '<img src="'+p.image_url+'" alt="" loading="lazy">';
+    }).join('');
+  }).catch(function(){});
+
+  // ── SLIDER CERVEJAS ──
+  var offset=0, cardW=190+16, visibleCount=3, totalCards=0;
+
+  function stars(r){
+    var s='',v=parseFloat(r)||0;
+    for(var i=0;i<5;i++) s+='<span class="nc-star'+(i<v?' on':'')+'">&#9733;</span>';
+    return s;
+  }
+  function updateArrows(){
+    document.getElementById('nc-prev').disabled = offset<=0;
+    document.getElementById('nc-next').disabled = offset>=totalCards-visibleCount;
+  }
+  function slide(dir){
+    offset=Math.max(0,Math.min(offset+dir,totalCards-visibleCount));
+    document.getElementById('nc-track').style.transform='translateX(-'+(offset*cardW)+'px)';
+    updateArrows();
+  }
+  document.getElementById('nc-prev').onclick=function(){slide(-1);};
+  document.getElementById('nc-next').onclick=function(){slide(1);};
+  function calcVisible(){
+    var w=document.querySelector('.nc-track-wrap');
+    if(w) visibleCount=Math.max(1,Math.floor(w.offsetWidth/cardW));
+    updateArrows();
+  }
+  window.addEventListener('resize',calcVisible);
+
+  rpc('get_nossas_cervejas').then(function(data){
+    var cfg=data.config||{}, items=data.items||[];
+
+    // Mosaico footer
+    if(cfg.logo_url){
+      ['gz-logo','nc-logo'].forEach(function(id){
+        var el=document.getElementById(id);
+        if(el){el.src=cfg.logo_url;el.style.display='block';}
+      });
+    }
+    var t=cfg.page_title||'Nossas Cervejas';
+    document.getElementById('gz-title').textContent=t;
+    document.getElementById('nc-title').textContent='Explore nossas cervejas';
+    document.getElementById('nc-feat-title').textContent=t;
+    if(cfg.page_description){
+      document.getElementById('gz-desc').textContent=cfg.page_description;
+      document.getElementById('nc-feat-desc').textContent=cfg.page_description;
+    }
+
+    // Cards
+    totalCards=items.length;
+    document.getElementById('nc-track').innerHTML=items.map(function(item){
+      var img=item.image_url
+        ?'<img src="'+item.image_url+'" alt="'+item.name+'" loading="lazy">'
+        :'<div class="nc-card-no-img">🍺</div>';
+      return '<div class="nc-card">'+img
+        +'<div class="nc-card-body">'
+        +'<div class="nc-card-name">'+item.name+'</div>'
+        +(item.category?'<div class="nc-card-cat">'+item.category+'</div>':'')
+        +'<div class="nc-stars">'+stars(item.rating)+'</div>'
+        +'</div></div>';
+    }).join('');
+    calcVisible();
+  }).catch(function(){});
+})();
+</script>
+</body>
+</html>
