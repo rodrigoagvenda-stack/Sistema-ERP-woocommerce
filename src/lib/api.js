@@ -3,36 +3,21 @@ import { supabase } from './supabase'
 export const api = {
   // ── Products ──────────────────────────────────
   async getProducts() {
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('products')
-      .select('*, category:categories(id, name), brand:brands(id, name)')
+      .select('*, category:categories!products_category_id_fkey(id, name, woo_id), subcategory:categories!products_subcategory_id_fkey(id, name, woo_id), brand:brands(id, name)')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
-    if (error) {
-      const res = await supabase
-        .from('products')
-        .select('*, category:categories(id, name)')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-      if (res.error) throw res.error
-      return res.data || []
-    }
+    if (error) throw error
     return data || []
   },
 
   async getAllProducts() {
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('products')
       .select('*, category:categories!products_category_id_fkey(id, name, woo_id), subcategory:categories!products_subcategory_id_fkey(id, name, woo_id), brand:brands(id, name)')
       .order('created_at', { ascending: false })
-    if (error) {
-      const res = await supabase
-        .from('products')
-        .select('*, category:categories(id, name)')
-        .order('created_at', { ascending: false })
-      if (res.error) throw res.error
-      return res.data || []
-    }
+    if (error) throw error
     return data || []
   },
 
