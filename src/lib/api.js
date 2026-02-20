@@ -21,10 +21,9 @@ export const api = {
   },
 
   async getAllProducts() {
-    // Tenta com join de brands; se a tabela ainda não existir, usa query sem brand
     let { data, error } = await supabase
       .from('products')
-      .select('*, category:categories(id, name), brand:brands(id, name)')
+      .select('*, category:categories!products_category_id_fkey(id, name, woo_id), subcategory:categories!products_subcategory_id_fkey(id, name, woo_id), brand:brands(id, name)')
       .order('created_at', { ascending: false })
     if (error) {
       const res = await supabase
@@ -40,7 +39,7 @@ export const api = {
   async getProductById(id) {
     const { data, error } = await supabase
       .from('products')
-      .select('*, category:categories(id, name), brand:brands(id, name)')
+      .select('*, category:categories!products_category_id_fkey(id, name, woo_id), subcategory:categories!products_subcategory_id_fkey(id, name, woo_id), brand:brands(id, name)')
       .eq('id', id)
       .single()
     if (error) throw error

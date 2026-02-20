@@ -15,9 +15,15 @@ import { supabase } from '@/lib/supabase'
 
 const EMPTY_PRODUCT = {
   name: '', description: '', price: '', stock: '', min_stock: 5,
-  category_id: '', brand_id: '', status: 'active', image_urls: [],
-  weight: '', width: '', height: '', depth: '', woo_tags: []
+  category_id: '', subcategory_id: '', brand_id: '', status: 'active', image_urls: [],
+  weight: '', width: '', height: '', depth: '', woo_tags: [], style: ''
 }
+
+const ESTILOS = [
+  'Pils', 'Czech Pils', 'American Pale Ale', 'West Coast IPA',
+  'American Sour Ale', 'American IPA', 'Double India Black Ale',
+  'Straight RIS', 'Dry Stout',
+]
 
 function AlertMsg({ alert }) {
   if (!alert) return null
@@ -131,6 +137,7 @@ export default function Products() {
         stock: parseInt(current.stock) || 0,
         min_stock: parseInt(current.min_stock) || 5,
         category_id: current.category_id || null,
+        subcategory_id: current.subcategory_id || null,
         brand_id: current.brand_id || null,
         status: current.status || 'active',
         image_urls: current.image_urls || [],
@@ -139,6 +146,7 @@ export default function Products() {
         height: current.height ? parseFloat(current.height) : null,
         depth: current.depth ? parseFloat(current.depth) : null,
         woo_tags: current.woo_tags || [],
+        style: current.style || null,
       }
       if (dialog === 'create') {
         const created = await api.createProduct(payload)
@@ -151,6 +159,13 @@ export default function Products() {
         if (current.woo_id) {
           const images = (payload.image_urls || []).filter(url => url.startsWith('http')).map(src => ({ src }))
           const cat = categories.find(c => c.id === payload.category_id)
+          const subcat = categories.find(c => c.id === payload.subcategory_id)
+          const wooCats = []
+          if (subcat?.woo_id) wooCats.push({ id: subcat.woo_id })
+          else if (cat?.woo_id) wooCats.push({ id: cat.woo_id })
+          const wooAttributes = payload.style
+            ? [{ name: 'Estilo', slug: 'estilo', options: [payload.style], visible: true }]
+            : []
           const wooPayload = {
             name: payload.name,
             regular_price: String(payload.price || 0),
@@ -158,7 +173,8 @@ export default function Products() {
             manage_stock: true,
             stock_quantity: Number(payload.stock) || 0,
             status: payload.status === 'active' ? 'publish' : 'draft',
-            ...(cat?.woo_id && { categories: [{ id: cat.woo_id }] }),
+            ...(wooCats.length > 0 && { categories: wooCats }),
+            ...(wooAttributes.length > 0 && { attributes: wooAttributes }),
             ...(images.length > 0 && { images }),
           }
           try {
@@ -187,6 +203,16 @@ export default function Products() {
         .map(src => ({ src }))
 
       const cat = categories.find(c => c.id === product.category_id)
+      const subcat = categories.find(c => c.id === product.subcategory_id)
+      // Monta lista de categorias WooCommerce: prioriza subcategoria (Woo inclui pai automaticamente)
+      const wooCats = []
+      if (subcat?.woo_id) wooCats.push({ id: subcat.woo_id })
+      else if (cat?.woo_id) wooCats.push({ id: cat.woo_id })
+
+      const wooAttributes = product.style
+        ? [{ name: 'Estilo', slug: 'estilo', options: [product.style], visible: true }]
+        : []
+
       const payload = {
         name: product.name,
         regular_price: String(product.price || 0),
@@ -194,7 +220,8 @@ export default function Products() {
         manage_stock: true,
         stock_quantity: Number(product.stock) || 0,
         status: product.status === 'active' ? 'publish' : 'draft',
-        ...(cat?.woo_id && { categories: [{ id: cat.woo_id }] }),
+        ...(wooCats.length > 0 && { categories: wooCats }),
+        ...(wooAttributes.length > 0 && { attributes: wooAttributes }),
         ...(product.weight && { weight: String(product.weight) }),
         ...(product.width && { dimensions: { width: String(product.width), height: String(product.height || 0), length: String(product.depth || 0) } }),
         ...(images.length > 0 && { images }),
@@ -414,11 +441,48 @@ export default function Products() {
               </div>
               <div className="space-y-1.5">
                 <Label>Categoria</Label>
-                <Select value={current.category_id?.toString() || 'none'} onValueChange={v => setCurrent(p => ({ ...p, category_id: v === 'none' ? null : v }))}>
+                <Select
+                  value={current.category_id?.toString() || 'none'}
+                  onValueChange={v => setCurrent(p => ({ ...p, category_id: v === 'none' ? null : v, subcategory_id: '' }))}
+                >
                   <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sem categoria</SelectItem>
-                    {categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                    {categories.filter(c => !c.parent_id).map(c => (
+                      <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Subcategoria</Label>
+                <Select
+                  value={current.subcategory_id?.toString() || 'none'}
+                  onValueChange={v => setCurrent(p => ({ ...p, subcategory_id: v === 'none' ? null : v }))}
+                  disabled={!current.category_id}
+                >
+                  <SelectTrigger><SelectValue placeholder={current.category_id ? 'Selecionar...' : 'Escolha a categoria'} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem subcategoria</SelectItem>
+                    {categories
+                      .filter(c => c.parent_id?.toString() === current.category_id?.toString())
+                      .map(c => (
+                        <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Estilo</Label>
+                <Select
+                  value={current.style || 'none'}
+                  onValueChange={v => setCurrent(p => ({ ...p, style: v === 'none' ? '' : v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecionar estilo..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem estilo</SelectItem>
+                    {ESTILOS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
