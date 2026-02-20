@@ -279,38 +279,32 @@ export default function NossasCervejas() {
               </div>
               <span className="text-xs text-gray-400 ml-2">Preview</span>
             </div>
-            <div className="overflow-auto bg-white" style={{ height: 'calc(100% - 37px)', padding: '24px 16px' }}>
-              {/* Preview do slider */}
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'stretch', height: '340px' }}>
-                {/* Card preto */}
-                <div style={{ width: '200px', minWidth: '200px', background: '#111', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', color: '#fff' }}>
-                  {config.logo_url
-                    ? <img src={config.logo_url} alt="logo" style={{ height: '36px', objectFit: 'contain', objectPosition: 'left' }} />
-                    : <div style={{ height: '36px', background: '#333', borderRadius: '6px' }} />
-                  }
-                  <div>
-                    <p style={{ fontWeight: 700, fontSize: '15px', marginBottom: '8px' }}>{config.page_title || 'Nossas Cervejas'}</p>
-                    <p style={{ fontSize: '11px', color: '#888', lineHeight: '1.5' }}>{config.page_description}</p>
-                  </div>
+            <div className="overflow-auto" style={{ height: 'calc(100% - 37px)', padding: '16px', background: '#F3F4F8' }}>
+              {/* Preview do slide — espelho do layout WordPress */}
+              <div style={{ background: '#fff', borderRadius: '14px', boxShadow: '0 3px 6px rgba(0,0,0,.18)', padding: '36px 16px 20px', position: 'relative' }}>
+                {/* Setas */}
+                <div style={{ position: 'absolute', top: '10px', right: '12px', display: 'flex', gap: '6px' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#F3F4F8', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,.15)', fontSize: '13px', color: '#000', opacity: .3 }}>←</div>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#F3F4F8', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,.15)', fontSize: '13px', color: '#000' }}>→</div>
                 </div>
-                {/* Cards das cervejas */}
-                {items.slice(0, 3).map(item => (
-                  <div key={item.id} style={{ width: '140px', minWidth: '140px', background: '#f8f8f8', borderRadius: '16px', overflow: 'hidden', border: '1px solid #eee' }}>
-                    {item.image_url
-                      ? <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '200px', objectFit: 'cover', display: 'block' }} />
-                      : <div style={{ width: '100%', height: '200px', background: '#e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', fontSize: '11px' }}>sem img</div>
-                    }
-                    <div style={{ padding: '10px' }}>
-                      <p style={{ fontWeight: 700, fontSize: '12px', marginBottom: '3px' }}>{item.name}</p>
-                      <p style={{ fontSize: '10px', color: '#888' }}>{item.category}</p>
-                      <div style={{ display: 'flex', gap: '2px', marginTop: '6px' }}>
-                        {Array.from({ length: 5 }, (_, i) => (
-                          <span key={i} style={{ fontSize: '10px', color: i < (item.rating || 0) ? '#f59e0b' : '#e5e7eb' }}>★</span>
-                        ))}
+                {/* Cards */}
+                <div style={{ display: 'flex', gap: '12px', overflow: 'hidden' }}>
+                  {items.length === 0 && (
+                    <p style={{ fontSize: '12px', color: '#aaa', margin: '20px auto' }}>Nenhuma cerveja cadastrada</p>
+                  )}
+                  {items.slice(0, 3).map(item => (
+                    <div key={item.id} style={{ width: '140px', minWidth: '140px', height: '140px', background: '#F3F4F8', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+                      {item.image_url
+                        ? <img src={item.image_url} alt={item.name} style={{ width: '140px', height: '79px', minHeight: '79px', objectFit: 'cover', display: 'block', borderRadius: '8px 8px 0 0', flexShrink: 0 }} />
+                        : <div style={{ width: '140px', height: '79px', minHeight: '79px', background: '#e8e8e8', borderRadius: '8px 8px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: '22px', flexShrink: 0 }}>🍺</div>
+                      }
+                      <div style={{ padding: '7px 8px', flex: 1 }}>
+                        <p style={{ fontWeight: 700, fontSize: '10px', margin: 0, marginBottom: '3px', color: '#000', lineHeight: 1.3 }}>{item.name}</p>
+                        <p style={{ fontSize: '9px', color: '#333', margin: 0, lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{item.description}</p>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>

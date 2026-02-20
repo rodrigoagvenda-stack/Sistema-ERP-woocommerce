@@ -63,7 +63,6 @@ const navItems = [
     label: 'Site',
     icon: Globe,
     children: [
-      { label: 'Home — Mosaico', icon: Home, to: '/admin/home-page' },
       { label: 'Nossas Cervejas', icon: Beer, to: '/admin/nossas-cervejas' },
     ],
   },
