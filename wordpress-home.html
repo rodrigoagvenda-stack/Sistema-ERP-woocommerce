@@ -9,58 +9,67 @@
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 
 /* ── MOSAICO ── */
-.gz-mosaic-section{
+.gz-section{
   font-family:'Montserrat',sans-serif;
   background:#fff;
-  padding:0;
-  position:relative;
+  padding:32px 16px 48px;
 }
-.gz-mosaic-grid{
-  columns:5 180px;
-  column-gap:8px;
-  padding:8px;
+.gz-arch{
+  display:flex;
+  gap:8px;
+  align-items:flex-end;
+  justify-content:center;
+  max-width:1100px;
+  margin:0 auto;
 }
-.gz-mosaic-grid img{
+.gz-col{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  flex:1;
+  min-width:0;
+}
+.gz-col img{
   width:100%;
-  display:block;
-  border-radius:12px;
-  margin-bottom:8px;
   object-fit:cover;
-  break-inside:avoid;
-}
-.gz-mosaic-footer{
-  text-align:center;
-  padding:40px 24px 48px;
-  background:#fff;
-}
-.gz-mosaic-footer img.gz-logo{
-  height:56px;
-  object-fit:contain;
-  margin-bottom:20px;
+  border-radius:14px;
   display:block;
-  margin-left:auto;
-  margin-right:auto;
+  flex-shrink:0;
 }
-.gz-mosaic-footer h1{
-  font-size:clamp(28px,4vw,52px);
+.gz-footer{
+  text-align:center;
+  padding:36px 24px 0;
+  max-width:600px;
+  margin:0 auto;
+}
+.gz-footer img.gz-logo{
+  height:52px;
+  object-fit:contain;
+  margin:0 auto 18px;
+  display:block;
+}
+.gz-footer h1{
+  font-size:clamp(26px,4vw,50px);
   font-weight:800;
   color:#111;
   line-height:1.15;
   letter-spacing:-1.5px;
-  margin-bottom:16px;
+  margin-bottom:14px;
 }
-.gz-mosaic-footer p{
+.gz-footer p{
   font-size:16px;
   color:#777;
-  max-width:520px;
-  margin:0 auto;
   line-height:1.7;
 }
-@media(max-width:600px){
-  .gz-mosaic-grid{columns:3 100px;}
+
+/* hide extra cols on small screens */
+@media(max-width:900px){
+  .gz-col-hide-md{display:none;}
 }
-@media(max-width:380px){
-  .gz-mosaic-grid{columns:2 80px;}
+@media(max-width:580px){
+  .gz-col-hide-sm{display:none;}
+  .gz-arch{gap:6px;}
+  .gz-col img{border-radius:10px;}
 }
 
 /* ── SLIDER CERVEJAS ── */
@@ -72,17 +81,12 @@
   margin:0 auto;
 }
 .nc-header{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  margin-bottom:32px;
+  display:flex;align-items:flex-start;
+  justify-content:space-between;margin-bottom:32px;
 }
 .nc-header h2{
-  font-size:clamp(20px,2.8vw,34px);
-  font-weight:800;
-  color:#111;
-  line-height:1.2;
-  max-width:400px;
+  font-size:clamp(20px,2.8vw,34px);font-weight:800;
+  color:#111;line-height:1.2;max-width:400px;
 }
 .nc-arrows{display:flex;gap:10px;align-items:center;flex-shrink:0;}
 .nc-arrow{
@@ -140,9 +144,27 @@
 <body>
 
 <!-- MOSAICO -->
-<div class="gz-mosaic-section">
-  <div class="gz-mosaic-grid" id="gz-grid"></div>
-  <div class="gz-mosaic-footer">
+<div class="gz-section">
+  <div class="gz-arch" id="gz-arch">
+    <!-- col 1 → hide on mobile -->
+    <div class="gz-col gz-col-hide-sm" id="gz-c1"></div>
+    <!-- col 2 → hide on md -->
+    <div class="gz-col gz-col-hide-md" id="gz-c2"></div>
+    <!-- col 3 -->
+    <div class="gz-col gz-col-hide-sm" id="gz-c3"></div>
+    <!-- col 4 center esq -->
+    <div class="gz-col" id="gz-c4"></div>
+    <!-- col 5 center dir -->
+    <div class="gz-col" id="gz-c5"></div>
+    <!-- col 6 -->
+    <div class="gz-col gz-col-hide-sm" id="gz-c6"></div>
+    <!-- col 7 → hide on md -->
+    <div class="gz-col gz-col-hide-md" id="gz-c7"></div>
+    <!-- col 8 → hide on mobile -->
+    <div class="gz-col gz-col-hide-sm" id="gz-c8"></div>
+  </div>
+
+  <div class="gz-footer">
     <img class="gz-logo" id="gz-logo" alt="Geezer" style="display:none;" onerror="this.style.display='none'">
     <h1 id="gz-title">Nossas Cervejas</h1>
     <p id="gz-desc"></p>
@@ -174,82 +196,70 @@
 
 <script>
 (function(){
-  var KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrdnpubW1paWlsanlya29waXF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwODI3NzEsImV4cCI6MjA4MTY1ODc3MX0.fDfad8H_91BPgM3pHQFZ2vadIrqdSuElwlT_i4JBdB4';
-  var BASE = 'https://dkvznmmiiiljyrkopiqx.supabase.co/rest/v1/rpc/';
-  var heads = {'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY};
+  var KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrdnpubW1paWlsanlya29waXF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYwODI3NzEsImV4cCI6MjA4MTY1ODc3MX0.fDfad8H_91BPgM3pHQFZ2vadIrqdSuElwlT_i4JBdB4';
+  var BASE='https://dkvznmmiiiljyrkopiqx.supabase.co/rest/v1/rpc/';
+  var heads={'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY};
+  function rpc(n){return fetch(BASE+n,{method:'POST',headers:heads}).then(function(r){return r.json();});}
 
-  function rpc(name){ return fetch(BASE+name,{method:'POST',headers:heads}).then(function(r){return r.json();}); }
+  /* ── MOSAICO ARCO ──
+     Estrutura de colunas (espelhada):
+     col1:[150,150]  col2:[110,110,100]  col3:[360]  col4:[440]  col5:[440]  col6:[360]  col7:[110,110,100]  col8:[150,150]
+     align-items: flex-end → base alinhada, centro mais alto
+  */
+  var COLS = [
+    { id:'gz-c1', heights:[150,150] },
+    { id:'gz-c2', heights:[110,110,100] },
+    { id:'gz-c3', heights:[360] },
+    { id:'gz-c4', heights:[440] },
+    { id:'gz-c5', heights:[440] },
+    { id:'gz-c6', heights:[360] },
+    { id:'gz-c7', heights:[110,110,100] },
+    { id:'gz-c8', heights:[150,150] }
+  ];
 
-  // ── MOSAICO ──
   rpc('get_home_page').then(function(data){
-    var photos = data.photos || [];
-    var grid = document.getElementById('gz-grid');
+    var photos=data.photos||[];
     if(!photos.length){
-      grid.style.display='none';
+      document.getElementById('gz-arch').style.display='none';
       return;
     }
-    grid.innerHTML = photos.map(function(p){
-      return '<img src="'+p.image_url+'" alt="" loading="lazy">';
-    }).join('');
+    var idx=0;
+    COLS.forEach(function(col){
+      var el=document.getElementById(col.id);
+      if(!el) return;
+      col.heights.forEach(function(h){
+        var p=photos[idx%photos.length]; idx++;
+        var img=document.createElement('img');
+        img.src=p.image_url;
+        img.alt='';
+        img.loading='lazy';
+        img.style.height=h+'px';
+        el.appendChild(img);
+      });
+    });
   }).catch(function(){});
 
-  // ── SLIDER CERVEJAS ──
-  var offset=0, cardW=190+16, visibleCount=3, totalCards=0;
-
-  function stars(r){
-    var s='',v=parseFloat(r)||0;
-    for(var i=0;i<5;i++) s+='<span class="nc-star'+(i<v?' on':'')+'">&#9733;</span>';
-    return s;
-  }
-  function updateArrows(){
-    document.getElementById('nc-prev').disabled = offset<=0;
-    document.getElementById('nc-next').disabled = offset>=totalCards-visibleCount;
-  }
-  function slide(dir){
-    offset=Math.max(0,Math.min(offset+dir,totalCards-visibleCount));
-    document.getElementById('nc-track').style.transform='translateX(-'+(offset*cardW)+'px)';
-    updateArrows();
-  }
+  /* ── SLIDER ── */
+  var offset=0,cardW=206,visibleCount=3,totalCards=0;
+  function stars(r){var s='',v=parseFloat(r)||0;for(var i=0;i<5;i++)s+='<span class="nc-star'+(i<v?' on':'')+'">&#9733;</span>';return s;}
+  function updateArrows(){document.getElementById('nc-prev').disabled=offset<=0;document.getElementById('nc-next').disabled=offset>=totalCards-visibleCount;}
+  function slide(d){offset=Math.max(0,Math.min(offset+d,totalCards-visibleCount));document.getElementById('nc-track').style.transform='translateX(-'+(offset*cardW)+'px)';updateArrows();}
   document.getElementById('nc-prev').onclick=function(){slide(-1);};
   document.getElementById('nc-next').onclick=function(){slide(1);};
-  function calcVisible(){
-    var w=document.querySelector('.nc-track-wrap');
-    if(w) visibleCount=Math.max(1,Math.floor(w.offsetWidth/cardW));
-    updateArrows();
-  }
+  function calcVisible(){var w=document.querySelector('.nc-track-wrap');if(w)visibleCount=Math.max(1,Math.floor(w.offsetWidth/cardW));updateArrows();}
   window.addEventListener('resize',calcVisible);
 
   rpc('get_nossas_cervejas').then(function(data){
-    var cfg=data.config||{}, items=data.items||[];
-
-    // Mosaico footer
-    if(cfg.logo_url){
-      ['gz-logo','nc-logo'].forEach(function(id){
-        var el=document.getElementById(id);
-        if(el){el.src=cfg.logo_url;el.style.display='block';}
-      });
-    }
+    var cfg=data.config||{},items=data.items||[];
+    if(cfg.logo_url){['gz-logo','nc-logo'].forEach(function(id){var el=document.getElementById(id);if(el){el.src=cfg.logo_url;el.style.display='block';}});}
     var t=cfg.page_title||'Nossas Cervejas';
     document.getElementById('gz-title').textContent=t;
-    document.getElementById('nc-title').textContent='Explore nossas cervejas';
     document.getElementById('nc-feat-title').textContent=t;
-    if(cfg.page_description){
-      document.getElementById('gz-desc').textContent=cfg.page_description;
-      document.getElementById('nc-feat-desc').textContent=cfg.page_description;
-    }
-
-    // Cards
+    if(cfg.page_description){document.getElementById('gz-desc').textContent=cfg.page_description;document.getElementById('nc-feat-desc').textContent=cfg.page_description;}
     totalCards=items.length;
     document.getElementById('nc-track').innerHTML=items.map(function(item){
-      var img=item.image_url
-        ?'<img src="'+item.image_url+'" alt="'+item.name+'" loading="lazy">'
-        :'<div class="nc-card-no-img">🍺</div>';
-      return '<div class="nc-card">'+img
-        +'<div class="nc-card-body">'
-        +'<div class="nc-card-name">'+item.name+'</div>'
-        +(item.category?'<div class="nc-card-cat">'+item.category+'</div>':'')
-        +'<div class="nc-stars">'+stars(item.rating)+'</div>'
-        +'</div></div>';
+      var img=item.image_url?'<img src="'+item.image_url+'" alt="'+item.name+'" loading="lazy">':'<div class="nc-card-no-img">🍺</div>';
+      return '<div class="nc-card">'+img+'<div class="nc-card-body"><div class="nc-card-name">'+item.name+'</div>'+(item.category?'<div class="nc-card-cat">'+item.category+'</div>':'')+'<div class="nc-stars">'+stars(item.rating)+'</div></div></div>';
     }).join('');
     calcVisible();
   }).catch(function(){});
