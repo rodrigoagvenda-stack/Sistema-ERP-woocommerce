@@ -5,7 +5,7 @@ export const api = {
   async getProducts() {
     const { data, error } = await supabase
       .from('products')
-      .select('*, category:categories!products_category_id_fkey(id, name, woo_id), subcategory:categories!products_subcategory_id_fkey(id, name, woo_id), brand:brands(id, name)')
+      .select('*, category:categories!category_id(id, name, woo_id), subcategory:categories!subcategory_id(id, name, woo_id), brand:brands(id, name)')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
     if (error) throw error
@@ -15,7 +15,7 @@ export const api = {
   async getAllProducts() {
     const { data, error } = await supabase
       .from('products')
-      .select('*, category:categories!products_category_id_fkey(id, name, woo_id), subcategory:categories!products_subcategory_id_fkey(id, name, woo_id), brand:brands(id, name)')
+      .select('*, category:categories!category_id(id, name, woo_id), subcategory:categories!subcategory_id(id, name, woo_id), brand:brands(id, name)')
       .order('created_at', { ascending: false })
     if (error) throw error
     return data || []
@@ -24,7 +24,7 @@ export const api = {
   async getProductById(id) {
     const { data, error } = await supabase
       .from('products')
-      .select('*, category:categories!products_category_id_fkey(id, name, woo_id), subcategory:categories!products_subcategory_id_fkey(id, name, woo_id), brand:brands(id, name)')
+      .select('*, category:categories!category_id(id, name, woo_id), subcategory:categories!subcategory_id(id, name, woo_id), brand:brands(id, name)')
       .eq('id', id)
       .single()
     if (error) throw error
