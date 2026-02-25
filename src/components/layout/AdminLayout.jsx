@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Tag, Layers, Star, BarChart2,
   Settings, ChevronDown, ChevronRight, LogOut, Menu, X,
   ShoppingBag, TrendingUp, ShoppingCart, Shuffle, FolderOpen,
-  Warehouse, SlidersHorizontal, Globe, FileText, Bookmark, Ticket, Beer
+  Warehouse, SlidersHorizontal, Globe, FileText, Bookmark, Ticket, Beer, Truck
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -52,6 +52,7 @@ const navItems = [
     children: [
       { label: 'Configurações', icon: Settings, to: '/admin/woo/settings' },
       { label: 'Formas de Pagamento', icon: SlidersHorizontal, to: '/admin/woo/payments' },
+      { label: 'Frete', icon: Truck, to: '/admin/woo/shipping' },
       { label: 'Logs de Sync', icon: FileText, to: '/admin/woo/logs' },
     ],
   },
