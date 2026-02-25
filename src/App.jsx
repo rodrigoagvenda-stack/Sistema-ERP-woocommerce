@@ -16,6 +16,7 @@ const Attributes = lazy(() => import('@/pages/admin/Attributes'))
 const Reviews = lazy(() => import('@/pages/admin/Reviews'))
 const WooSettings = lazy(() => import('@/pages/admin/WooSettings'))
 const SyncLogs = lazy(() => import('@/pages/admin/SyncLogs'))
+const WooPayments = lazy(() => import('@/pages/admin/WooPayments'))
 const FAQ = lazy(() => import('@/pages/admin/FAQ'))
 const Coupons = lazy(() => import('@/pages/admin/Coupons'))
 const NossasCervejas = lazy(() => import('@/pages/admin/NossasCervejas'))
@@ -56,6 +57,7 @@ export default function App() {
       <Route path="/admin/reviews" element={<AdminPage><Reviews /></AdminPage>} />
       <Route path="/admin/woo/settings" element={<AdminPage><WooSettings /></AdminPage>} />
       <Route path="/admin/woo/logs" element={<AdminPage><SyncLogs /></AdminPage>} />
+      <Route path="/admin/woo/payments" element={<AdminPage><WooPayments /></AdminPage>} />
       <Route path="/admin/faq" element={<AdminPage><FAQ /></AdminPage>} />
       <Route path="/admin/coupons" element={<AdminPage><Coupons /></AdminPage>} />
       <Route path="/admin/nossas-cervejas" element={<AdminPage><NossasCervejas /></AdminPage>} />
