@@ -102,6 +102,11 @@ export const api = {
   },
 
   async deleteCategory(id) {
+    // Zera referências em produtos antes de deletar (evita FK violation)
+    await supabase.from('products').update({ category_id: null }).eq('category_id', id)
+    await supabase.from('products').update({ subcategory_id: null }).eq('subcategory_id', id)
+    // Zera parent_id em subcategorias filhas
+    await supabase.from('categories').update({ parent_id: null }).eq('parent_id', id)
     const { error } = await supabase.from('categories').delete().eq('id', id)
     if (error) throw error
     return true
