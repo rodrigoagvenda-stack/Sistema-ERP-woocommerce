@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
-const LOGO_URL = 'https://hnkhihzeqtzqzybkjype.supabase.co/storage/v1/object/public/Logos-site/geezer_preto.png'
+const LOGO_URL = 'https://dkvznmmiiiljyrkopiqx.supabase.co/storage/v1/object/public/Logos-site/geezer_preto%202.png'
 
 const navItems = [
   {

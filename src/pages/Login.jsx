@@ -39,7 +39,7 @@ export default function Login() {
         {/* Logo */}
         <div className="flex flex-col items-center gap-3">
           <img
-            src="https://hnkhihzeqtzqzybkjype.supabase.co/storage/v1/object/public/Logos-site/geezer_preto.png"
+            src="https://dkvznmmiiiljyrkopiqx.supabase.co/storage/v1/object/public/Logos-site/geezer_preto%202.png"
             alt="Geezer"
             className="h-16 w-auto object-contain"
           />
