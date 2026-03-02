@@ -71,9 +71,14 @@ serve(async (req) => {
 
     if (!response.ok) {
       // Sempre retorna HTTP 200 — erro fica no campo "error" do body
+      const debugUrl = fullUrl
+        .replace(/consumer_key=[^&]+/, 'consumer_key=***')
+        .replace(/consumer_secret=[^&]+/, 'consumer_secret=***')
       return new Response(JSON.stringify({
         error: responseData?.message || `WooCommerce API error ${response.status}`,
         details: responseData,
+        debug_url: debugUrl,
+        status_code: response.status,
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -84,7 +89,7 @@ serve(async (req) => {
     })
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error.message, stack: error.stack }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
