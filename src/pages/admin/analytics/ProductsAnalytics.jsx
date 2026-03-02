@@ -17,8 +17,9 @@ export default function ProductsAnalytics() {
   const load = async () => {
     setLoading(true); setError(null)
     try {
-      const data = await wooProxy({ endpoint: 'reports/top_sellers?period=month&limit=20' })
-      setTopSellers(Array.isArray(data) ? data : [])
+      const data = await wooProxy({ endpoint: 'products?orderby=popularity&order=desc&per_page=20&status=publish' })
+      const arr = Array.isArray(data) ? data : []
+      setTopSellers(arr.filter(p => p.total_sales > 0).map(p => ({ product_id: p.id, name: p.name, quantity: p.total_sales })))
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }

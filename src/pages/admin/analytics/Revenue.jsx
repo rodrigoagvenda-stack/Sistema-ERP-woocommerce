@@ -29,15 +29,31 @@ export default function Revenue() {
       const days = parseInt(period)
       const end = new Date()
       const start = new Date(end - days * 86400000)
-      const dateMin = start.toISOString().split('T')[0]
-      const dateMax = end.toISOString().split('T')[0]
-      const sales = await wooProxy({ endpoint: `reports/sales?date_min=${dateMin}&date_max=${dateMax}` })
-      setTotals(sales)
-      // Build chart data from totals (WooCommerce reports/sales returns aggregate)
-      // For chart, we get the aggregate per day using period=day
-      const chartData = Array.isArray(sales) ? sales : (sales.totals ? Object.entries(sales.totals).map(([date, d]) => ({
-        date, sales: parseFloat(d.sales || 0), orders: parseInt(d.orders || 0)
-      })) : [])
+
+      const orders = await wooProxy({
+        endpoint: `orders?status=completed,processing&after=${start.toISOString()}&before=${end.toISOString()}&per_page=100`,
+      })
+
+      const arr = Array.isArray(orders) ? orders : []
+
+      // Agrupa por dia para o gráfico
+      const byDay = {}
+      arr.forEach(o => {
+        const date = o.date_created?.split('T')[0]
+        if (!date) return
+        if (!byDay[date]) byDay[date] = { date, sales: 0, orders: 0 }
+        byDay[date].sales += parseFloat(o.total || 0)
+        byDay[date].orders += 1
+      })
+      const chartData = Object.values(byDay).sort((a, b) => a.date.localeCompare(b.date))
+
+      const total_sales = arr.reduce((s, o) => s + parseFloat(o.total || 0), 0)
+      const total_orders = arr.length
+      const total_discount = arr.reduce((s, o) => s + parseFloat(o.discount_total || 0), 0)
+      const gross_sales = total_sales + total_discount
+      const average_total_sales = total_orders > 0 ? total_sales / total_orders : 0
+
+      setTotals({ total_sales, gross_sales, total_orders, average_total_sales })
       setData(chartData)
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }

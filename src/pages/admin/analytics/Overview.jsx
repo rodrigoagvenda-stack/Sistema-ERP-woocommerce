@@ -38,10 +38,26 @@ export default function AnalyticsOverview() {
     setError(null)
     try {
       const now = new Date()
-      const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-      const end = now.toISOString().split('T')[0]
-      const sales = await wooProxy({ endpoint: `reports/sales?date_min=${start}&date_max=${end}` })
-      setData(sales)
+      const start = new Date(now.getFullYear(), now.getMonth(), 1)
+      const after = start.toISOString()
+      const before = now.toISOString()
+
+      const orders = await wooProxy({
+        endpoint: `orders?status=completed,processing&after=${after}&before=${before}&per_page=100`,
+      })
+
+      const arr = Array.isArray(orders) ? orders : []
+      const total_sales = arr.reduce((s, o) => s + parseFloat(o.total || 0), 0)
+      const total_orders = arr.length
+      const total_items = arr.reduce((s, o) => s + (o.line_items?.reduce((a, i) => a + i.quantity, 0) || 0), 0)
+      const total_shipping = arr.reduce((s, o) => s + parseFloat(o.shipping_total || 0), 0)
+      const total_discount = arr.reduce((s, o) => s + parseFloat(o.discount_total || 0), 0)
+      const gross_sales = total_sales + total_discount
+      const average_total_sales = total_orders > 0 ? total_sales / total_orders : 0
+      const days = Math.max(1, Math.ceil((now - start) / 86400000))
+      const average_sales = total_sales / days
+
+      setData({ total_sales, total_orders, total_items, average_total_sales, total_shipping, total_discount, gross_sales, total_refunds: 0, average_sales })
     } catch (e) {
       setError(e.message)
     } finally {
