@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { Building2, LogOut } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -5,6 +6,12 @@ import { cn } from '@/lib/utils'
 
 export default function SuperAdminLayout({ children }) {
   const navigate = useNavigate()
+
+  useEffect(() => {
+    document.title = 'Super Admin — Plataforma'
+    const link = document.querySelector("link[rel~='icon']")
+    if (link) link.href = '/favicon.ico'
+  }, [])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()

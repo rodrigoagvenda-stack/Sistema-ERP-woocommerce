@@ -4,8 +4,12 @@ import { getCompany, clearCompany, updateCompanyCache } from '@/lib/company'
 
 const CompanyContext = createContext(null)
 
+function isSuperAdminRoute() {
+  return window.location.pathname.startsWith('/super-admin')
+}
+
 function applyBranding(company) {
-  if (!company) return
+  if (!company || isSuperAdminRoute()) return
   const color = company.primary_color || '#15A344'
   document.documentElement.style.setProperty('--brand', color)
   if (company.favicon_url) {
