@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { supabase } from '@/lib/supabase'
+import { getCompanyId } from '@/lib/company'
 
-const SUPABASE_URL = 'https://dkvznmmiiiljyrkopiqx.supabase.co'
 const BUCKET = 'product-images'
 
 export default function HomePage() {
@@ -28,9 +28,11 @@ export default function HomePage() {
   const load = async () => {
     setLoading(true)
     try {
+      const cid = await getCompanyId()
       const { data, error } = await supabase
         .from('home_photos')
         .select('*')
+        .eq('company_id', cid)
         .order('sort_order', { ascending: true })
       if (error) throw error
       setPhotos(data || [])
@@ -51,10 +53,11 @@ export default function HomePage() {
         const path = `home/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
         const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true })
         if (upErr) throw upErr
-        const url = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`
+        const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path)
+        const cid = await getCompanyId()
         const { data, error: insErr } = await supabase
           .from('home_photos')
-          .insert({ image_url: url, sort_order: photos.length + uploaded.length })
+          .insert({ image_url: urlData.publicUrl, company_id: cid, sort_order: photos.length + uploaded.length })
           .select().single()
         if (insErr) throw insErr
         uploaded.push(data)
@@ -73,7 +76,8 @@ export default function HomePage() {
     if (!deleteTarget) return
     setDeleting(true)
     try {
-      const { error } = await supabase.from('home_photos').delete().eq('id', deleteTarget.id)
+      const cid = await getCompanyId()
+      const { error } = await supabase.from('home_photos').delete().eq('id', deleteTarget.id).eq('company_id', cid)
       if (error) throw error
       setPhotos(prev => prev.filter(p => p.id !== deleteTarget.id))
       showAlert('success', 'Foto removida.')
@@ -91,8 +95,9 @@ export default function HomePage() {
     if (target < 0 || target >= arr.length) return
     ;[arr[index], arr[target]] = [arr[target], arr[index]]
     setPhotos(arr)
+    const cid = await getCompanyId()
     await Promise.all(arr.map((p, i) =>
-      supabase.from('home_photos').update({ sort_order: i }).eq('id', p.id)
+      supabase.from('home_photos').update({ sort_order: i }).eq('id', p.id).eq('company_id', cid)
     ))
   }
 

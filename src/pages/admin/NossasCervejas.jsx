@@ -8,8 +8,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { supabase } from '@/lib/supabase'
+import { getCompanyId } from '@/lib/company'
 
-const SUPABASE_URL = 'https://dkvznmmiiiljyrkopiqx.supabase.co'
 const BUCKET = 'product-images'
 const EMPTY_ITEM = { name: '', description: '', image_url: '', category: '', rating: 5 }
 
@@ -35,9 +35,10 @@ export default function NossasCervejas() {
   const load = async () => {
     setLoading(true)
     try {
+      const cid = await getCompanyId()
       const [{ data: cfg }, { data: its }] = await Promise.all([
-        supabase.from('nossas_cervejas_config').select('*').limit(1).single(),
-        supabase.from('nossas_cervejas_items').select('*').order('sort_order', { ascending: true }),
+        supabase.from('nossas_cervejas_config').select('*').eq('company_id', cid).limit(1).single(),
+        supabase.from('nossas_cervejas_items').select('*').eq('company_id', cid).order('sort_order', { ascending: true }),
       ])
       if (cfg) setConfig(cfg)
       if (its) setItems(its)
@@ -51,6 +52,7 @@ export default function NossasCervejas() {
   const handleSaveConfig = async () => {
     setSavingConfig(true)
     try {
+      const cid = await getCompanyId()
       const { error } = await supabase
         .from('nossas_cervejas_config')
         .update({
@@ -60,6 +62,7 @@ export default function NossasCervejas() {
           updated_at: new Date().toISOString()
         })
         .eq('id', config.id)
+        .eq('company_id', cid)
       if (error) throw error
       showAlert('success', 'Configurações salvas!')
     } catch (e) {
@@ -77,8 +80,8 @@ export default function NossasCervejas() {
       const path = `cervejas/${Date.now()}.${ext}`
       const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true })
       if (error) throw error
-      const url = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`
-      setCurrent(p => ({ ...p, image_url: url }))
+      const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
+      setCurrent(p => ({ ...p, image_url: data.publicUrl }))
     } catch (e) {
       showAlert('error', 'Erro no upload: ' + e.message)
     } finally {
@@ -90,6 +93,7 @@ export default function NossasCervejas() {
     if (!current.name?.trim()) return showAlert('error', 'Nome é obrigatório')
     setSaving(true)
     try {
+      const cid = await getCompanyId()
       const payload = {
         name: current.name,
         description: current.description,
@@ -100,7 +104,7 @@ export default function NossasCervejas() {
       if (dialog === 'create') {
         const { data, error } = await supabase
           .from('nossas_cervejas_items')
-          .insert({ ...payload, sort_order: items.length })
+          .insert({ ...payload, company_id: cid, sort_order: items.length })
           .select().single()
         if (error) throw error
         setItems(prev => [...prev, data])
@@ -110,6 +114,7 @@ export default function NossasCervejas() {
           .from('nossas_cervejas_items')
           .update(payload)
           .eq('id', current.id)
+          .eq('company_id', cid)
           .select().single()
         if (error) throw error
         setItems(prev => prev.map(i => i.id === data.id ? data : i))
@@ -127,7 +132,8 @@ export default function NossasCervejas() {
   const handleDelete = async () => {
     setSaving(true)
     try {
-      const { error } = await supabase.from('nossas_cervejas_items').delete().eq('id', current.id)
+      const cid = await getCompanyId()
+      const { error } = await supabase.from('nossas_cervejas_items').delete().eq('id', current.id).eq('company_id', cid)
       if (error) throw error
       setItems(prev => prev.filter(i => i.id !== current.id))
       showAlert('success', `"${current.name}" removida.`)
@@ -146,8 +152,9 @@ export default function NossasCervejas() {
     if (target < 0 || target >= newItems.length) return
     ;[newItems[index], newItems[target]] = [newItems[target], newItems[index]]
     setItems(newItems)
+    const cid = await getCompanyId()
     await Promise.all(newItems.map((item, i) =>
-      supabase.from('nossas_cervejas_items').update({ sort_order: i }).eq('id', item.id)
+      supabase.from('nossas_cervejas_items').update({ sort_order: i }).eq('id', item.id).eq('company_id', cid)
     ))
   }
 

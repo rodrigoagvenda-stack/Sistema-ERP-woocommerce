@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { api, wooProxy } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
+import { getCompanyId } from '@/lib/company'
 
 const EMPTY_PRODUCT = {
   name: '', description: '', price: '', stock: '', min_stock: 5,
@@ -233,7 +234,8 @@ export default function Products() {
       } else {
         wooData = await wooProxy({ method: 'POST', endpoint: 'products', body: { ...payload, type: 'simple' } })
         // Salvar woo_id localmente
-        await supabase.from('products').update({ woo_id: wooData.id }).eq('id', product.id)
+        const cid = await getCompanyId()
+        await supabase.from('products').update({ woo_id: wooData.id }).eq('id', product.id).eq('company_id', cid)
         setProducts(prev => prev.map(p => p.id === product.id ? { ...p, woo_id: wooData.id } : p))
       }
 
