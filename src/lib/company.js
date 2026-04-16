@@ -8,17 +8,25 @@ export async function getCompany() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Usuário não autenticado')
 
-  const { data, error } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('company_id, is_super_admin, companies(*)')
+    .select('company_id, is_super_admin')
     .eq('id', user.id)
     .single()
 
-  if (error) throw new Error('Perfil não encontrado')
+  if (profileError) throw new Error('Perfil não encontrado')
+
+  const { data: company, error: companyError } = await supabase
+    .from('companies')
+    .select('*')
+    .eq('id', profile.company_id)
+    .single()
+
+  if (companyError) throw new Error('Empresa não encontrada')
 
   _company = {
-    ...(data.companies || {}),
-    is_super_admin: data.is_super_admin || false,
+    ...company,
+    is_super_admin: profile.is_super_admin || false,
   }
   return _company
 }
