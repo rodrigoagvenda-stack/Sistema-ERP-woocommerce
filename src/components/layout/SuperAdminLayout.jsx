@@ -9,8 +9,13 @@ export default function SuperAdminLayout({ children }) {
 
   useEffect(() => {
     document.title = 'Super Admin — Plataforma'
-    const link = document.querySelector("link[rel~='icon']")
-    if (link) link.href = '/favicon.ico'
+    let link = document.querySelector("link[rel~='icon']")
+    if (!link) {
+      link = document.createElement('link')
+      link.rel = 'icon'
+      document.head.appendChild(link)
+    }
+    link.href = 'https://dkvznmmiiiljyrkopiqx.supabase.co/storage/v1/object/public/user-uploads/briefing-logos/Fivecon%20(3).png'
   }, [])
 
   const handleLogout = async () => {
@@ -23,9 +28,12 @@ export default function SuperAdminLayout({ children }) {
       {/* Sidebar */}
       <aside className="w-56 bg-gray-900 border-r border-gray-800 flex flex-col shrink-0">
         {/* Header */}
-        <div className="px-5 py-5 border-b border-gray-800">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Super Admin</p>
-          <p className="text-sm font-semibold text-white mt-0.5">Plataforma</p>
+        <div className="px-5 py-4 border-b border-gray-800 flex items-center">
+          <img
+            src="https://dkvznmmiiiljyrkopiqx.supabase.co/storage/v1/object/public/user-uploads/briefing-logos/66a0b259-c069-4871-8494-de3deed09800-1774451850976.png"
+            alt="Logo"
+            className="h-8 w-auto object-contain"
+          />
         </div>
 
         {/* Nav */}
