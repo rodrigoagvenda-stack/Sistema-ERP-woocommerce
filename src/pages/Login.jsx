@@ -70,7 +70,7 @@ export default function Login() {
 
     // Salva slug para redirect caso a sessão expire
     localStorage.setItem('lastSlug', slug)
-    navigate('/admin/dashboard')
+    navigate(`/admin/${slug}/dashboard`)
   }
 
   if (notFound) {

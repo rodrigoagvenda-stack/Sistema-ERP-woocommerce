@@ -63,46 +63,46 @@ export default function App() {
         <Route path="/login/:slug" element={<Login />} />
 
         {/* Super Admin */}
-        <Route path="/super-admin/login"        element={<SuperAdminLogin />} />
-        <Route path="/super-admin/companies"    element={<SuperPage><SuperAdminCompanies /></SuperPage>} />
+        <Route path="/super-admin/login"         element={<SuperAdminLogin />} />
+        <Route path="/super-admin/companies"     element={<SuperPage><SuperAdminCompanies /></SuperPage>} />
         <Route path="/super-admin/companies/new" element={<SuperPage><SuperAdminCompanyEditor /></SuperPage>} />
         <Route path="/super-admin/companies/:id" element={<SuperPage><SuperAdminCompanyEditor /></SuperPage>} />
-        <Route path="/super-admin"              element={<Navigate to="/super-admin/login" replace />} />
+        <Route path="/super-admin"               element={<Navigate to="/super-admin/login" replace />} />
 
         {/* Admin — Geral */}
-        <Route path="/admin/dashboard"  element={<AdminPage><Dashboard /></AdminPage>} />
-        <Route path="/admin/products"   element={<AdminPage><Products /></AdminPage>} />
-        <Route path="/admin/categories" element={<AdminPage><Categories /></AdminPage>} />
-        <Route path="/admin/brands"     element={<AdminPage><Brands /></AdminPage>} />
-        <Route path="/admin/tags"       element={<AdminPage><Tags /></AdminPage>} />
-        <Route path="/admin/attributes" element={<AdminPage><Attributes /></AdminPage>} />
-        <Route path="/admin/reviews"    element={<AdminPage><Reviews /></AdminPage>} />
-        <Route path="/admin/faq"        element={<AdminPage><FAQ /></AdminPage>} />
+        <Route path="/admin/:slug/dashboard"  element={<AdminPage><Dashboard /></AdminPage>} />
+        <Route path="/admin/:slug/products"   element={<AdminPage><Products /></AdminPage>} />
+        <Route path="/admin/:slug/categories" element={<AdminPage><Categories /></AdminPage>} />
+        <Route path="/admin/:slug/brands"     element={<AdminPage><Brands /></AdminPage>} />
+        <Route path="/admin/:slug/tags"       element={<AdminPage><Tags /></AdminPage>} />
+        <Route path="/admin/:slug/attributes" element={<AdminPage><Attributes /></AdminPage>} />
+        <Route path="/admin/:slug/reviews"    element={<AdminPage><Reviews /></AdminPage>} />
+        <Route path="/admin/:slug/faq"        element={<AdminPage><FAQ /></AdminPage>} />
 
         {/* Admin — WooCommerce */}
-        <Route path="/admin/woo/settings"  element={<AdminPage><WooSettings /></AdminPage>} />
-        <Route path="/admin/woo/payments"  element={<AdminPage><WooPayments /></AdminPage>} />
-        <Route path="/admin/woo/shipping"  element={<AdminPage><WooShipping /></AdminPage>} />
-        <Route path="/admin/woo/logs"      element={<AdminPage><SyncLogs /></AdminPage>} />
+        <Route path="/admin/:slug/woo/settings" element={<AdminPage><WooSettings /></AdminPage>} />
+        <Route path="/admin/:slug/woo/payments" element={<AdminPage><WooPayments /></AdminPage>} />
+        <Route path="/admin/:slug/woo/shipping" element={<AdminPage><WooShipping /></AdminPage>} />
+        <Route path="/admin/:slug/woo/logs"     element={<AdminPage><SyncLogs /></AdminPage>} />
 
         {/* Admin — Features opcionais */}
-        <Route path="/admin/coupons"         element={<AdminPage><Coupons /></AdminPage>} />
-        <Route path="/admin/nossas-cervejas" element={<AdminPage><NossasCervejas /></AdminPage>} />
+        <Route path="/admin/:slug/coupons"         element={<AdminPage><Coupons /></AdminPage>} />
+        <Route path="/admin/:slug/nossas-cervejas" element={<AdminPage><NossasCervejas /></AdminPage>} />
 
         {/* Admin — Analytics */}
-        <Route path="/admin/analytics/overview"   element={<AdminPage><AnalyticsOverview /></AdminPage>} />
-        <Route path="/admin/analytics/products"   element={<AdminPage><AnalyticsProducts /></AdminPage>} />
-        <Route path="/admin/analytics/revenue"    element={<AdminPage><AnalyticsRevenue /></AdminPage>} />
-        <Route path="/admin/analytics/orders"     element={<AdminPage><AnalyticsOrders /></AdminPage>} />
-        <Route path="/admin/analytics/variations" element={<AdminPage><AnalyticsVariations /></AdminPage>} />
-        <Route path="/admin/analytics/categories" element={<AdminPage><AnalyticsCategories /></AdminPage>} />
-        <Route path="/admin/analytics/stock"      element={<AdminPage><AnalyticsStock /></AdminPage>} />
-        <Route path="/admin/analytics/settings"   element={<AdminPage><AnalyticsSettings /></AdminPage>} />
+        <Route path="/admin/:slug/analytics/overview"   element={<AdminPage><AnalyticsOverview /></AdminPage>} />
+        <Route path="/admin/:slug/analytics/products"   element={<AdminPage><AnalyticsProducts /></AdminPage>} />
+        <Route path="/admin/:slug/analytics/revenue"    element={<AdminPage><AnalyticsRevenue /></AdminPage>} />
+        <Route path="/admin/:slug/analytics/orders"     element={<AdminPage><AnalyticsOrders /></AdminPage>} />
+        <Route path="/admin/:slug/analytics/variations" element={<AdminPage><AnalyticsVariations /></AdminPage>} />
+        <Route path="/admin/:slug/analytics/categories" element={<AdminPage><AnalyticsCategories /></AdminPage>} />
+        <Route path="/admin/:slug/analytics/stock"      element={<AdminPage><AnalyticsStock /></AdminPage>} />
+        <Route path="/admin/:slug/analytics/settings"   element={<AdminPage><AnalyticsSettings /></AdminPage>} />
 
         {/* Redirects */}
-        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-        <Route path="/"      element={<Navigate to="/admin/dashboard" replace />} />
-        <Route path="*"      element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="/admin/:slug" element={<Navigate to="dashboard" replace />} />
+        <Route path="/" element={<Navigate to={`/login/${localStorage.getItem('lastSlug') || 'agro'}`} replace />} />
+        <Route path="*" element={<Navigate to={`/login/${localStorage.getItem('lastSlug') || 'agro'}`} replace />} />
       </Routes>
     </Suspense>
   )

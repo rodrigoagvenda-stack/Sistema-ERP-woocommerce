@@ -1,12 +1,16 @@
 import { supabase } from './supabase'
 
 let _company = null
+let _userId  = null
 
 export async function getCompany() {
   if (_company) return _company
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Usuário não autenticado')
+
+  // Cache por usuário — invalida se o usuário mudou
+  if (_company && _userId === user.id) return _company
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
@@ -24,6 +28,7 @@ export async function getCompany() {
 
   if (companyError) throw new Error('Empresa não encontrada')
 
+  _userId  = user.id
   _company = {
     ...company,
     is_super_admin: profile.is_super_admin || false,
@@ -42,4 +47,5 @@ export function updateCompanyCache(updates) {
 
 export function clearCompany() {
   _company = null
+  _userId  = null
 }

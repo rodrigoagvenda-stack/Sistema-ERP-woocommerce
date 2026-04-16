@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import {
   LayoutDashboard, Package, Tag, Layers, Star, BarChart2,
   Settings, ChevronDown, ChevronRight, LogOut, Menu, X,
@@ -83,12 +83,12 @@ function NavItem({ item, collapsed, onNavigate, brandColor }) {
   )
 }
 
-function Sidebar({ collapsed, onNavigate, brandColor, logoUrl, navItems }) {
+function Sidebar({ collapsed, onNavigate, brandColor, logoUrl, navItems, slug }) {
   const navigate = useNavigate()
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    navigate('/login')
+    navigate(`/login/${slug}`)
   }
 
   return (
@@ -149,60 +149,62 @@ export default function AdminLayout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const navigate = useNavigate()
   const { company, features } = useCompany()
+  const { slug } = useParams()
 
   const brandColor = company?.primary_color || '#15A344'
   const logoUrl    = company?.logo_url || null
+  const base       = `/admin/${slug}`
 
   const navItems = useMemo(() => {
     const wooChildren = [
-      { label: 'Configurações',       icon: Settings,          to: '/admin/woo/settings' },
-      ...(features.payments ? [{ label: 'Formas de Pagamento', icon: CreditCard, to: '/admin/woo/payments' }] : []),
-      ...(features.shipping ? [{ label: 'Frete',               icon: Truck,      to: '/admin/woo/shipping' }] : []),
-      { label: 'Logs de Sync',        icon: FileText,          to: '/admin/woo/logs' },
+      { label: 'Configurações',       icon: Settings,          to: `${base}/woo/settings` },
+      ...(features.payments ? [{ label: 'Formas de Pagamento', icon: CreditCard, to: `${base}/woo/payments` }] : []),
+      ...(features.shipping ? [{ label: 'Frete',               icon: Truck,      to: `${base}/woo/shipping` }] : []),
+      { label: 'Logs de Sync',        icon: FileText,          to: `${base}/woo/logs` },
     ]
 
     return [
-      { label: 'Dashboard', icon: LayoutDashboard, to: '/admin/dashboard' },
+      { label: 'Dashboard', icon: LayoutDashboard, to: `${base}/dashboard` },
       {
         label: 'Produtos',
         icon: Package,
         children: [
-          { label: 'Produtos',    icon: ShoppingBag, to: '/admin/products' },
-          { label: 'Categorias', icon: FolderOpen,  to: '/admin/categories' },
-          { label: 'Marcas',     icon: Bookmark,    to: '/admin/brands' },
-          { label: 'Tags',       icon: Tag,         to: '/admin/tags' },
-          { label: 'Atributos',  icon: Layers,      to: '/admin/attributes' },
-          { label: 'Avaliações', icon: Star,        to: '/admin/reviews' },
+          { label: 'Produtos',    icon: ShoppingBag, to: `${base}/products` },
+          { label: 'Categorias', icon: FolderOpen,  to: `${base}/categories` },
+          { label: 'Marcas',     icon: Bookmark,    to: `${base}/brands` },
+          { label: 'Tags',       icon: Tag,         to: `${base}/tags` },
+          { label: 'Atributos',  icon: Layers,      to: `${base}/attributes` },
+          { label: 'Avaliações', icon: Star,        to: `${base}/reviews` },
         ],
       },
       {
         label: 'Analytics',
         icon: BarChart2,
         children: [
-          { label: 'Visão Geral',  icon: TrendingUp,       to: '/admin/analytics/overview' },
-          { label: 'Produtos',     icon: ShoppingBag,      to: '/admin/analytics/products' },
-          { label: 'Receita',      icon: TrendingUp,       to: '/admin/analytics/revenue' },
-          { label: 'Pedidos',      icon: ShoppingCart,     to: '/admin/analytics/orders' },
-          { label: 'Variações',    icon: Shuffle,          to: '/admin/analytics/variations' },
-          { label: 'Categorias',   icon: FolderOpen,       to: '/admin/analytics/categories' },
-          { label: 'Estoque',      icon: Warehouse,        to: '/admin/analytics/stock' },
-          { label: 'Configurações',icon: SlidersHorizontal,to: '/admin/analytics/settings' },
+          { label: 'Visão Geral',  icon: TrendingUp,        to: `${base}/analytics/overview` },
+          { label: 'Produtos',     icon: ShoppingBag,       to: `${base}/analytics/products` },
+          { label: 'Receita',      icon: TrendingUp,        to: `${base}/analytics/revenue` },
+          { label: 'Pedidos',      icon: ShoppingCart,      to: `${base}/analytics/orders` },
+          { label: 'Variações',    icon: Shuffle,           to: `${base}/analytics/variations` },
+          { label: 'Categorias',   icon: FolderOpen,        to: `${base}/analytics/categories` },
+          { label: 'Estoque',      icon: Warehouse,         to: `${base}/analytics/stock` },
+          { label: 'Configurações',icon: SlidersHorizontal, to: `${base}/analytics/settings` },
         ],
       },
       { label: 'WooCommerce', icon: Globe, children: wooChildren },
-      ...(features.coupons ? [{ label: 'Cupons', icon: Ticket, to: '/admin/coupons' }] : []),
+      ...(features.coupons ? [{ label: 'Cupons', icon: Ticket, to: `${base}/coupons` }] : []),
       ...(features.site ? [{
         label: 'Site',
         icon: Globe,
-        children: [{ label: 'Nossas Cervejas', icon: Beer, to: '/admin/nossas-cervejas' }],
+        children: [{ label: 'Nossas Cervejas', icon: Beer, to: `${base}/nossas-cervejas` }],
       }] : []),
-      { label: 'FAQ', icon: FileText, to: '/admin/faq' },
+      { label: 'FAQ', icon: FileText, to: `${base}/faq` },
     ]
-  }, [features])
+  }, [features, base])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    navigate('/login')
+    navigate(`/login/${slug}`)
   }
 
   return (
@@ -214,12 +216,12 @@ export default function AdminLayout({ children }) {
 
       {/* Sidebar — desktop */}
       <aside className={cn('fixed top-0 left-0 h-full transition-all duration-200 z-30 hidden md:block', collapsed ? 'w-16' : 'w-60')}>
-        <Sidebar collapsed={collapsed} onNavigate={undefined} brandColor={brandColor} logoUrl={logoUrl} navItems={navItems} />
+        <Sidebar collapsed={collapsed} onNavigate={undefined} brandColor={brandColor} logoUrl={logoUrl} navItems={navItems} slug={slug} />
       </aside>
 
       {/* Sidebar — mobile */}
       <aside className={cn('fixed top-0 left-0 h-full w-64 z-50 transition-transform duration-200 md:hidden', mobileOpen ? 'translate-x-0' : '-translate-x-full')}>
-        <Sidebar collapsed={false} onNavigate={() => setMobileOpen(false)} brandColor={brandColor} logoUrl={logoUrl} navItems={navItems} />
+        <Sidebar collapsed={false} onNavigate={() => setMobileOpen(false)} brandColor={brandColor} logoUrl={logoUrl} navItems={navItems} slug={slug} />
       </aside>
 
       {/* Main content */}
