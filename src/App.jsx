@@ -8,6 +8,11 @@ import SuperAdminLayout from '@/components/layout/SuperAdminLayout'
 // Public
 const Login = lazy(() => import('@/pages/Login'))
 
+// Super Admin
+const SuperAdminLogin         = lazy(() => import('@/pages/super-admin/Login'))
+const SuperAdminCompanies     = lazy(() => import('@/pages/super-admin/Companies'))
+const SuperAdminCompanyEditor = lazy(() => import('@/pages/super-admin/CompanyEditor'))
+
 // Admin pages
 const Dashboard      = lazy(() => import('@/pages/admin/Dashboard'))
 const Products       = lazy(() => import('@/pages/admin/Products'))
@@ -34,10 +39,6 @@ const AnalyticsCategories  = lazy(() => import('@/pages/admin/analytics/Categori
 const AnalyticsStock       = lazy(() => import('@/pages/admin/analytics/Stock'))
 const AnalyticsSettings    = lazy(() => import('@/pages/admin/analytics/AnalyticsSettings'))
 
-// Super Admin pages
-const SuperAdminCompanies     = lazy(() => import('@/pages/super-admin/Companies'))
-const SuperAdminCompanyEditor = lazy(() => import('@/pages/super-admin/CompanyEditor'))
-
 function AdminPage({ children }) {
   return (
     <ProtectedRoute>
@@ -58,14 +59,15 @@ export default function App() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-screen text-gray-400">Carregando...</div>}>
       <Routes>
-        {/* Public */}
-        <Route path="/login" element={<Login />} />
+        {/* Login por empresa */}
+        <Route path="/login/:slug" element={<Login />} />
 
         {/* Super Admin */}
-        <Route path="/super-admin/companies" element={<SuperPage><SuperAdminCompanies /></SuperPage>} />
+        <Route path="/super-admin/login"        element={<SuperAdminLogin />} />
+        <Route path="/super-admin/companies"    element={<SuperPage><SuperAdminCompanies /></SuperPage>} />
         <Route path="/super-admin/companies/new" element={<SuperPage><SuperAdminCompanyEditor /></SuperPage>} />
         <Route path="/super-admin/companies/:id" element={<SuperPage><SuperAdminCompanyEditor /></SuperPage>} />
-        <Route path="/super-admin" element={<Navigate to="/super-admin/companies" replace />} />
+        <Route path="/super-admin"              element={<Navigate to="/super-admin/login" replace />} />
 
         {/* Admin — Geral */}
         <Route path="/admin/dashboard"  element={<AdminPage><Dashboard /></AdminPage>} />
@@ -88,14 +90,14 @@ export default function App() {
         <Route path="/admin/nossas-cervejas" element={<AdminPage><NossasCervejas /></AdminPage>} />
 
         {/* Admin — Analytics */}
-        <Route path="/admin/analytics/overview"    element={<AdminPage><AnalyticsOverview /></AdminPage>} />
-        <Route path="/admin/analytics/products"    element={<AdminPage><AnalyticsProducts /></AdminPage>} />
-        <Route path="/admin/analytics/revenue"     element={<AdminPage><AnalyticsRevenue /></AdminPage>} />
-        <Route path="/admin/analytics/orders"      element={<AdminPage><AnalyticsOrders /></AdminPage>} />
-        <Route path="/admin/analytics/variations"  element={<AdminPage><AnalyticsVariations /></AdminPage>} />
-        <Route path="/admin/analytics/categories"  element={<AdminPage><AnalyticsCategories /></AdminPage>} />
-        <Route path="/admin/analytics/stock"       element={<AdminPage><AnalyticsStock /></AdminPage>} />
-        <Route path="/admin/analytics/settings"    element={<AdminPage><AnalyticsSettings /></AdminPage>} />
+        <Route path="/admin/analytics/overview"   element={<AdminPage><AnalyticsOverview /></AdminPage>} />
+        <Route path="/admin/analytics/products"   element={<AdminPage><AnalyticsProducts /></AdminPage>} />
+        <Route path="/admin/analytics/revenue"    element={<AdminPage><AnalyticsRevenue /></AdminPage>} />
+        <Route path="/admin/analytics/orders"     element={<AdminPage><AnalyticsOrders /></AdminPage>} />
+        <Route path="/admin/analytics/variations" element={<AdminPage><AnalyticsVariations /></AdminPage>} />
+        <Route path="/admin/analytics/categories" element={<AdminPage><AnalyticsCategories /></AdminPage>} />
+        <Route path="/admin/analytics/stock"      element={<AdminPage><AnalyticsStock /></AdminPage>} />
+        <Route path="/admin/analytics/settings"   element={<AdminPage><AnalyticsSettings /></AdminPage>} />
 
         {/* Redirects */}
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />

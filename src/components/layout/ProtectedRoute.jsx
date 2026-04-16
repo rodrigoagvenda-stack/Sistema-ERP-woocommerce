@@ -23,16 +23,14 @@ export default function ProtectedRoute({ children }) {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f3f4f8] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-[#f4b522] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-500">Carregando...</p>
-        </div>
+        <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
       </div>
     )
   }
 
   if (!authenticated) {
-    return <Navigate to="/login" replace />
+    const lastSlug = localStorage.getItem('lastSlug')
+    return <Navigate to={lastSlug ? `/login/${lastSlug}` : '/super-admin/login'} replace />
   }
 
   return children

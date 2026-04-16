@@ -1,117 +1,185 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { LogIn, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { LogIn, Eye, EyeOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export default function Login() {
+  const { slug } = useParams()
   const navigate = useNavigate()
+
+  const [company, setCompany] = useState(null)
+  const [notFound, setNotFound] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [alert, setAlert] = useState(null) // { type: 'success'|'error', message }
+  const [error, setError] = useState(null)
+
+  // Carrega branding da empresa pelo slug
+  useEffect(() => {
+    if (!slug) { setNotFound(true); return }
+    supabase
+      .from('companies')
+      .select('id, name, logo_url, favicon_url, primary_color')
+      .eq('slug', slug)
+      .single()
+      .then(({ data, error }) => {
+        if (error || !data) { setNotFound(true); return }
+        setCompany(data)
+        // Aplica branding
+        const color = data.primary_color || '#15A344'
+        document.documentElement.style.setProperty('--brand', color)
+        if (data.favicon_url) {
+          let link = document.querySelector("link[rel~='icon']")
+          if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link) }
+          link.href = data.favicon_url
+        }
+        if (data.name) document.title = `${data.name} — Login`
+      })
+  }, [slug])
 
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
-    setAlert(null)
+    setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
 
-    if (error) {
-      setAlert({ type: 'error', message: 'E-mail ou senha inválidos. Tente novamente.' })
+    if (authError) {
+      setError('E-mail ou senha inválidos.')
       setLoading(false)
       return
     }
 
-    setAlert({ type: 'success', message: 'Login realizado com sucesso! Redirecionando...' })
-    setTimeout(() => navigate('/admin/dashboard'), 1000)
+    // Verifica se o usuário pertence a essa empresa
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', data.user.id)
+      .single()
+
+    if (!profile || profile.company_id !== company.id) {
+      await supabase.auth.signOut()
+      setError('Usuário não pertence a esta empresa.')
+      setLoading(false)
+      return
+    }
+
+    // Salva slug para redirect caso a sessão expire
+    localStorage.setItem('lastSlug', slug)
+    navigate('/admin/dashboard')
   }
+
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-[#f3f4f8] flex items-center justify-center p-4">
+        <div className="text-center space-y-2">
+          <p className="text-gray-500 text-sm">Empresa não encontrada.</p>
+          <p className="text-gray-400 text-xs">Verifique o link de acesso.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!company) {
+    return (
+      <div className="min-h-screen bg-[#f3f4f8] flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  const brandColor = company.primary_color || '#15A344'
 
   return (
     <div className="min-h-screen bg-[#f3f4f8] flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+      <div className="w-full max-w-sm space-y-8">
+
         {/* Logo */}
         <div className="flex flex-col items-center gap-3">
-          <img
-            src="https://dkvznmmiiiljyrkopiqx.supabase.co/storage/v1/object/public/Logos-site/geezer_preto%202.png"
-            alt="Geezer"
-            className="h-16 w-auto object-contain"
-          />
-          <p className="text-sm text-gray-500">Gestão inteligente do seu negócio</p>
+          {company.logo_url ? (
+            <img src={company.logo_url} alt={company.name} className="h-14 w-auto object-contain" />
+          ) : (
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: brandColor }}
+            >
+              <span className="text-white font-bold text-lg">{company.name[0]}</span>
+            </div>
+          )}
+          <p className="text-sm text-gray-400">Painel administrativo</p>
         </div>
 
-        <Card className="shadow-sm">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Entrar</CardTitle>
-            <CardDescription>Acesse o painel administrativo</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              {alert && (
-                <Alert variant={alert.type === 'error' ? 'destructive' : 'success'}>
-                  {alert.type === 'error'
-                    ? <AlertCircle className="h-4 w-4" />
-                    : <CheckCircle2 className="h-4 w-4" />
-                  }
-                  <AlertDescription>{alert.message}</AlertDescription>
-                </Alert>
-              )}
+        {/* Form */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+          <div>
+            <h1 className="text-base font-semibold text-gray-900">Entrar</h1>
+            <p className="text-xs text-gray-400 mt-0.5">{company.name}</p>
+          </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="email">E-mail</Label>
+          {error && (
+            <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2.5 text-xs text-red-600">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-xs text-gray-600">E-mail</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                autoFocus
+                className="h-9 text-sm"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-xs text-gray-600">Senha</Label>
+              <div className="relative">
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
                   required
-                  autoFocus
+                  className="h-9 text-sm pr-9"
                 />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
               </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-9 gap-2 text-sm text-white"
+              style={{ backgroundColor: brandColor }}
+            >
+              {loading
+                ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                : <LogIn className="h-3.5 w-3.5" />
+              }
+              {loading ? 'Entrando...' : 'Entrar'}
+            </Button>
+          </form>
+        </div>
 
-              <Button type="submit" className="w-full gap-2" disabled={loading}>
-                {loading ? (
-                  <div className="w-4 h-4 border-2 border-[#1a1a1a]/30 border-t-[#1a1a1a] rounded-full animate-spin" />
-                ) : (
-                  <LogIn className="h-4 w-4" />
-                )}
-                {loading ? 'Entrando...' : 'Entrar'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <p className="text-center text-xs text-gray-900">
-          Desenvolvido com 💗 por <span className="font-medium">Vend.ai</span> - Grupo Venda
+        <p className="text-center text-xs text-gray-400">
+          Desenvolvido por <span className="font-medium text-gray-500">Vend.ai</span>
         </p>
       </div>
     </div>
