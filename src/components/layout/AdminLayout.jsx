@@ -1,81 +1,19 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Package, Tag, Layers, Star, BarChart2,
   Settings, ChevronDown, ChevronRight, LogOut, Menu, X,
   ShoppingBag, TrendingUp, ShoppingCart, Shuffle, FolderOpen,
-  Warehouse, SlidersHorizontal, Globe, FileText, Bookmark, Ticket, Beer, Truck
+  Warehouse, SlidersHorizontal, Globe, FileText, Bookmark, Ticket, Beer, Truck, CreditCard
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useCompany } from '@/context/CompanyContext'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
-const LOGO_URL = 'https://dkvznmmiiiljyrkopiqx.supabase.co/storage/v1/object/public/Logos-site/geezer_preto%202.png'
-
-const navItems = [
-  {
-    label: 'Dashboard',
-    icon: LayoutDashboard,
-    to: '/admin/dashboard',
-  },
-  {
-    label: 'Produtos',
-    icon: Package,
-    children: [
-      { label: 'Produtos', icon: ShoppingBag, to: '/admin/products' },
-      { label: 'Categorias', icon: FolderOpen, to: '/admin/categories' },
-      { label: 'Marcas', icon: Bookmark, to: '/admin/brands' },
-      { label: 'Tags', icon: Tag, to: '/admin/tags' },
-      { label: 'Atributos', icon: Layers, to: '/admin/attributes' },
-      { label: 'Avaliações', icon: Star, to: '/admin/reviews' },
-    ],
-  },
-  {
-    label: 'Analytics',
-    icon: BarChart2,
-    children: [
-      { label: 'Visão Geral', icon: TrendingUp, to: '/admin/analytics/overview' },
-      { label: 'Produtos', icon: ShoppingBag, to: '/admin/analytics/products' },
-      { label: 'Receita', icon: TrendingUp, to: '/admin/analytics/revenue' },
-      { label: 'Pedidos', icon: ShoppingCart, to: '/admin/analytics/orders' },
-      { label: 'Variações', icon: Shuffle, to: '/admin/analytics/variations' },
-      { label: 'Categorias', icon: FolderOpen, to: '/admin/analytics/categories' },
-      { label: 'Estoque', icon: Warehouse, to: '/admin/analytics/stock' },
-      { label: 'Configurações', icon: SlidersHorizontal, to: '/admin/analytics/settings' },
-    ],
-  },
-  {
-    label: 'WooCommerce',
-    icon: Globe,
-    children: [
-      { label: 'Configurações', icon: Settings, to: '/admin/woo/settings' },
-      { label: 'Formas de Pagamento', icon: SlidersHorizontal, to: '/admin/woo/payments' },
-      { label: 'Frete', icon: Truck, to: '/admin/woo/shipping' },
-      { label: 'Logs de Sync', icon: FileText, to: '/admin/woo/logs' },
-    ],
-  },
-  {
-    label: 'Cupons',
-    icon: Ticket,
-    to: '/admin/coupons',
-  },
-  {
-    label: 'Site',
-    icon: Globe,
-    children: [
-      { label: 'Nossas Cervejas', icon: Beer, to: '/admin/nossas-cervejas' },
-    ],
-  },
-  {
-    label: 'FAQ',
-    icon: FileText,
-    to: '/admin/faq',
-  },
-]
-
-function NavItem({ item, collapsed, onNavigate }) {
+function NavItem({ item, collapsed, onNavigate, brandColor }) {
   const [open, setOpen] = useState(false)
 
   if (item.children) {
@@ -107,9 +45,13 @@ function NavItem({ item, collapsed, onNavigate }) {
                   cn(
                     'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors',
                     isActive
-                      ? 'bg-[#f4b522]/15 text-[#c49018] font-medium'
+                      ? 'font-medium'
                       : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                   )
+                }
+                style={({ isActive }) => isActive
+                  ? { backgroundColor: `${brandColor}18`, color: brandColor }
+                  : {}
                 }
               >
                 <child.icon className="w-3.5 h-3.5" />
@@ -129,12 +71,11 @@ function NavItem({ item, collapsed, onNavigate }) {
       className={({ isActive }) =>
         cn(
           'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-          isActive
-            ? 'bg-[#f4b522] text-[#1a1a1a]'
-            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+          isActive ? 'text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
           collapsed && 'justify-center px-2'
         )
       }
+      style={({ isActive }) => isActive ? { backgroundColor: brandColor } : {}}
     >
       <item.icon className="w-4 h-4 shrink-0" />
       {!collapsed && <span>{item.label}</span>}
@@ -142,7 +83,7 @@ function NavItem({ item, collapsed, onNavigate }) {
   )
 }
 
-function Sidebar({ collapsed, onNavigate }) {
+function Sidebar({ collapsed, onNavigate, brandColor, logoUrl, navItems }) {
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -155,23 +96,14 @@ function Sidebar({ collapsed, onNavigate }) {
       {/* Logo */}
       <div className={cn('flex items-center gap-3 px-4 py-4 border-b border-gray-100', collapsed && 'justify-center px-3')}>
         {collapsed ? (
-          <div className="w-8 h-8 bg-[#f4b522] rounded-lg flex items-center justify-center shrink-0">
-            <span className="text-[#1a1a1a] font-bold text-sm">G</span>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: brandColor }}>
+            <span className="text-white font-bold text-sm">G</span>
           </div>
+        ) : logoUrl ? (
+          <img src={logoUrl} alt="Logo" className="h-11 w-auto object-contain" />
         ) : (
-          <img
-            src={LOGO_URL}
-            alt="Geezer"
-            className="h-11 w-auto object-contain"
-            onError={(e) => {
-              e.target.style.display = 'none'
-              e.target.nextSibling.style.display = 'flex'
-            }}
-          />
-        )}
-        {!collapsed && (
-          <div className="hidden w-8 h-8 bg-[#f4b522] rounded-lg items-center justify-center shrink-0">
-            <span className="text-[#1a1a1a] font-bold text-sm">G</span>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: brandColor }}>
+            <span className="text-white font-bold text-sm">G</span>
           </div>
         )}
       </div>
@@ -179,7 +111,13 @@ function Sidebar({ collapsed, onNavigate }) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5 scrollbar-hide">
         {navItems.map((item) => (
-          <NavItem key={item.label} item={item} collapsed={collapsed} onNavigate={onNavigate} />
+          <NavItem
+            key={item.label}
+            item={item}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+            brandColor={brandColor}
+          />
         ))}
       </nav>
 
@@ -193,7 +131,7 @@ function Sidebar({ collapsed, onNavigate }) {
         {!collapsed && (
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-gray-900 truncate">Admin</p>
-            <p className="text-xs text-gray-400 truncate">Geezer ERP</p>
+            <p className="text-xs text-gray-400 truncate">Painel</p>
           </div>
         )}
         {!collapsed && (
@@ -202,7 +140,6 @@ function Sidebar({ collapsed, onNavigate }) {
           </Button>
         )}
       </div>
-
     </div>
   )
 }
@@ -211,6 +148,57 @@ export default function AdminLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const navigate = useNavigate()
+  const { company, features } = useCompany()
+
+  const brandColor = company?.primary_color || '#15A344'
+  const logoUrl    = company?.logo_url || null
+
+  const navItems = useMemo(() => {
+    const wooChildren = [
+      { label: 'Configurações',       icon: Settings,          to: '/admin/woo/settings' },
+      ...(features.payments ? [{ label: 'Formas de Pagamento', icon: CreditCard, to: '/admin/woo/payments' }] : []),
+      ...(features.shipping ? [{ label: 'Frete',               icon: Truck,      to: '/admin/woo/shipping' }] : []),
+      { label: 'Logs de Sync',        icon: FileText,          to: '/admin/woo/logs' },
+    ]
+
+    return [
+      { label: 'Dashboard', icon: LayoutDashboard, to: '/admin/dashboard' },
+      {
+        label: 'Produtos',
+        icon: Package,
+        children: [
+          { label: 'Produtos',    icon: ShoppingBag, to: '/admin/products' },
+          { label: 'Categorias', icon: FolderOpen,  to: '/admin/categories' },
+          { label: 'Marcas',     icon: Bookmark,    to: '/admin/brands' },
+          { label: 'Tags',       icon: Tag,         to: '/admin/tags' },
+          { label: 'Atributos',  icon: Layers,      to: '/admin/attributes' },
+          { label: 'Avaliações', icon: Star,        to: '/admin/reviews' },
+        ],
+      },
+      {
+        label: 'Analytics',
+        icon: BarChart2,
+        children: [
+          { label: 'Visão Geral',  icon: TrendingUp,       to: '/admin/analytics/overview' },
+          { label: 'Produtos',     icon: ShoppingBag,      to: '/admin/analytics/products' },
+          { label: 'Receita',      icon: TrendingUp,       to: '/admin/analytics/revenue' },
+          { label: 'Pedidos',      icon: ShoppingCart,     to: '/admin/analytics/orders' },
+          { label: 'Variações',    icon: Shuffle,          to: '/admin/analytics/variations' },
+          { label: 'Categorias',   icon: FolderOpen,       to: '/admin/analytics/categories' },
+          { label: 'Estoque',      icon: Warehouse,        to: '/admin/analytics/stock' },
+          { label: 'Configurações',icon: SlidersHorizontal,to: '/admin/analytics/settings' },
+        ],
+      },
+      { label: 'WooCommerce', icon: Globe, children: wooChildren },
+      ...(features.coupons ? [{ label: 'Cupons', icon: Ticket, to: '/admin/coupons' }] : []),
+      ...(features.site ? [{
+        label: 'Site',
+        icon: Globe,
+        children: [{ label: 'Nossas Cervejas', icon: Beer, to: '/admin/nossas-cervejas' }],
+      }] : []),
+      { label: 'FAQ', icon: FileText, to: '/admin/faq' },
+    ]
+  }, [features])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -221,83 +209,34 @@ export default function AdminLayout({ children }) {
     <div className="min-h-screen bg-[#f3f4f8] flex">
       {/* Mobile overlay */}
       {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-40 md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* Sidebar — desktop (always visible, collapsible) */}
-      <aside
-        className={cn(
-          'fixed top-0 left-0 h-full transition-all duration-200 z-30',
-          'hidden md:block',
-          collapsed ? 'w-16' : 'w-60'
-        )}
-      >
-        <Sidebar collapsed={collapsed} onNavigate={undefined} />
+      {/* Sidebar — desktop */}
+      <aside className={cn('fixed top-0 left-0 h-full transition-all duration-200 z-30 hidden md:block', collapsed ? 'w-16' : 'w-60')}>
+        <Sidebar collapsed={collapsed} onNavigate={undefined} brandColor={brandColor} logoUrl={logoUrl} navItems={navItems} />
       </aside>
 
-      {/* Sidebar — mobile (drawer overlay) */}
-      <aside
-        className={cn(
-          'fixed top-0 left-0 h-full w-64 z-50 transition-transform duration-200 md:hidden',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        )}
-      >
-        <Sidebar collapsed={false} onNavigate={() => setMobileOpen(false)} />
+      {/* Sidebar — mobile */}
+      <aside className={cn('fixed top-0 left-0 h-full w-64 z-50 transition-transform duration-200 md:hidden', mobileOpen ? 'translate-x-0' : '-translate-x-full')}>
+        <Sidebar collapsed={false} onNavigate={() => setMobileOpen(false)} brandColor={brandColor} logoUrl={logoUrl} navItems={navItems} />
       </aside>
 
       {/* Main content */}
-      <div
-        className={cn(
-          'flex-1 flex flex-col min-h-screen transition-all duration-200',
-          'md:ml-60',
-          collapsed && 'md:ml-16'
-        )}
-      >
+      <div className={cn('flex-1 flex flex-col min-h-screen transition-all duration-200 md:ml-60', collapsed && 'md:ml-16')}>
         {/* Top bar */}
         <header className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 md:px-6 py-3 flex items-center gap-4">
-          {/* Mobile hamburger */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 md:hidden"
-            onClick={() => setMobileOpen(!mobileOpen)}
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8 md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
             <Menu className="h-4 w-4" />
           </Button>
-
-          {/* Desktop collapse toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 hidden md:flex"
-            onClick={() => setCollapsed(!collapsed)}
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8 hidden md:flex" onClick={() => setCollapsed(!collapsed)}>
             {collapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
           </Button>
-
-          {/* Mobile logo */}
           <div className="md:hidden flex-1 flex items-center">
-            <img
-              src={LOGO_URL}
-              alt="Geezer"
-              className="h-7 w-auto object-contain"
-              onError={(e) => {
-                e.target.style.display = 'none'
-              }}
-            />
+            {logoUrl && <img src={logoUrl} alt="Logo" className="h-7 w-auto object-contain" />}
           </div>
-
           <div className="flex-1 hidden md:block" />
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2 text-gray-500 hover:text-red-600"
-            onClick={handleLogout}
-          >
+          <Button variant="ghost" size="sm" className="gap-2 text-gray-500 hover:text-red-600" onClick={handleLogout}>
             <LogOut className="h-4 w-4" />
             <span className="hidden sm:inline">Sair</span>
           </Button>
@@ -307,7 +246,6 @@ export default function AdminLayout({ children }) {
         <main className="flex-1 p-4 md:p-6">
           {children}
         </main>
-
       </div>
     </div>
   )

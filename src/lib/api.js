@@ -1,11 +1,13 @@
 import { supabase } from './supabase'
+import { getCompanyId } from './company'
 
 export const api = {
   // ── Products ──────────────────────────────────
   async _enrichProducts(products) {
+    const cid = await getCompanyId()
     const [catRes, brandRes] = await Promise.all([
-      supabase.from('categories').select('id, name, woo_id'),
-      supabase.from('brands').select('id, name'),
+      supabase.from('categories').select('id, name, woo_id').eq('company_id', cid),
+      supabase.from('brands').select('id, name').eq('company_id', cid),
     ])
     const cats = catRes.data || []
     const brands = brandRes.data || []
@@ -18,9 +20,11 @@ export const api = {
   },
 
   async getProducts() {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('products')
       .select('*')
+      .eq('company_id', cid)
       .eq('status', 'active')
       .order('created_at', { ascending: false })
     if (error) throw error
@@ -28,19 +32,23 @@ export const api = {
   },
 
   async getAllProducts() {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('products')
       .select('*')
+      .eq('company_id', cid)
       .order('created_at', { ascending: false })
     if (error) throw error
     return this._enrichProducts(data || [])
   },
 
   async getProductById(id) {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('products')
       .select('*')
       .eq('id', id)
+      .eq('company_id', cid)
       .single()
     if (error) throw error
     const enriched = await this._enrichProducts([data])
@@ -48,177 +56,209 @@ export const api = {
   },
 
   async createProduct(product) {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('products')
-      .insert([product])
+      .insert([{ ...product, company_id: cid }])
       .select()
     if (error) throw error
     return data[0]
   },
 
   async updateProduct(id, product) {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('products')
       .update(product)
       .eq('id', id)
+      .eq('company_id', cid)
       .select()
     if (error) throw error
     return data[0]
   },
 
   async deleteProduct(id) {
-    const { error } = await supabase.from('products').delete().eq('id', id)
+    const cid = await getCompanyId()
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id)
+      .eq('company_id', cid)
     if (error) throw error
     return true
   },
 
   // ── Categories ────────────────────────────────
   async getAllCategories() {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('categories')
       .select('*, parent:categories(id, name)')
+      .eq('company_id', cid)
       .order('name', { ascending: true })
     if (error) throw error
     return data || []
   },
 
   async createCategory(category) {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('categories')
-      .insert([category])
+      .insert([{ ...category, company_id: cid }])
       .select()
     if (error) throw error
     return data[0]
   },
 
   async updateCategory(id, category) {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('categories')
       .update(category)
       .eq('id', id)
+      .eq('company_id', cid)
       .select()
     if (error) throw error
     return data[0]
   },
 
   async deleteCategory(id) {
-    // Zera referências em produtos antes de deletar (evita FK violation)
-    await supabase.from('products').update({ category_id: null }).eq('category_id', id)
-    await supabase.from('products').update({ subcategory_id: null }).eq('subcategory_id', id)
-    // Zera parent_id em subcategorias filhas
-    await supabase.from('categories').update({ parent_id: null }).eq('parent_id', id)
-    const { error } = await supabase.from('categories').delete().eq('id', id)
+    const cid = await getCompanyId()
+    await supabase.from('products').update({ category_id: null }).eq('category_id', id).eq('company_id', cid)
+    await supabase.from('products').update({ subcategory_id: null }).eq('subcategory_id', id).eq('company_id', cid)
+    await supabase.from('categories').update({ parent_id: null }).eq('parent_id', id).eq('company_id', cid)
+    const { error } = await supabase.from('categories').delete().eq('id', id).eq('company_id', cid)
     if (error) throw error
     return true
   },
 
   // ── Brands ────────────────────────────────────
   async getAllBrands() {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('brands')
       .select('*')
+      .eq('company_id', cid)
       .order('name', { ascending: true })
     if (error) throw error
     return data || []
   },
 
   async createBrand(brand) {
-    const { data, error } = await supabase.from('brands').insert([brand]).select()
+    const cid = await getCompanyId()
+    const { data, error } = await supabase.from('brands').insert([{ ...brand, company_id: cid }]).select()
     if (error) throw error
     return data[0]
   },
 
   async updateBrand(id, brand) {
-    const { data, error } = await supabase.from('brands').update(brand).eq('id', id).select()
+    const cid = await getCompanyId()
+    const { data, error } = await supabase.from('brands').update(brand).eq('id', id).eq('company_id', cid).select()
     if (error) throw error
     return data[0]
   },
 
   async deleteBrand(id) {
-    const { error } = await supabase.from('brands').delete().eq('id', id)
+    const cid = await getCompanyId()
+    const { error } = await supabase.from('brands').delete().eq('id', id).eq('company_id', cid)
     if (error) throw error
     return true
   },
 
   // ── Tags ──────────────────────────────────────
   async getAllTags() {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('tags')
       .select('*')
+      .eq('company_id', cid)
       .order('name', { ascending: true })
     if (error) throw error
     return data || []
   },
 
   async createTag(tag) {
-    const { data, error } = await supabase.from('tags').insert([tag]).select()
+    const cid = await getCompanyId()
+    const { data, error } = await supabase.from('tags').insert([{ ...tag, company_id: cid }]).select()
     if (error) throw error
     return data[0]
   },
 
   async updateTag(id, tag) {
-    const { data, error } = await supabase.from('tags').update(tag).eq('id', id).select()
+    const cid = await getCompanyId()
+    const { data, error } = await supabase.from('tags').update(tag).eq('id', id).eq('company_id', cid).select()
     if (error) throw error
     return data[0]
   },
 
   async deleteTag(id) {
-    const { error } = await supabase.from('tags').delete().eq('id', id)
+    const cid = await getCompanyId()
+    const { error } = await supabase.from('tags').delete().eq('id', id).eq('company_id', cid)
     if (error) throw error
     return true
   },
 
   // ── Attributes ────────────────────────────────
   async getAllAttributes() {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('attributes')
       .select('*, terms:attribute_terms!attribute_terms_attribute_id_fkey(*)')
+      .eq('company_id', cid)
       .order('name', { ascending: true })
     if (error) throw error
     return data || []
   },
 
   async createAttribute(attr) {
-    const { data, error } = await supabase.from('attributes').insert([attr]).select()
+    const cid = await getCompanyId()
+    const { data, error } = await supabase.from('attributes').insert([{ ...attr, company_id: cid }]).select()
     if (error) throw error
     return data[0]
   },
 
   async updateAttribute(id, attr) {
-    const { data, error } = await supabase.from('attributes').update(attr).eq('id', id).select()
+    const cid = await getCompanyId()
+    const { data, error } = await supabase.from('attributes').update(attr).eq('id', id).eq('company_id', cid).select()
     if (error) throw error
     return data[0]
   },
 
   async deleteAttribute(id) {
-    const { error } = await supabase.from('attributes').delete().eq('id', id)
+    const cid = await getCompanyId()
+    const { error } = await supabase.from('attributes').delete().eq('id', id).eq('company_id', cid)
     if (error) throw error
     return true
   },
 
   async createAttributeTerm(term) {
-    const { data, error } = await supabase.from('attribute_terms').insert([term]).select()
+    const cid = await getCompanyId()
+    const { data, error } = await supabase.from('attribute_terms').insert([{ ...term, company_id: cid }]).select()
     if (error) throw error
     return data[0]
   },
 
   async updateAttributeTerm(id, term) {
-    const { data, error } = await supabase.from('attribute_terms').update(term).eq('id', id).select()
+    const cid = await getCompanyId()
+    const { data, error } = await supabase.from('attribute_terms').update(term).eq('id', id).eq('company_id', cid).select()
     if (error) throw error
     return data[0]
   },
 
   async deleteAttributeTerm(id) {
-    const { error } = await supabase.from('attribute_terms').delete().eq('id', id)
+    const cid = await getCompanyId()
+    const { error } = await supabase.from('attribute_terms').delete().eq('id', id).eq('company_id', cid)
     if (error) throw error
     return true
   },
 
   // ── Reviews ───────────────────────────────────
   async getReviews() {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('reviews')
       .select('*, product:products(id, name)')
+      .eq('company_id', cid)
       .order('created_at', { ascending: false })
     if (error) throw error
     return data || []
@@ -226,19 +266,21 @@ export const api = {
 
   // ── Analytics Settings ────────────────────────
   async getAnalyticsSettings() {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('analytics_settings')
       .select('*')
-      .eq('id', 1)
+      .eq('company_id', cid)
       .single()
     if (error) return { default_period: 30, revenue_goal: 0, low_stock_threshold: 5, sync_interval: 10 }
     return data
   },
 
   async updateAnalyticsSettings(settings) {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('analytics_settings')
-      .upsert({ id: 1, ...settings, updated_at: new Date().toISOString() })
+      .upsert({ company_id: cid, ...settings, updated_at: new Date().toISOString() }, { onConflict: 'company_id' })
       .select()
     if (error) throw error
     return data[0]
@@ -246,23 +288,27 @@ export const api = {
 
   // ── WooCommerce Credentials ───────────────────
   async getWooCredentials() {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('marketplace_credentials')
       .select('*')
       .eq('marketplace', 'woocommerce')
+      .eq('company_id', cid)
       .single()
     if (error) return null
     return data
   },
 
   async upsertWooCredentials(creds) {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('marketplace_credentials')
       .upsert({
         marketplace: 'woocommerce',
+        company_id: cid,
         ...creds,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'marketplace' })
+      }, { onConflict: 'marketplace,company_id' })
       .select()
     if (error) throw error
     return data[0]
@@ -270,9 +316,11 @@ export const api = {
 
   // ── Sync Logs ─────────────────────────────────
   async getSyncLogs({ page = 1, pageSize = 20, status, entity_type } = {}) {
+    const cid = await getCompanyId()
     let query = supabase
       .from('marketplace_sync_log')
       .select('*', { count: 'exact' })
+      .eq('company_id', cid)
       .eq('marketplace', 'woocommerce')
       .order('created_at', { ascending: false })
       .range((page - 1) * pageSize, page * pageSize - 1)
@@ -287,11 +335,12 @@ export const api = {
 
   // ── Dashboard Stats ───────────────────────────
   async getDashboardStats() {
+    const cid = await getCompanyId()
     const [productsRes, categoriesRes, brandsRes, tagsRes] = await Promise.all([
-      supabase.from('products').select('id, status, price, stock', { count: 'exact' }),
-      supabase.from('categories').select('id', { count: 'exact' }),
-      supabase.from('brands').select('id', { count: 'exact' }),
-      supabase.from('tags').select('id', { count: 'exact' }),
+      supabase.from('products').select('id, status, price, stock', { count: 'exact' }).eq('company_id', cid),
+      supabase.from('categories').select('id', { count: 'exact' }).eq('company_id', cid),
+      supabase.from('brands').select('id', { count: 'exact' }).eq('company_id', cid),
+      supabase.from('tags').select('id', { count: 'exact' }).eq('company_id', cid),
     ])
 
     const products = productsRes.data || []
@@ -312,17 +361,18 @@ export const api = {
 
   // ── Banners ───────────────────────────────────
   async getAllBanners() {
+    const cid = await getCompanyId()
     const { data, error } = await supabase
       .from('banners')
       .select('*')
+      .eq('company_id', cid)
       .order('order_index', { ascending: true })
     if (error) throw error
     return data || []
   },
 }
 
-// WooCommerce proxy via Supabase Edge Function (evita CORS)
-// credentials: opcional, para usar credenciais do form sem precisar salvar antes
+// WooCommerce proxy via Supabase Edge Function
 export async function wooProxy({ method = 'GET', endpoint, body, credentials } = {}) {
   const { data, error } = await supabase.functions.invoke('woo-proxy', {
     body: { method, endpoint, body, credentials }
