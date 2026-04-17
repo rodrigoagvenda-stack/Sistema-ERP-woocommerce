@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { api, wooProxy } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 import { getCompanyId } from '@/lib/company'
+import { useCompany } from '@/context/CompanyContext'
 
 const EMPTY_PRODUCT = {
   name: '', description: '', price: '', stock: '', min_stock: 5,
@@ -37,6 +38,7 @@ function AlertMsg({ alert }) {
 }
 
 export default function Products() {
+  const { features } = useCompany()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [brands, setBrands] = useState([])
@@ -475,19 +477,21 @@ export default function Products() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label>Estilo</Label>
-                <Select
-                  value={current.style || 'none'}
-                  onValueChange={v => setCurrent(p => ({ ...p, style: v === 'none' ? '' : v }))}
-                >
-                  <SelectTrigger><SelectValue placeholder="Selecionar estilo..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sem estilo</SelectItem>
-                    {ESTILOS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              {features.site && (
+                <div className="space-y-1.5">
+                  <Label>Estilo</Label>
+                  <Select
+                    value={current.style || 'none'}
+                    onValueChange={v => setCurrent(p => ({ ...p, style: v === 'none' ? '' : v }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecionar estilo..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem estilo</SelectItem>
+                      {ESTILOS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Marca</Label>
                 <Select value={current.brand_id?.toString() || 'none'} onValueChange={v => setCurrent(p => ({ ...p, brand_id: v === 'none' ? null : v }))}>

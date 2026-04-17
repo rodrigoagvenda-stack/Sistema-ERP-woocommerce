@@ -8,7 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        'geezer-accent': '#f4b522',
+        'brand': 'var(--brand)',
         'geezer-bg': '#f3f4f8',
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -16,8 +16,8 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "#f4b522",
-          foreground: "#1a1a1a",
+          DEFAULT: "var(--brand)",
+          foreground: "#ffffff",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -32,8 +32,8 @@ export default {
           foreground: "hsl(var(--muted-foreground))",
         },
         accent: {
-          DEFAULT: "#f4b522",
-          foreground: "#1a1a1a",
+          DEFAULT: "var(--brand)",
+          foreground: "#ffffff",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
