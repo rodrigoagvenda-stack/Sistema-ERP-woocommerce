@@ -27,6 +27,225 @@ const ESTILOS = [
   'Straight RIS', 'Dry Stout',
 ]
 
+const STEPS = [
+  { n: 1, label: 'Básico' },
+  { n: 2, label: 'Detalhes' },
+  { n: 3, label: 'Mídia' },
+]
+
+function StepIndicator({ step }) {
+  return (
+    <div className="flex items-center gap-0 mb-6">
+      {STEPS.map((s, i) => (
+        <div key={s.n} className="flex items-center flex-1 last:flex-none">
+          <div className="flex flex-col items-center gap-1">
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors
+              ${step > s.n ? 'bg-green-500 text-white' : step === s.n ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-400'}`}>
+              {step > s.n ? '✓' : s.n}
+            </div>
+            <span className={`text-[10px] font-medium ${step === s.n ? 'text-gray-900' : 'text-gray-400'}`}>{s.label}</span>
+          </div>
+          {i < STEPS.length - 1 && (
+            <div className={`flex-1 h-px mx-2 mb-4 ${step > s.n ? 'bg-green-400' : 'bg-gray-200'}`} />
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ProductStepper({ step, setStep, current, setCurrent, categories, brands, features, imageLoading, handleUploadImage, removeImage, saving, onSave, onCancel, isEdit }) {
+  const set = (key, val) => setCurrent(p => ({ ...p, [key]: val }))
+
+  return (
+    <div>
+      <StepIndicator step={step} />
+
+      {/* Step 1 — Básico */}
+      {step === 1 && (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Nome *</Label>
+            <Input value={current.name} onChange={e => set('name', e.target.value)} placeholder="Nome do produto" autoFocus />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Preço (R$) *</Label>
+              <Input type="number" step="0.01" value={current.price} onChange={e => set('price', e.target.value)} placeholder="0.00" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Estoque</Label>
+              <Input type="number" value={current.stock} onChange={e => set('stock', e.target.value)} placeholder="0" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select value={current.status} onValueChange={v => set('status', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Ativo</SelectItem>
+                  <SelectItem value="inactive">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Estoque Mínimo</Label>
+              <Input type="number" value={current.min_stock} onChange={e => set('min_stock', e.target.value)} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2 — Detalhes */}
+      {step === 2 && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Categoria</Label>
+              <Select value={current.category_id?.toString() || 'none'} onValueChange={v => setCurrent(p => ({ ...p, category_id: v === 'none' ? null : v, subcategory_id: '' }))}>
+                <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem categoria</SelectItem>
+                  {categories.filter(c => !c.parent_id).map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Subcategoria</Label>
+              <Select value={current.subcategory_id?.toString() || 'none'} onValueChange={v => set('subcategory_id', v === 'none' ? null : v)} disabled={!current.category_id}>
+                <SelectTrigger><SelectValue placeholder={current.category_id ? 'Selecionar...' : 'Escolha a categoria'} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem subcategoria</SelectItem>
+                  {categories.filter(c => c.parent_id?.toString() === current.category_id?.toString()).map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Marca</Label>
+              <Select value={current.brand_id?.toString() || 'none'} onValueChange={v => set('brand_id', v === 'none' ? null : v)}>
+                <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem marca</SelectItem>
+                  {brands.map(b => <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {features.site && (
+              <div className="space-y-1.5">
+                <Label>Estilo</Label>
+                <Select value={current.style || 'none'} onValueChange={v => set('style', v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem estilo</SelectItem>
+                    {ESTILOS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label>Descrição</Label>
+            <Textarea value={current.description} onChange={e => set('description', e.target.value)} rows={4} placeholder="Descreva o produto..." />
+          </div>
+        </div>
+      )}
+
+      {/* Step 3 — Mídia + Dimensões */}
+      {step === 3 && (
+        <div className="space-y-5">
+          {/* Imagem principal */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Imagem principal <span className="text-gray-400 font-normal text-xs">(destaque)</span></Label>
+            <div className="flex items-center gap-4">
+              {current.image_urls?.[0] ? (
+                <div className="relative w-24 h-24 shrink-0">
+                  <img src={current.image_urls[0]} alt="" className="w-full h-full object-cover rounded-xl border border-gray-200" />
+                  <button onClick={() => removeImage(0)} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <label className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition-colors shrink-0">
+                  {imageLoading ? <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> : <Upload className="w-5 h-5 text-gray-400" />}
+                  <span className="text-[10px] text-gray-400 mt-1">Principal</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleUploadImage} disabled={imageLoading} />
+                </label>
+              )}
+              <p className="text-xs text-gray-400">Primeira imagem exibida como foto de destaque no WooCommerce.</p>
+            </div>
+          </div>
+
+          {/* Galeria */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Galeria</Label>
+            <div className="flex flex-wrap gap-2">
+              {(current.image_urls || []).slice(1).map((img, i) => (
+                <div key={i} className="relative w-16 h-16">
+                  <img src={img} alt="" className="w-full h-full object-cover rounded-lg border border-gray-200" />
+                  <button onClick={() => removeImage(i + 1)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              ))}
+              {current.image_urls?.[0] && (
+                <label className="w-16 h-16 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center cursor-pointer hover:border-gray-400 transition-colors">
+                  {imageLoading ? <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> : <Upload className="w-4 h-4 text-gray-400" />}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleUploadImage} disabled={imageLoading} />
+                </label>
+              )}
+              {!current.image_urls?.[0] && <p className="text-xs text-gray-400 self-center">Adicione a imagem principal primeiro.</p>}
+            </div>
+          </div>
+
+          {/* Dimensões */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Dimensões e peso</Label>
+            <div className="grid grid-cols-4 gap-3">
+              {[['Peso (kg)', 'weight'], ['Largura (cm)', 'width'], ['Altura (cm)', 'height'], ['Prof. (cm)', 'depth']].map(([label, field]) => (
+                <div key={field} className="space-y-1">
+                  <Label className="text-xs text-gray-500">{label}</Label>
+                  <Input type="number" step="0.01" value={current[field] || ''} onChange={e => set(field, e.target.value)} placeholder="0" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer nav */}
+      <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
+        <button
+          type="button"
+          onClick={step === 1 ? onCancel : () => setStep(s => s - 1)}
+          className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
+        >
+          {step === 1 ? 'Cancelar' : '← Voltar'}
+        </button>
+        <div className="flex gap-2">
+          {step < 3 ? (
+            <button
+              type="button"
+              onClick={() => setStep(s => s + 1)}
+              disabled={step === 1 && !current.name?.trim()}
+              className="px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Próximo →
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={saving}
+              className="px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:opacity-40 transition-colors"
+            >
+              {saving ? 'Salvando...' : isEdit ? 'Salvar alterações' : 'Criar produto'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AlertMsg({ alert }) {
   if (!alert) return null
   return (
@@ -51,6 +270,7 @@ export default function Products() {
   const [saving, setSaving] = useState(false)
   const [imageLoading, setImageLoading] = useState(false)
   const [syncing, setSyncing] = useState(null) // product id being synced
+  const [step, setStep] = useState(1)
 
   const showAlert = (type, message) => {
     setAlert({ type, message })
@@ -81,10 +301,10 @@ export default function Products() {
     }
   }
 
-  const openCreate = () => { setCurrent(EMPTY_PRODUCT); setDialog('create') }
-  const openEdit = (p) => { setCurrent({ ...p }); setDialog('edit') }
+  const openCreate = () => { setCurrent(EMPTY_PRODUCT); setStep(1); setDialog('create') }
+  const openEdit = (p) => { setCurrent({ ...p }); setStep(1); setDialog('edit') }
   const openDelete = (p) => { setCurrent(p); setDialog('delete') }
-  const closeDialog = () => { setDialog(null); setCurrent(EMPTY_PRODUCT) }
+  const closeDialog = () => { setDialog(null); setCurrent(EMPTY_PRODUCT); setStep(1) }
 
   const convertToJpeg = (file) => new Promise((resolve, reject) => {
     const img = new Image()
@@ -424,169 +644,25 @@ export default function Products() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialog === 'create' || dialog === 'edit'} onOpenChange={closeDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{dialog === 'create' ? 'Novo Produto' : 'Editar Produto'}</DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 gap-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2 space-y-1.5">
-                <Label>Nome *</Label>
-                <Input value={current.name} onChange={e => setCurrent(p => ({ ...p, name: e.target.value }))} placeholder="Nome do produto" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Preço (R$) *</Label>
-                <Input type="number" step="0.01" value={current.price} onChange={e => setCurrent(p => ({ ...p, price: e.target.value }))} placeholder="0.00" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Estoque</Label>
-                <Input type="number" value={current.stock} onChange={e => setCurrent(p => ({ ...p, stock: e.target.value }))} placeholder="0" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Categoria</Label>
-                <Select
-                  value={current.category_id?.toString() || 'none'}
-                  onValueChange={v => setCurrent(p => ({ ...p, category_id: v === 'none' ? null : v, subcategory_id: '' }))}
-                >
-                  <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sem categoria</SelectItem>
-                    {categories.filter(c => !c.parent_id).map(c => (
-                      <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Subcategoria</Label>
-                <Select
-                  value={current.subcategory_id?.toString() || 'none'}
-                  onValueChange={v => setCurrent(p => ({ ...p, subcategory_id: v === 'none' ? null : v }))}
-                  disabled={!current.category_id}
-                >
-                  <SelectTrigger><SelectValue placeholder={current.category_id ? 'Selecionar...' : 'Escolha a categoria'} /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sem subcategoria</SelectItem>
-                    {categories
-                      .filter(c => c.parent_id?.toString() === current.category_id?.toString())
-                      .map(c => (
-                        <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-                      ))
-                    }
-                  </SelectContent>
-                </Select>
-              </div>
-              {features.site && (
-                <div className="space-y-1.5">
-                  <Label>Estilo</Label>
-                  <Select
-                    value={current.style || 'none'}
-                    onValueChange={v => setCurrent(p => ({ ...p, style: v === 'none' ? '' : v }))}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Selecionar estilo..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Sem estilo</SelectItem>
-                      {ESTILOS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div className="space-y-1.5">
-                <Label>Marca</Label>
-                <Select value={current.brand_id?.toString() || 'none'} onValueChange={v => setCurrent(p => ({ ...p, brand_id: v === 'none' ? null : v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sem marca</SelectItem>
-                    {brands.map(b => <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Status</Label>
-                <Select value={current.status} onValueChange={v => setCurrent(p => ({ ...p, status: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="inactive">Inativo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Estoque Mínimo</Label>
-                <Input type="number" value={current.min_stock} onChange={e => setCurrent(p => ({ ...p, min_stock: e.target.value }))} />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Descrição</Label>
-              <Textarea value={current.description} onChange={e => setCurrent(p => ({ ...p, description: e.target.value }))} rows={3} />
-            </div>
-
-            {/* Dimensions */}
-            <div className="grid grid-cols-4 gap-3">
-              {[['Peso (kg)', 'weight'], ['Largura (cm)', 'width'], ['Altura (cm)', 'height'], ['Profundidade (cm)', 'depth']].map(([label, field]) => (
-                <div key={field} className="space-y-1.5">
-                  <Label className="text-xs">{label}</Label>
-                  <Input type="number" step="0.01" value={current[field] || ''} onChange={e => setCurrent(p => ({ ...p, [field]: e.target.value }))} placeholder="0" />
-                </div>
-              ))}
-            </div>
-
-            {/* Images */}
-            <div className="space-y-3">
-              {/* Imagem principal */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-gray-700">Imagem do produto <span className="text-gray-400 font-normal">(destaque)</span></Label>
-                <div className="flex items-center gap-3">
-                  {current.image_urls?.[0] ? (
-                    <div className="relative w-20 h-20">
-                      <img src={current.image_urls[0]} alt="" className="w-full h-full object-cover rounded-lg border-2 border-[#f4b522]" />
-                      <button onClick={() => removeImage(0)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
-                        <X className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="w-20 h-20 border-2 border-dashed border-[#f4b522] rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-yellow-50 transition-colors">
-                      {imageLoading ? <div className="w-4 h-4 border-2 border-[#f4b522] border-t-transparent rounded-full animate-spin" /> : <Upload className="w-5 h-5 text-[#f4b522]" />}
-                      <span className="text-[10px] text-gray-400 mt-1">Principal</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={handleUploadImage} disabled={imageLoading} />
-                    </label>
-                  )}
-                  <p className="text-xs text-gray-400">Primeira imagem exibida no WooCommerce como foto de destaque do produto.</p>
-                </div>
-              </div>
-
-              {/* Galeria */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-gray-700">Galeria de imagens</Label>
-                <div className="flex flex-wrap gap-2">
-                  {(current.image_urls || []).slice(1).map((img, i) => (
-                    <div key={i} className="relative w-16 h-16">
-                      <img src={img} alt="" className="w-full h-full object-cover rounded-lg border" />
-                      <button onClick={() => removeImage(i + 1)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
-                        <X className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
-                  ))}
-                  {current.image_urls?.[0] && (
-                    <label className="w-16 h-16 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#f4b522] transition-colors">
-                      {imageLoading ? <div className="w-4 h-4 border-2 border-[#f4b522] border-t-transparent rounded-full animate-spin" /> : <Upload className="w-4 h-4 text-gray-400" />}
-                      <input type="file" accept="image/*" className="hidden" onChange={handleUploadImage} disabled={imageLoading} />
-                    </label>
-                  )}
-                  {!(current.image_urls?.[0]) && <p className="text-xs text-gray-400 self-center">Adicione a imagem principal primeiro.</p>}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Salvando...' : (dialog === 'create' ? 'Criar Produto' : 'Salvar')}
-            </Button>
-          </DialogFooter>
+          <ProductStepper
+            step={step} setStep={setStep}
+            current={current} setCurrent={setCurrent}
+            categories={categories} brands={brands}
+            features={features}
+            imageLoading={imageLoading}
+            handleUploadImage={handleUploadImage}
+            removeImage={removeImage}
+            saving={saving}
+            onSave={handleSave}
+            onCancel={closeDialog}
+            isEdit={dialog === 'edit'}
+          />
+        </DialogContent>
         </DialogContent>
       </Dialog>
 
