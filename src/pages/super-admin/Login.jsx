@@ -49,9 +49,13 @@ export default function SuperAdminLogin() {
       <div className="w-full max-w-sm space-y-8">
 
         {/* Header */}
-        <div className="text-center space-y-1">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Plataforma</p>
-          <h1 className="text-xl font-semibold text-white">Administração</h1>
+        <div className="flex flex-col items-center gap-4">
+          <img
+            src="https://dkvznmmiiiljyrkopiqx.supabase.co/storage/v1/object/public/user-uploads/briefing-logos/66a0b259-c069-4871-8494-de3deed09800-1774451850976.png"
+            alt="Vend.ai"
+            className="h-10 w-auto object-contain"
+          />
+          <p className="text-xs text-gray-500">Acesso restrito — Super Admin</p>
         </div>
 
         {/* Form */}
