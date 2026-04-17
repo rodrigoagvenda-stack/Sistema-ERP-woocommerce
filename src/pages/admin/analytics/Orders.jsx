@@ -8,6 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { wooProxy } from '@/lib/api'
 
+const getBrand = () => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#6366f1'
+
 const STATUS_LABELS = {
   pending: { label: 'Pendente', variant: 'warning' },
   processing: { label: 'Processando', variant: 'info' },
@@ -75,7 +77,7 @@ export default function Orders() {
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                 <Tooltip />
-                <Bar dataKey="count" fill="#f4b522" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" fill={getBrand()} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

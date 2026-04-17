@@ -84,7 +84,7 @@ export default function WooSettings() {
       <button
         type="button"
         onClick={() => setForm(f => ({ ...f, [field]: !f[field] }))}
-        className={`relative w-10 h-5 rounded-full transition-colors ${form[field] ? 'bg-[#f4b522]' : 'bg-gray-200'}`}
+        className={`relative w-10 h-5 rounded-full transition-colors ${form[field] ? '[background-color:var(--brand)]' : 'bg-gray-200'}`}
       >
         <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form[field] ? 'translate-x-5' : 'translate-x-0.5'}`} />
       </button>

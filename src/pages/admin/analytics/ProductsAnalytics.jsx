@@ -66,7 +66,7 @@ export default function ProductsAnalytics() {
                     </TableCell>
                     <TableCell className="font-medium text-sm">{p.name}</TableCell>
                     <TableCell>
-                      <span className="font-semibold text-[#c49018]">{p.quantity}</span>
+                      <span className="font-semibold [color:var(--brand)]">{p.quantity}</span>
                       <span className="text-gray-400 text-xs ml-1">unid.</span>
                     </TableCell>
                   </TableRow>

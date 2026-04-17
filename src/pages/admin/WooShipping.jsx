@@ -66,8 +66,8 @@ function ZoneCard({ zone, onToggle, saving }) {
           onClick={() => setExpanded(v => !v)}
           className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors text-left"
         >
-          <div className="w-9 h-9 rounded-lg bg-[#f4b522]/10 flex items-center justify-center shrink-0">
-            <MapPin className="h-4 w-4 text-[#c49018]" />
+          <div className="w-9 h-9 rounded-lg [background-color:color-mix(in_srgb,var(--brand)_10%,transparent)] flex items-center justify-center shrink-0">
+            <MapPin className="h-4 w-4 [color:var(--brand)]" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-900 text-sm">{zone.name}</p>

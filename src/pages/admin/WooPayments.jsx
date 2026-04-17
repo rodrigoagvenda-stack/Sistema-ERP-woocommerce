@@ -53,7 +53,7 @@ function SettingField({ setting, value, onChange }) {
         <select
           value={value || ''}
           onChange={e => onChange(e.target.value)}
-          className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f4b522]"
+          className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
         >
           {Object.entries(setting.options || {}).map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
@@ -71,7 +71,7 @@ function SettingField({ setting, value, onChange }) {
           value={value || ''}
           onChange={e => onChange(e.target.value)}
           rows={3}
-          className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#f4b522] resize-none"
+          className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand)] resize-none"
         />
       </div>
     )

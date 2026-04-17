@@ -187,8 +187,8 @@ export default function Brands() {
                 <div className="md:hidden divide-y divide-gray-100">
                   {brands.map(b => (
                     <div key={b.id} className="p-4 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-[#f4b522]/10 flex items-center justify-center shrink-0">
-                        <span className="text-[#c49018] font-bold text-sm">{b.name[0]?.toUpperCase()}</span>
+                      <div className="w-10 h-10 rounded-lg [background-color:color-mix(in_srgb,var(--brand)_10%,transparent)] flex items-center justify-center shrink-0">
+                        <span className="[color:var(--brand)] font-bold text-sm">{b.name[0]?.toUpperCase()}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm text-gray-900">{b.name}</p>

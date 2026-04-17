@@ -7,6 +7,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { wooProxy } from '@/lib/api'
 
+const getBrand = () => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#6366f1'
+
 const PERIODS = [
   { label: '7 dias', days: 7 },
   { label: '30 dias', days: 30 },
@@ -117,7 +119,7 @@ export default function Revenue() {
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={d => d?.slice(5)} />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `R$${(v/1000).toFixed(1)}k`} />
                 <Tooltip formatter={(v) => [fmt(v), 'Receita']} labelFormatter={l => `Data: ${l}`} />
-                <Line type="monotone" dataKey="sales" stroke="#f4b522" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                <Line type="monotone" dataKey="sales" stroke={getBrand()} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
           ) : (

@@ -16,8 +16,8 @@ function StatCard({ title, value, icon: Icon, sub }) {
             <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
             {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
           </div>
-          <div className="p-2.5 rounded-lg bg-[#f4b522]/10">
-            <Icon className="w-5 h-5 text-[#f4b522]" />
+          <div className="p-2.5 rounded-lg [background-color:color-mix(in_srgb,var(--brand)_10%,transparent)]">
+            <Icon className="w-5 h-5 [color:var(--brand)]" />
           </div>
         </div>
       </CardContent>
@@ -123,7 +123,7 @@ export default function AnalyticsOverview() {
         <Card>
           <CardContent className="p-8 text-center">
             <p className="text-gray-400 text-sm">Configure o WooCommerce para visualizar analytics</p>
-            <a href="/admin/woo/settings" className="text-[#f4b522] text-sm mt-2 inline-block hover:underline">Ir para Configurações →</a>
+            <a href="/admin/woo/settings" className="[color:var(--brand)] text-sm mt-2 inline-block hover:underline">Ir para Configurações →</a>
           </CardContent>
         </Card>
       ) : null}

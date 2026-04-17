@@ -7,7 +7,8 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recha
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { wooProxy } from '@/lib/api'
 
-const COLORS = ['#f4b522', '#fcd060', '#e8a41a', '#c98c0e', '#a87208', '#8a5e04', '#6b4a02', '#4d3600']
+const getBrand = () => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#6366f1'
+const getColors = () => { const b = getBrand(); return [b, `color-mix(in srgb,${b} 80%,white)`, `color-mix(in srgb,${b} 60%,white)`, `color-mix(in srgb,${b} 40%,white)`, `color-mix(in srgb,${b} 80%,black)`, `color-mix(in srgb,${b} 60%,black)`, `color-mix(in srgb,${b} 40%,black)`, `color-mix(in srgb,${b} 20%,black)`] }
 
 const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
 
@@ -67,7 +68,7 @@ export default function CategoriesAnalytics() {
               <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
                   <Pie data={data} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}>
-                    {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    {data.map((_, i) => <Cell key={i} fill={getColors()[i % 8]} />)}
                   </Pie>
                   <Tooltip formatter={(v) => fmt(v)} />
                   <Legend />
@@ -98,7 +99,7 @@ export default function CategoriesAnalytics() {
                       <TableRow key={d.name}>
                         <TableCell className="text-sm">
                           <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getColors()[i % 8] }} />
                             {d.name}
                           </div>
                         </TableCell>

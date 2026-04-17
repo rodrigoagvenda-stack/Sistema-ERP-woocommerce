@@ -578,7 +578,7 @@ export default function Products() {
                             </Button>
                             <Button
                               variant="ghost" size="icon"
-                              className={`h-7 w-7 ${p.woo_id ? 'text-green-500 hover:text-green-700' : 'text-gray-400 hover:text-[#f4b522]'}`}
+                              className={`h-7 w-7 ${p.woo_id ? 'text-green-500 hover:text-green-700' : 'text-gray-400 hover:[color:var(--brand)]'}`}
                               onClick={() => handleSync(p)}
                               disabled={syncing === p.id}
                               title={p.woo_id ? `Sincronizado (WooID: ${p.woo_id})` : 'Sincronizar com WooCommerce'}

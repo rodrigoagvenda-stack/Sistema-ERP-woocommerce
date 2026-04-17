@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { api } from '@/lib/api'
 
-function StatCard({ title, value, icon: Icon, sub, color = 'text-[#f4b522]' }) {
+function StatCard({ title, value, icon: Icon, sub, color = '[color:var(--brand)]' }) {
   return (
     <Card>
       <CardContent className="pt-6">
@@ -14,7 +14,7 @@ function StatCard({ title, value, icon: Icon, sub, color = 'text-[#f4b522]' }) {
             <p className="text-2xl font-bold text-gray-900">{value}</p>
             {sub && <p className="text-xs text-gray-400">{sub}</p>}
           </div>
-          <div className={`p-2.5 rounded-lg bg-[#f4b522]/10`}>
+          <div className="p-2.5 rounded-lg [background-color:color-mix(in_srgb,var(--brand)_10%,transparent)]">
             <Icon className={`w-5 h-5 ${color}`} />
           </div>
         </div>
@@ -92,11 +92,11 @@ export default function Dashboard() {
           value={stats?.lowStock ?? 0}
           icon={TrendingDown}
           sub="Produtos com menos de 5 unidades"
-          color={stats?.lowStock > 0 ? 'text-red-500' : 'text-[#f4b522]'}
+          color={stats?.lowStock > 0 ? 'text-red-500' : '[color:var(--brand)]'}
         />
         <StatCard
           title="Analytics WooCommerce"
-          value={<a href="/admin/analytics/overview" className="text-[#f4b522] hover:underline text-base">Ver Analytics →</a>}
+          value={<a href="/admin/analytics/overview" className="[color:var(--brand)] hover:underline text-base">Ver Analytics →</a>}
           icon={BarChart2}
           sub="Receita, pedidos e estoque em tempo real"
         />
@@ -117,7 +117,7 @@ export default function Dashboard() {
               <a
                 key={item.href}
                 href={item.href}
-                className="flex items-center justify-center px-4 py-2.5 rounded-lg bg-[#f3f4f8] hover:bg-[#f4b522]/10 text-sm font-medium text-gray-700 hover:text-[#c49018] transition-colors"
+                className="flex items-center justify-center px-4 py-2.5 rounded-lg bg-[#f3f4f8] hover:[background-color:color-mix(in_srgb,var(--brand)_10%,transparent)] text-sm font-medium text-gray-700 hover:[color:var(--brand)] transition-colors"
               >
                 {item.label}
               </a>
