@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Globe, CheckCircle2, AlertCircle } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, Pencil, Trash2, Globe, CheckCircle2, AlertCircle, Upload, X, ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { api, wooProxy } from '@/lib/api'
+import { supabase } from '@/lib/supabase'
 
-const EMPTY = { name: '', slug: '', status: 'active', parent_id: null, woo_id: null }
+const EMPTY = { name: '', slug: '', status: 'active', parent_id: null, woo_id: null, image_url: '' }
 
 export default function Categories() {
   const [categories, setCategories] = useState([])
@@ -21,6 +22,8 @@ export default function Categories() {
   const [current, setCurrent] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [syncing, setSyncing] = useState(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const imageInputRef = useRef(null)
 
   const showAlert = (type, message) => {
     setAlert({ type, message })
@@ -51,6 +54,7 @@ export default function Categories() {
         status: current.status,
         parent_id: current.parent_id || null,
         woo_id: current.woo_id || null,
+        image_url: current.image_url || null,
       }
       if (dialog === 'create') {
         const created = await api.createCategory(payload)
@@ -60,13 +64,14 @@ export default function Categories() {
         const updated = await api.updateCategory(current.id, payload)
         setCategories(prev => prev.map(c => c.id === updated.id ? updated : c))
         try {
+          const wooBody = (base) => payload.image_url ? { ...base, image: { src: payload.image_url } } : base
           if (current.woo_id) {
-            await wooProxy({ method: 'PUT', endpoint: `products/categories/${current.woo_id}`, body: { name: payload.name, slug: payload.slug } })
+            await wooProxy({ method: 'PUT', endpoint: `products/categories/${current.woo_id}`, body: wooBody({ name: payload.name, slug: payload.slug }) })
           } else {
-            const body = { name: payload.name, slug: payload.slug }
+            const base = { name: payload.name, slug: payload.slug }
             const parent = categories.find(c => c.id === payload.parent_id)
-            if (parent?.woo_id) body.parent = parent.woo_id
-            const wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body })
+            if (parent?.woo_id) base.parent = parent.woo_id
+            const wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body: wooBody(base) })
             await api.updateCategory(current.id, { woo_id: wooData.id })
             setCategories(prev => prev.map(c => c.id === current.id ? { ...c, woo_id: wooData.id } : c))
           }
@@ -100,19 +105,37 @@ export default function Categories() {
     }
   }
 
+  const handleUploadImage = async (file) => {
+    if (!file) return
+    setUploadingImage(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `categories/${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true })
+      if (error) throw error
+      const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
+      setCurrent(p => ({ ...p, image_url: publicUrl }))
+    } catch (e) {
+      showAlert('error', 'Erro ao fazer upload: ' + e.message)
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   const handleSync = async (cat) => {
     setSyncing(cat.id)
     try {
       let wooData
+      const withImage = (body) => cat.image_url ? { ...body, image: { src: cat.image_url } } : body
       if (cat.woo_id) {
-        wooData = await wooProxy({ method: 'PUT', endpoint: `products/categories/${cat.woo_id}`, body: { name: cat.name, slug: cat.slug } })
+        wooData = await wooProxy({ method: 'PUT', endpoint: `products/categories/${cat.woo_id}`, body: withImage({ name: cat.name, slug: cat.slug }) })
       } else {
         const body = { name: cat.name, slug: cat.slug }
         if (cat.parent_id) {
           const parent = categories.find(c => c.id === cat.parent_id)
           if (parent?.woo_id) body.parent = parent.woo_id
         }
-        wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body })
+        wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body: withImage(body) })
       }
       const updated = await api.updateCategory(cat.id, { woo_id: wooData.id })
       setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, woo_id: wooData.id } : c))
@@ -201,8 +224,11 @@ export default function Categories() {
               <div className="md:hidden divide-y divide-gray-100">
                 {categories.map(c => (
                   <div key={c.id} className="p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[#f4b522]/10 flex items-center justify-center shrink-0">
-                      <span className="text-[#c49018] font-bold text-sm">{c.name[0]?.toUpperCase()}</span>
+                    <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-gray-100 flex items-center justify-center">
+                      {c.image_url
+                        ? <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" />
+                        : <span className="text-gray-500 font-bold text-sm">{c.name[0]?.toUpperCase()}</span>
+                      }
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm text-gray-900">{c.name}</p>
@@ -240,6 +266,31 @@ export default function Categories() {
             <DialogTitle>{dialog === 'create' ? 'Nova Categoria' : 'Editar Categoria'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Image upload */}
+            <div className="space-y-1.5">
+              <Label>Imagem</Label>
+              <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleUploadImage(e.target.files[0])} />
+              {current.image_url ? (
+                <div className="relative w-full h-32 rounded-lg overflow-hidden border border-gray-200">
+                  <img src={current.image_url} alt="categoria" className="w-full h-full object-cover" />
+                  <button type="button" onClick={() => setCurrent(p => ({ ...p, image_url: '' }))}
+                    className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => imageInputRef.current?.click()} disabled={uploadingImage}
+                  className="w-full h-24 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center gap-1.5 text-gray-400 hover:border-gray-300 hover:text-gray-500 transition-colors">
+                  {uploadingImage
+                    ? <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                    : <>
+                        <ImageIcon className="h-5 w-5" />
+                        <span className="text-xs">Clique para fazer upload</span>
+                      </>
+                  }
+                </button>
+              )}
+            </div>
             <div className="space-y-1.5">
               <Label>Nome *</Label>
               <Input value={current.name} onChange={e => setCurrent(p => ({ ...p, name: e.target.value }))} />
