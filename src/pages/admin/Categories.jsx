@@ -64,13 +64,14 @@ export default function Categories() {
         const updated = await api.updateCategory(current.id, payload)
         setCategories(prev => prev.map(c => c.id === updated.id ? updated : c))
         try {
+          const wooBody = (base) => payload.image_url ? { ...base, image: { src: payload.image_url } } : base
           if (current.woo_id) {
-            await wooProxy({ method: 'PUT', endpoint: `products/categories/${current.woo_id}`, body: { name: payload.name, slug: payload.slug } })
+            await wooProxy({ method: 'PUT', endpoint: `products/categories/${current.woo_id}`, body: wooBody({ name: payload.name, slug: payload.slug }) })
           } else {
             const base = { name: payload.name, slug: payload.slug }
             const parent = categories.find(c => c.id === payload.parent_id)
             if (parent?.woo_id) base.parent = parent.woo_id
-            const wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body: base })
+            const wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body: wooBody(base) })
             await api.updateCategory(current.id, { woo_id: wooData.id })
             setCategories(prev => prev.map(c => c.id === current.id ? { ...c, woo_id: wooData.id } : c))
           }
@@ -104,13 +105,31 @@ export default function Categories() {
     }
   }
 
+  const convertToJpeg = (file) => new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth
+      canvas.height = img.naturalHeight
+      const ctx = canvas.getContext('2d')
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(img, 0, 0)
+      URL.revokeObjectURL(url)
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Conversão falhou')), 'image/jpeg', 0.92)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Imagem inválida')) }
+    img.src = url
+  })
+
   const handleUploadImage = async (file) => {
     if (!file) return
     setUploadingImage(true)
     try {
-      const ext = file.name.split('.').pop()
-      const path = `categories/${Date.now()}.${ext}`
-      const { error } = await supabase.storage.from('product-images').upload(path, file, { upsert: true })
+      const jpeg = await convertToJpeg(file)
+      const path = `categories/${Date.now()}.jpg`
+      const { error } = await supabase.storage.from('product-images').upload(path, jpeg, { contentType: 'image/jpeg' })
       if (error) throw error
       const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
       setCurrent(p => ({ ...p, image_url: publicUrl }))
@@ -118,6 +137,7 @@ export default function Categories() {
       showAlert('error', 'Erro ao fazer upload: ' + e.message)
     } finally {
       setUploadingImage(false)
+      if (imageInputRef.current) imageInputRef.current.value = ''
     }
   }
 
@@ -125,15 +145,16 @@ export default function Categories() {
     setSyncing(cat.id)
     try {
       let wooData
+      const withImage = (body) => cat.image_url ? { ...body, image: { src: cat.image_url } } : body
       if (cat.woo_id) {
-        wooData = await wooProxy({ method: 'PUT', endpoint: `products/categories/${cat.woo_id}`, body: { name: cat.name, slug: cat.slug } })
+        wooData = await wooProxy({ method: 'PUT', endpoint: `products/categories/${cat.woo_id}`, body: withImage({ name: cat.name, slug: cat.slug }) })
       } else {
         const body = { name: cat.name, slug: cat.slug }
         if (cat.parent_id) {
           const parent = categories.find(c => c.id === cat.parent_id)
           if (parent?.woo_id) body.parent = parent.woo_id
         }
-        wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body })
+        wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body: withImage(body) })
       }
       const updated = await api.updateCategory(cat.id, { woo_id: wooData.id })
       setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, woo_id: wooData.id } : c))
