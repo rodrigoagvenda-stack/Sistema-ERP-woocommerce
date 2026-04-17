@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import HealthBanner from '@/components/layout/HealthBanner'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import {
   LayoutDashboard, Package, Tag, Layers, Star, BarChart2,
@@ -239,6 +240,8 @@ export default function AdminLayout({ children }) {
             <span className="hidden sm:inline">Sair</span>
           </Button>
         </header>
+
+        <HealthBanner />
 
         {/* Page content */}
         <main className="flex-1 p-4 md:p-6">
