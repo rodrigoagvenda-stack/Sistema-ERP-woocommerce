@@ -663,7 +663,6 @@ export default function Products() {
             isEdit={dialog === 'edit'}
           />
         </DialogContent>
-        </DialogContent>
       </Dialog>
 
       {/* Delete Dialog */}
