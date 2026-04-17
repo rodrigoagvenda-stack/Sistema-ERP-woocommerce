@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { api, wooProxy } from '@/lib/api'
+import { api, wooProxy, wooUploadMedia } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 
 const EMPTY = { name: '', slug: '', status: 'active', parent_id: null, woo_id: null, image_url: '' }
@@ -64,7 +64,8 @@ export default function Categories() {
         const updated = await api.updateCategory(current.id, payload)
         setCategories(prev => prev.map(c => c.id === updated.id ? updated : c))
         try {
-          const wooBody = (base) => payload.image_url ? { ...base, image: { src: payload.image_url } } : base
+          const wooImg = await resolveWooImage(payload.image_url)
+          const wooBody = (base) => wooImg ? { ...base, image: wooImg } : base
           if (current.woo_id) {
             await wooProxy({ method: 'PUT', endpoint: `products/categories/${current.woo_id}`, body: wooBody({ name: payload.name, slug: payload.slug }) })
           } else {
@@ -123,6 +124,17 @@ export default function Categories() {
     img.src = url
   })
 
+  const resolveWooImage = async (image_url) => {
+    if (!image_url) return null
+    try {
+      const filename = image_url.split('/').pop() || 'category.jpg'
+      const media = await wooUploadMedia(image_url, filename)
+      return media?.id ? { id: media.id } : null
+    } catch {
+      return null
+    }
+  }
+
   const handleUploadImage = async (file) => {
     if (!file) return
     setUploadingImage(true)
@@ -145,7 +157,8 @@ export default function Categories() {
     setSyncing(cat.id)
     try {
       let wooData
-      const withImage = (body) => cat.image_url ? { ...body, image: { src: cat.image_url } } : body
+      const wooImg = await resolveWooImage(cat.image_url)
+      const withImage = (body) => wooImg ? { ...body, image: wooImg } : body
       if (cat.woo_id) {
         wooData = await wooProxy({ method: 'PUT', endpoint: `products/categories/${cat.woo_id}`, body: withImage({ name: cat.name, slug: cat.slug }) })
       } else {

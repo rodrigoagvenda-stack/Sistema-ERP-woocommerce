@@ -12,13 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { method = 'GET', endpoint, body, credentials } = await req.json()
-
-    if (!endpoint) {
-      return new Response(JSON.stringify({ error: 'endpoint é obrigatório' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    const { method = 'GET', endpoint, body, credentials, action, image_url, filename } = await req.json()
 
     let creds = credentials
     if (!creds) {
@@ -47,6 +41,53 @@ serve(async (req) => {
       storeUrl = 'https://' + storeUrl
     }
 
+    // Ação especial: upload de imagem para a media library do WordPress
+    if (action === 'upload_media') {
+      if (!image_url) {
+        return new Response(JSON.stringify({ error: 'image_url é obrigatório para upload_media' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const imgRes = await fetch(image_url)
+      if (!imgRes.ok) throw new Error(`Falha ao baixar imagem: ${imgRes.status}`)
+      const imgBlob = await imgRes.blob()
+
+      const form = new FormData()
+      form.append('file', imgBlob, filename || 'image.jpg')
+
+      const basicAuth = btoa(`${creds.consumer_key}:${creds.consumer_secret}`)
+      const mediaUrl = `${storeUrl}/wp-json/wp/v2/media`
+
+      const mediaRes = await fetch(mediaUrl, {
+        method: 'POST',
+        headers: { 'Authorization': `Basic ${basicAuth}` },
+        body: form,
+      })
+
+      const mediaText = await mediaRes.text()
+      let mediaData
+      try { mediaData = JSON.parse(mediaText) } catch { mediaData = { raw: mediaText } }
+
+      if (!mediaRes.ok) {
+        return new Response(JSON.stringify({
+          error: mediaData?.message || `WordPress Media API error ${mediaRes.status}`,
+          details: mediaData,
+          status_code: mediaRes.status,
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
+      return new Response(JSON.stringify({ id: mediaData.id, src: mediaData.source_url }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (!endpoint) {
+      return new Response(JSON.stringify({ error: 'endpoint é obrigatório' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const separator = endpoint.includes('?') ? '&' : '?'
     const fullUrl = `${storeUrl}/wp-json/wc/v3/${endpoint}${separator}consumer_key=${encodeURIComponent(creds.consumer_key)}&consumer_secret=${encodeURIComponent(creds.consumer_secret)}`
 
@@ -70,7 +111,6 @@ serve(async (req) => {
     }
 
     if (!response.ok) {
-      // Sempre retorna HTTP 200 — erro fica no campo "error" do body
       const debugUrl = fullUrl
         .replace(/consumer_key=[^&]+/, 'consumer_key=***')
         .replace(/consumer_secret=[^&]+/, 'consumer_secret=***')

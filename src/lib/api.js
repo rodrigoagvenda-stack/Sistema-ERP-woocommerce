@@ -373,11 +373,15 @@ export const api = {
 }
 
 // WooCommerce proxy via Supabase Edge Function
-export async function wooProxy({ method = 'GET', endpoint, body, credentials } = {}) {
+export async function wooProxy({ method = 'GET', endpoint, body, credentials, action, image_url, filename } = {}) {
   const { data, error } = await supabase.functions.invoke('woo-proxy', {
-    body: { method, endpoint, body, credentials }
+    body: { method, endpoint, body, credentials, action, image_url, filename }
   })
   if (error) throw new Error(error.message)
   if (data?.error) throw new Error(data.error)
   return data
+}
+
+export async function wooUploadMedia(image_url, filename) {
+  return wooProxy({ action: 'upload_media', image_url, filename })
 }
