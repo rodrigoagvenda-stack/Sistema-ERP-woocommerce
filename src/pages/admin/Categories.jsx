@@ -64,14 +64,13 @@ export default function Categories() {
         const updated = await api.updateCategory(current.id, payload)
         setCategories(prev => prev.map(c => c.id === updated.id ? updated : c))
         try {
-          const wooBody = (base) => payload.image_url ? { ...base, image: { src: payload.image_url } } : base
           if (current.woo_id) {
-            await wooProxy({ method: 'PUT', endpoint: `products/categories/${current.woo_id}`, body: wooBody({ name: payload.name, slug: payload.slug }) })
+            await wooProxy({ method: 'PUT', endpoint: `products/categories/${current.woo_id}`, body: { name: payload.name, slug: payload.slug } })
           } else {
             const base = { name: payload.name, slug: payload.slug }
             const parent = categories.find(c => c.id === payload.parent_id)
             if (parent?.woo_id) base.parent = parent.woo_id
-            const wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body: wooBody(base) })
+            const wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body: base })
             await api.updateCategory(current.id, { woo_id: wooData.id })
             setCategories(prev => prev.map(c => c.id === current.id ? { ...c, woo_id: wooData.id } : c))
           }
@@ -126,16 +125,15 @@ export default function Categories() {
     setSyncing(cat.id)
     try {
       let wooData
-      const withImage = (body) => cat.image_url ? { ...body, image: { src: cat.image_url } } : body
       if (cat.woo_id) {
-        wooData = await wooProxy({ method: 'PUT', endpoint: `products/categories/${cat.woo_id}`, body: withImage({ name: cat.name, slug: cat.slug }) })
+        wooData = await wooProxy({ method: 'PUT', endpoint: `products/categories/${cat.woo_id}`, body: { name: cat.name, slug: cat.slug } })
       } else {
         const body = { name: cat.name, slug: cat.slug }
         if (cat.parent_id) {
           const parent = categories.find(c => c.id === cat.parent_id)
           if (parent?.woo_id) body.parent = parent.woo_id
         }
-        wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body: withImage(body) })
+        wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body })
       }
       const updated = await api.updateCategory(cat.id, { woo_id: wooData.id })
       setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, woo_id: wooData.id } : c))
