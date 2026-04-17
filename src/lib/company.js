@@ -6,10 +6,10 @@ let _userId  = null
 export async function getCompany() {
   if (_company) return _company
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
   if (!user) throw new Error('Usuário não autenticado')
 
-  // Cache por usuário — invalida se o usuário mudou
   if (_company && _userId === user.id) return _company
 
   const { data: profile, error: profileError } = await supabase
@@ -19,6 +19,7 @@ export async function getCompany() {
     .single()
 
   if (profileError) throw new Error('Perfil não encontrado')
+  if (!profile.company_id) throw new Error('Empresa não vinculada ao perfil')
 
   const { data: company, error: companyError } = await supabase
     .from('companies')

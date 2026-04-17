@@ -95,15 +95,11 @@ function Sidebar({ collapsed, onNavigate, brandColor, logoUrl, navItems, slug })
     <div className="h-full bg-white border-r border-gray-200 flex flex-col">
       {/* Logo */}
       <div className={cn('flex items-center gap-3 px-4 py-4 border-b border-gray-100', collapsed && 'justify-center px-3')}>
-        {collapsed ? (
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: brandColor }}>
-            <span className="text-white font-bold text-sm">G</span>
-          </div>
-        ) : logoUrl ? (
-          <img src={logoUrl} alt="Logo" className="h-11 w-auto object-contain" />
+        {logoUrl ? (
+          <img src={logoUrl} alt="Logo" className={cn('object-contain', collapsed ? 'h-8 w-8 rounded-lg' : 'h-11 w-auto')} />
         ) : (
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: brandColor }}>
-            <span className="text-white font-bold text-sm">G</span>
+            <span className="text-white font-bold text-sm">{slug?.[0]?.toUpperCase() || '?'}</span>
           </div>
         )}
       </div>
