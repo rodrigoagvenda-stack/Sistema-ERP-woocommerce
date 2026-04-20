@@ -29,8 +29,9 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (!authenticated) {
-    const lastSlug = localStorage.getItem('lastSlug')
-    return <Navigate to={lastSlug ? `/login/${lastSlug}` : '/super-admin/login'} replace />
+    const pathSlug = window.location.pathname.match(/\/admin\/([^/]+)/)?.[1]
+    const lastSlug = pathSlug || localStorage.getItem('lastSlug')
+    return <Navigate to={lastSlug ? `/login/${lastSlug}` : '/login/agro'} replace />
   }
 
   return children
