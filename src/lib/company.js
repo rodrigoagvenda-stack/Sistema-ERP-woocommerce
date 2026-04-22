@@ -4,8 +4,6 @@ let _company = null
 let _userId  = null
 
 export async function getCompany() {
-  if (_company) return _company
-
   const { data: { session } } = await supabase.auth.getSession()
   const user = session?.user
   if (!user) throw new Error('Usuário não autenticado')
