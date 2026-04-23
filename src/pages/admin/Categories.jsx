@@ -162,12 +162,12 @@ export default function Categories() {
       return { wooId: wooData.id }
     }
 
-    const body = { name: cat.name, slug: cat.slug }
+    // Monta body sem slug (deixa WooCommerce gerar) para evitar conflitos
+    const body = { name: cat.name }
 
     if (cat.parent_id) {
       let parent = currentCategories.find(c => c.id === cat.parent_id)
       if (parent && !parent.woo_id) {
-        // Sincroniza o pai primeiro
         const parentResult = await syncCategoryToWoo(parent, currentCategories)
         parent = { ...parent, woo_id: parentResult.wooId }
         await api.updateCategory(parent.id, { woo_id: parentResult.wooId })
@@ -177,19 +177,27 @@ export default function Categories() {
       if (parent?.woo_id) body.parent = parent.woo_id
     }
 
+    // Tentativa 1: POST com parent (se tiver)
     try {
       const wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body: withImage(body) })
       return { wooId: wooData.id }
-    } catch {
-      // Categoria já existe no WooCommerce — busca pelo slug e usa o ID existente
-      const existing = await wooProxy({ method: 'GET', endpoint: `products/categories?slug=${encodeURIComponent(body.slug)}&per_page=1` })
-      if (Array.isArray(existing) && existing.length > 0) return { wooId: existing[0].id }
-      // Tenta buscar pelo nome
-      const byName = await wooProxy({ method: 'GET', endpoint: `products/categories?search=${encodeURIComponent(body.name)}&per_page=10` })
-      const match = Array.isArray(byName) && byName.find(c => c.name.toLowerCase() === body.name.toLowerCase())
-      if (match) return { wooId: match.id }
-      throw new Error(`Categoria "${body.name}" não encontrada no WooCommerce após falha na criação`)
+    } catch {}
+
+    // Tentativa 2: POST sem parent (parent pode estar inválido no Woo)
+    if (body.parent) {
+      try {
+        const { parent: _, ...bodyNoParent } = body
+        const wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body: withImage(bodyNoParent) })
+        return { wooId: wooData.id }
+      } catch {}
     }
+
+    // Tentativa 3: busca pelo nome no WooCommerce (pode já existir)
+    const byName = await wooProxy({ method: 'GET', endpoint: `products/categories?search=${encodeURIComponent(cat.name)}&per_page=20` })
+    const match = Array.isArray(byName) && byName.find(c => c.name.toLowerCase() === cat.name.toLowerCase())
+    if (match) return { wooId: match.id }
+
+    throw new Error(`Não foi possível criar ou encontrar a categoria "${cat.name}" no WooCommerce`)
   }
 
   const handleSync = async (cat) => {

@@ -378,7 +378,10 @@ export async function wooProxy({ method = 'GET', endpoint, body, credentials, ac
     body: { method, endpoint, body, credentials, action, image_url, filename }
   })
   if (error) throw new Error(error.message)
-  if (data?.error) throw new Error(data.error)
+  if (data?.error) {
+    const detail = data.details ? ` | WooCommerce: ${JSON.stringify(data.details)}` : ''
+    throw new Error(data.error + detail)
+  }
   return data
 }
 

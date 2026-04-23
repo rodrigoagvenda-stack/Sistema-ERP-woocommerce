@@ -11,7 +11,10 @@ async function pingSupabase() {
     const ctrl = new AbortController()
     const timer = setTimeout(() => ctrl.abort(), TIMEOUT)
     const res = await fetch(`${ENV.SUPABASE_URL}/rest/v1/`, {
-      headers: { apikey: ENV.SUPABASE_ANON_KEY },
+      headers: {
+        apikey: ENV.SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${ENV.SUPABASE_ANON_KEY}`,
+      },
       signal: ctrl.signal,
     })
     clearTimeout(timer)
