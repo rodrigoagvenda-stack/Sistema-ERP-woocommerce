@@ -289,14 +289,13 @@ export const api = {
   // ── WooCommerce Credentials ───────────────────
   async getWooCredentials() {
     const cid = await getCompanyId()
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('marketplace_credentials')
       .select('*')
       .eq('marketplace', 'woocommerce')
       .eq('company_id', cid)
-      .single()
-    if (error) return null
-    return data
+      .limit(1)
+    return data?.[0] || null
   },
 
   async upsertWooCredentials(creds) {
@@ -312,14 +311,27 @@ export const api = {
         .select()
       if (error) throw error
       return data[0]
-    } else {
-      const { data, error } = await supabase
-        .from('marketplace_credentials')
-        .insert(payload)
-        .select()
-      if (error) throw error
-      return data[0]
     }
+
+    const { data, error } = await supabase
+      .from('marketplace_credentials')
+      .insert(payload)
+      .select()
+
+    if (error?.code === '23505') {
+      // Conflito — atualiza pelo marketplace+company_id
+      const { data: d2, error: e2 } = await supabase
+        .from('marketplace_credentials')
+        .update(payload)
+        .eq('marketplace', 'woocommerce')
+        .eq('company_id', cid)
+        .select()
+      if (e2) throw e2
+      return d2[0]
+    }
+
+    if (error) throw error
+    return data[0]
   },
 
   // ── Sync Logs ─────────────────────────────────
