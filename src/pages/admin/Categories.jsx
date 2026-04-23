@@ -177,8 +177,19 @@ export default function Categories() {
       if (parent?.woo_id) body.parent = parent.woo_id
     }
 
-    const wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body: withImage(body) })
-    return { wooId: wooData.id }
+    try {
+      const wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body: withImage(body) })
+      return { wooId: wooData.id }
+    } catch {
+      // Categoria já existe no WooCommerce — busca pelo slug e usa o ID existente
+      const existing = await wooProxy({ method: 'GET', endpoint: `products/categories?slug=${encodeURIComponent(body.slug)}&per_page=1` })
+      if (Array.isArray(existing) && existing.length > 0) return { wooId: existing[0].id }
+      // Tenta buscar pelo nome
+      const byName = await wooProxy({ method: 'GET', endpoint: `products/categories?search=${encodeURIComponent(body.name)}&per_page=10` })
+      const match = Array.isArray(byName) && byName.find(c => c.name.toLowerCase() === body.name.toLowerCase())
+      if (match) return { wooId: match.id }
+      throw new Error(`Categoria "${body.name}" não encontrada no WooCommerce após falha na criação`)
+    }
   }
 
   const handleSync = async (cat) => {
