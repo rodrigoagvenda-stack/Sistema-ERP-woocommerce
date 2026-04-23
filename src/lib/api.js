@@ -301,17 +301,25 @@ export const api = {
 
   async upsertWooCredentials(creds) {
     const cid = await getCompanyId()
-    const { data, error } = await supabase
-      .from('marketplace_credentials')
-      .upsert({
-        marketplace: 'woocommerce',
-        company_id: cid,
-        ...creds,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'marketplace,company_id' })
-      .select()
-    if (error) throw error
-    return data[0]
+    const existing = await this.getWooCredentials()
+    const payload = { marketplace: 'woocommerce', company_id: cid, ...creds, updated_at: new Date().toISOString() }
+
+    if (existing?.id) {
+      const { data, error } = await supabase
+        .from('marketplace_credentials')
+        .update(payload)
+        .eq('id', existing.id)
+        .select()
+      if (error) throw error
+      return data[0]
+    } else {
+      const { data, error } = await supabase
+        .from('marketplace_credentials')
+        .insert(payload)
+        .select()
+      if (error) throw error
+      return data[0]
+    }
   },
 
   // ── Sync Logs ─────────────────────────────────
