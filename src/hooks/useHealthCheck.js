@@ -1,24 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ENV } from '@/config/env'
+import { supabase } from '@/lib/supabase'
 import { wooProxy } from '@/lib/api'
 import { useCompany } from '@/context/CompanyContext'
 
 const INTERVAL = 30_000
-const TIMEOUT  = 6_000
 
 async function pingSupabase() {
   try {
-    const ctrl = new AbortController()
-    const timer = setTimeout(() => ctrl.abort(), TIMEOUT)
-    const res = await fetch(`${ENV.SUPABASE_URL}/rest/v1/`, {
-      headers: {
-        apikey: ENV.SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${ENV.SUPABASE_ANON_KEY}`,
-      },
-      signal: ctrl.signal,
-    })
-    clearTimeout(timer)
-    return res.ok || res.status === 401
+    const { error } = await supabase.from('companies').select('id').limit(1)
+    // PGRST116 = nenhuma linha — banco ok. Outros erros de rede = offline
+    if (error && error.message?.toLowerCase().includes('fetch')) return false
+    return true
   } catch {
     return false
   }
