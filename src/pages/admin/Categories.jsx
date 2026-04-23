@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, Globe, CheckCircle2, AlertCircle, Upload, X, ImageIcon } from 'lucide-react'
+import { Plus, Pencil, Trash2, Globe, CheckCircle2, AlertCircle, X, ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -153,25 +153,41 @@ export default function Categories() {
     }
   }
 
+  const syncCategoryToWoo = async (cat, currentCategories) => {
+    const wooImg = await resolveWooImage(cat.image_url)
+    const withImage = (body) => wooImg ? { ...body, image: wooImg } : body
+
+    if (cat.woo_id) {
+      const wooData = await wooProxy({ method: 'PUT', endpoint: `products/categories/${cat.woo_id}`, body: withImage({ name: cat.name, slug: cat.slug }) })
+      return { wooId: wooData.id }
+    }
+
+    const body = { name: cat.name, slug: cat.slug }
+
+    if (cat.parent_id) {
+      let parent = currentCategories.find(c => c.id === cat.parent_id)
+      if (parent && !parent.woo_id) {
+        // Sincroniza o pai primeiro
+        const parentResult = await syncCategoryToWoo(parent, currentCategories)
+        parent = { ...parent, woo_id: parentResult.wooId }
+        await api.updateCategory(parent.id, { woo_id: parentResult.wooId })
+        setCategories(prev => prev.map(c => c.id === parent.id ? { ...c, woo_id: parentResult.wooId } : c))
+        currentCategories = currentCategories.map(c => c.id === parent.id ? { ...c, woo_id: parentResult.wooId } : c)
+      }
+      if (parent?.woo_id) body.parent = parent.woo_id
+    }
+
+    const wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body: withImage(body) })
+    return { wooId: wooData.id }
+  }
+
   const handleSync = async (cat) => {
     setSyncing(cat.id)
     try {
-      let wooData
-      const wooImg = await resolveWooImage(cat.image_url)
-      const withImage = (body) => wooImg ? { ...body, image: wooImg } : body
-      if (cat.woo_id) {
-        wooData = await wooProxy({ method: 'PUT', endpoint: `products/categories/${cat.woo_id}`, body: withImage({ name: cat.name, slug: cat.slug }) })
-      } else {
-        const body = { name: cat.name, slug: cat.slug }
-        if (cat.parent_id) {
-          const parent = categories.find(c => c.id === cat.parent_id)
-          if (parent?.woo_id) body.parent = parent.woo_id
-        }
-        wooData = await wooProxy({ method: 'POST', endpoint: 'products/categories', body: withImage(body) })
-      }
-      const updated = await api.updateCategory(cat.id, { woo_id: wooData.id })
-      setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, woo_id: wooData.id } : c))
-      showAlert('success', `Categoria sincronizada! ID Woo: ${wooData.id}`)
+      const { wooId } = await syncCategoryToWoo(cat, categories)
+      await api.updateCategory(cat.id, { woo_id: wooId })
+      setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, woo_id: wooId } : c))
+      showAlert('success', `Categoria sincronizada! ID Woo: ${wooId}`)
     } catch (e) {
       showAlert('error', 'Erro ao sincronizar: ' + e.message)
     } finally {

@@ -10,9 +10,12 @@ async function pingSupabase() {
   try {
     const ctrl = new AbortController()
     const timer = setTimeout(() => ctrl.abort(), TIMEOUT)
-    const res = await fetch(`${ENV.SUPABASE_URL}/rest/v1/`, { signal: ctrl.signal })
+    const res = await fetch(`${ENV.SUPABASE_URL}/rest/v1/`, {
+      headers: { apikey: ENV.SUPABASE_ANON_KEY },
+      signal: ctrl.signal,
+    })
     clearTimeout(timer)
-    return res.ok || res.status === 401 // 401 = alcançou o servidor
+    return res.ok || res.status === 401
   } catch {
     return false
   }
