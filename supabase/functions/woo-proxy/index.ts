@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { method = 'GET', endpoint, body, credentials, action, image_url, filename } = await req.json()
+    const { method = 'GET', endpoint, body, credentials, action, image_url, filename, company_id } = await req.json()
 
     let creds = credentials
     if (!creds) {
@@ -21,15 +21,23 @@ serve(async (req) => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       )
 
+      if (!company_id) {
+        return new Response(JSON.stringify({ error: 'company_id é obrigatório para buscar credenciais' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
       const { data, error: credsError } = await supabase
         .from('marketplace_credentials')
         .select('store_url, consumer_key, consumer_secret')
         .eq('marketplace', 'woocommerce')
+        .eq('company_id', company_id)
         .eq('is_active', true)
+        .limit(1)
         .single()
 
       if (credsError || !data) {
-        return new Response(JSON.stringify({ error: 'WooCommerce não configurado ou inativo' }), {
+        return new Response(JSON.stringify({ error: 'WooCommerce não configurado ou inativo para esta empresa' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
