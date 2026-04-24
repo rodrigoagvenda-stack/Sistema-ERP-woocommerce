@@ -289,25 +289,39 @@ export const api = {
   // ── WooCommerce Credentials ───────────────────
   async getWooCredentials() {
     const cid = await getCompanyId()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('marketplace_credentials')
       .select('*')
       .eq('marketplace', 'woocommerce')
       .eq('company_id', cid)
+      .order('updated_at', { ascending: false })
       .limit(1)
+    if (error) return null
     return data?.[0] || null
   },
 
   async upsertWooCredentials(creds) {
     const cid = await getCompanyId()
     const existing = await this.getWooCredentials()
-    const payload = { marketplace: 'woocommerce', company_id: cid, ...creds, updated_at: new Date().toISOString() }
+    const payload = {
+      marketplace: 'woocommerce',
+      company_id: cid,
+      store_url: creds.store_url,
+      consumer_key: creds.consumer_key,
+      consumer_secret: creds.consumer_secret,
+      is_active: creds.is_active ?? true,
+      auto_sync_stock: creds.auto_sync_stock ?? false,
+      auto_sync_price: creds.auto_sync_price ?? false,
+      auto_sync_products: creds.auto_sync_products ?? false,
+      updated_at: new Date().toISOString(),
+    }
 
     if (existing?.id) {
       const { data, error } = await supabase
         .from('marketplace_credentials')
         .update(payload)
         .eq('id', existing.id)
+        .eq('company_id', cid)
         .select()
       if (error) throw error
       return data[0]
@@ -317,19 +331,6 @@ export const api = {
       .from('marketplace_credentials')
       .insert(payload)
       .select()
-
-    if (error?.code === '23505') {
-      // Conflito — atualiza pelo marketplace+company_id
-      const { data: d2, error: e2 } = await supabase
-        .from('marketplace_credentials')
-        .update(payload)
-        .eq('marketplace', 'woocommerce')
-        .eq('company_id', cid)
-        .select()
-      if (e2) throw e2
-      return d2[0]
-    }
-
     if (error) throw error
     return data[0]
   },
