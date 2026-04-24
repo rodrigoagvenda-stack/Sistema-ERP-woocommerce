@@ -158,8 +158,17 @@ export default function Categories() {
     const withImage = (body) => wooImg ? { ...body, image: wooImg } : body
 
     if (cat.woo_id) {
-      const wooData = await wooProxy({ method: 'PUT', endpoint: `products/categories/${cat.woo_id}`, body: withImage({ name: cat.name, slug: cat.slug }) })
-      return { wooId: wooData.id }
+      try {
+        const wooData = await wooProxy({ method: 'PUT', endpoint: `products/categories/${cat.woo_id}`, body: withImage({ name: cat.name, slug: cat.slug }) })
+        return { wooId: wooData.id }
+      } catch (e) {
+        if (e.message?.includes('term_invalid') || e.message?.includes('inexistente') || e.message?.includes('404')) {
+          // woo_id inválido nesta loja — reseta e cria do zero
+          await api.updateCategory(cat.id, { woo_id: null })
+          setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, woo_id: null } : c))
+          cat = { ...cat, woo_id: null }
+        } else throw e
+      }
     }
 
     // Monta body sem slug (deixa WooCommerce gerar) para evitar conflitos
