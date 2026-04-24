@@ -289,14 +289,12 @@ export const api = {
   // ── WooCommerce Credentials ───────────────────
   async getWooCredentials() {
     const cid = await getCompanyId()
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('marketplace_credentials')
       .select('*')
       .eq('marketplace', 'woocommerce')
       .eq('company_id', cid)
-      .order('updated_at', { ascending: false })
       .limit(1)
-    if (error) return null
     return data?.[0] || null
   },
 
@@ -310,10 +308,6 @@ export const api = {
       consumer_key: creds.consumer_key,
       consumer_secret: creds.consumer_secret,
       is_active: creds.is_active ?? true,
-      auto_sync_stock: creds.auto_sync_stock ?? false,
-      auto_sync_price: creds.auto_sync_price ?? false,
-      auto_sync_products: creds.auto_sync_products ?? false,
-      updated_at: new Date().toISOString(),
     }
 
     if (existing?.id) {
