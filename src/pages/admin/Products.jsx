@@ -452,14 +452,23 @@ export default function Products() {
 
       let wooData
       if (product.woo_id) {
-        wooData = await wooProxy({ method: 'PUT', endpoint: `products/${product.woo_id}`, body: payload })
+        try {
+          wooData = await wooProxy({ method: 'PUT', endpoint: `products/${product.woo_id}`, body: payload })
+        } catch (e) {
+          if (e.message?.includes('invalid_id') || e.message?.includes('ID inválido')) {
+            // woo_id inválido nesta loja — reseta e cria como novo
+            const cid = await getCompanyId()
+            await supabase.from('products').update({ woo_id: null }).eq('id', product.id).eq('company_id', cid)
+            setProducts(prev => prev.map(p => p.id === product.id ? { ...p, woo_id: null } : p))
+            wooData = await wooProxy({ method: 'POST', endpoint: 'products', body: { ...payload, type: 'simple' } })
+          } else throw e
+        }
       } else {
         wooData = await wooProxy({ method: 'POST', endpoint: 'products', body: { ...payload, type: 'simple' } })
-        // Salvar woo_id localmente
-        const cid = await getCompanyId()
-        await supabase.from('products').update({ woo_id: wooData.id }).eq('id', product.id).eq('company_id', cid)
-        setProducts(prev => prev.map(p => p.id === product.id ? { ...p, woo_id: wooData.id } : p))
       }
+      const cid = await getCompanyId()
+      await supabase.from('products').update({ woo_id: wooData.id }).eq('id', product.id).eq('company_id', cid)
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, woo_id: wooData.id } : p))
 
       showAlert('success', `"${product.name}" sincronizado com WooCommerce! ID: ${wooData.id}`)
     } catch (e) {
