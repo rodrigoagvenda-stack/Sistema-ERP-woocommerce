@@ -403,8 +403,12 @@ export default function Products() {
           try {
             await wooProxy({ method: 'PUT', endpoint: `products/${current.woo_id}`, body: wooPayload })
             showAlert('success', `Produto "${updated.name}" atualizado e sincronizado com WooCommerce!`)
-          } catch {
-            showAlert('success', `Produto "${updated.name}" atualizado no ERP (falha ao sincronizar WooCommerce).`)
+          } catch (e) {
+            if (e.message?.includes('invalid_id') || e.message?.includes('ID inválido')) {
+              await api.updateProduct(current.id, { woo_id: null })
+              setProducts(prev => prev.map(p => p.id === current.id ? { ...p, woo_id: null } : p))
+            }
+            showAlert('success', `Produto "${updated.name}" atualizado no ERP (sincronize manualmente com o WooCommerce).`)
           }
         } else {
           showAlert('success', `Produto "${updated.name}" atualizado!`)
