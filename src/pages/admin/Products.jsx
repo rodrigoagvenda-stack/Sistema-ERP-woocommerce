@@ -98,6 +98,12 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
       {/* Step 2 — Detalhes */}
       {step === 2 && (
         <div className="space-y-4">
+          {!current.category_id && (
+            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              <span>⚠️</span>
+              <span>Lembre-se de vincular este produto a uma categoria para que ele seja sincronizado corretamente com o WooCommerce.</span>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Categoria</Label>
