@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Plus, Pencil, Trash2, Search, CheckCircle2, AlertCircle, X, Upload, Globe } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -270,6 +270,7 @@ export default function Products() {
   const [dialog, setDialog] = useState(null) // null | 'create' | 'edit' | 'delete'
   const [current, setCurrent] = useState(EMPTY_PRODUCT)
   const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)
   const [imageLoading, setImageLoading] = useState(false)
   const [syncing, setSyncing] = useState(null) // product id being synced
   const [step, setStep] = useState(1)
@@ -353,8 +354,10 @@ export default function Products() {
   }
 
   const handleSave = async () => {
+    if (savingRef.current) return
     if (!current.name?.trim()) return showAlert('error', 'Nome é obrigatório')
     if (!current.price) return showAlert('error', 'Preço é obrigatório')
+    savingRef.current = true
     setSaving(true)
     try {
       const payload = {
@@ -422,6 +425,7 @@ export default function Products() {
     } catch (e) {
       showAlert('error', 'Erro ao salvar: ' + e.message)
     } finally {
+      savingRef.current = false
       setSaving(false)
     }
   }
