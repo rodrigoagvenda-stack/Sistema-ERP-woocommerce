@@ -19,6 +19,7 @@ const Products       = lazy(() => import('@/pages/admin/Products'))
 const Categories     = lazy(() => import('@/pages/admin/Categories'))
 const Brands         = lazy(() => import('@/pages/admin/Brands'))
 const Tags           = lazy(() => import('@/pages/admin/Tags'))
+const Styles         = lazy(() => import('@/pages/admin/Styles'))
 const Attributes     = lazy(() => import('@/pages/admin/Attributes'))
 const Reviews        = lazy(() => import('@/pages/admin/Reviews'))
 const WooSettings    = lazy(() => import('@/pages/admin/WooSettings'))
@@ -75,6 +76,7 @@ export default function App() {
         <Route path="/admin/:slug/categories" element={<AdminPage><Categories /></AdminPage>} />
         <Route path="/admin/:slug/brands"     element={<AdminPage><Brands /></AdminPage>} />
         <Route path="/admin/:slug/tags"       element={<AdminPage><Tags /></AdminPage>} />
+        <Route path="/admin/:slug/styles"     element={<AdminPage><Styles /></AdminPage>} />
         <Route path="/admin/:slug/attributes" element={<AdminPage><Attributes /></AdminPage>} />
         <Route path="/admin/:slug/reviews"    element={<AdminPage><Reviews /></AdminPage>} />
         <Route path="/admin/:slug/faq"        element={<AdminPage><FAQ /></AdminPage>} />

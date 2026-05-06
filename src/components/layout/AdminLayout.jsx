@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Package, Tag, Layers, Star, BarChart2,
   Settings, ChevronDown, ChevronRight, LogOut, Menu, X,
   ShoppingBag, TrendingUp, ShoppingCart, Shuffle, FolderOpen,
-  Warehouse, SlidersHorizontal, Globe, FileText, Bookmark, Ticket, Beer, Truck, CreditCard
+  Warehouse, SlidersHorizontal, Globe, FileText, Bookmark, Ticket, Beer, Truck, CreditCard, FlaskConical
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useCompany } from '@/context/CompanyContext'
@@ -169,7 +169,8 @@ export default function AdminLayout({ children }) {
           { label: 'Produtos',    icon: ShoppingBag, to: `${base}/products` },
           { label: 'Categorias', icon: FolderOpen,  to: `${base}/categories` },
           { label: 'Marcas',     icon: Bookmark,    to: `${base}/brands` },
-          { label: 'Tags',       icon: Tag,         to: `${base}/tags` },
+          { label: 'Tags',       icon: Tag,            to: `${base}/tags` },
+          { label: 'Estilos',    icon: FlaskConical,   to: `${base}/styles` },
           { label: 'Atributos',  icon: Layers,      to: `${base}/attributes` },
           { label: 'Avaliações', icon: Star,        to: `${base}/reviews` },
         ],

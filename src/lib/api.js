@@ -374,6 +374,43 @@ export const api = {
     }
   },
 
+  // ── Styles ────────────────────────────────────
+  async getAllStyles() {
+    const cid = await getCompanyId()
+    const { data, error } = await supabase
+      .from('styles')
+      .select('*')
+      .eq('company_id', cid)
+      .order('name', { ascending: true })
+    if (error) throw error
+    return data || []
+  },
+
+  async createStyle(style) {
+    const cid = await getCompanyId()
+    const { data, error } = await supabase.from('styles').insert([{ ...style, company_id: cid }]).select()
+    if (error) throw error
+    return data[0]
+  },
+
+  async updateStyle(id, style) {
+    const cid = await getCompanyId()
+    const { data, error } = await supabase.from('styles').update(style).eq('id', id).eq('company_id', cid).select()
+    if (error) throw error
+    return data[0]
+  },
+
+  async deleteStyle(id) {
+    const cid = await getCompanyId()
+    const { data: s } = await supabase.from('styles').select('name').eq('id', id).eq('company_id', cid).single()
+    if (s?.name) {
+      await supabase.from('products').update({ style: null }).eq('style', s.name).eq('company_id', cid)
+    }
+    const { error } = await supabase.from('styles').delete().eq('id', id).eq('company_id', cid)
+    if (error) throw error
+    return true
+  },
+
   // ── Banners ───────────────────────────────────
   async getAllBanners() {
     const cid = await getCompanyId()

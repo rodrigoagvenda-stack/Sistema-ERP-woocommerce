@@ -21,11 +21,6 @@ const EMPTY_PRODUCT = {
   weight: '', width: '', height: '', depth: '', woo_tags: [], style: ''
 }
 
-const ESTILOS = [
-  'Pils', 'Czech Pils', 'American Pale Ale', 'West Coast IPA',
-  'American Sour Ale', 'American IPA', 'Double India Black Ale',
-  'Straight RIS', 'Dry Stout',
-]
 
 const STEPS = [
   { n: 1, label: 'Básico' },
@@ -54,7 +49,7 @@ function StepIndicator({ step }) {
   )
 }
 
-function ProductStepper({ step, setStep, current, setCurrent, categories, brands, features, imageLoading, handleUploadImage, removeImage, saving, onSave, onCancel, isEdit }) {
+function ProductStepper({ step, setStep, current, setCurrent, categories, brands, styles, features, imageLoading, handleUploadImage, removeImage, saving, onSave, onCancel, isEdit }) {
   const set = (key, val) => setCurrent(p => ({ ...p, [key]: val }))
 
   return (
@@ -142,7 +137,7 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
                   <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sem estilo</SelectItem>
-                    {ESTILOS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    {styles.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -268,6 +263,7 @@ export default function Products() {
   const [categories, setCategories] = useState([])
   const [brands, setBrands] = useState([])
   const [tags, setTags] = useState([])
+  const [styles, setStyles] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [alert, setAlert] = useState(null)
@@ -290,16 +286,18 @@ export default function Products() {
   const loadAll = async () => {
     setLoading(true)
     try {
-      const [p, c, b, t] = await Promise.all([
+      const [p, c, b, t, st] = await Promise.all([
         api.getAllProducts(),
         api.getAllCategories(),
         api.getAllBrands(),
         api.getAllTags(),
+        api.getAllStyles(),
       ])
       setProducts(p)
       setCategories(c)
       setBrands(b)
       setTags(t)
+      setStyles(st)
     } catch (e) {
       showAlert('error', 'Erro ao carregar dados: ' + e.message)
     } finally {
@@ -672,6 +670,7 @@ export default function Products() {
             step={step} setStep={setStep}
             current={current} setCurrent={setCurrent}
             categories={categories} brands={brands}
+            styles={styles}
             features={features}
             imageLoading={imageLoading}
             handleUploadImage={handleUploadImage}
