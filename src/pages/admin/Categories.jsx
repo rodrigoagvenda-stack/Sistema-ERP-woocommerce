@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, Globe, CheckCircle2, AlertCircle, X, ImageIcon } from 'lucide-react'
+import { Plus, Pencil, Trash2, Globe, CheckCircle2, AlertCircle, X, ImageIcon, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,6 +22,7 @@ export default function Categories() {
   const [current, setCurrent] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [syncing, setSyncing] = useState(null)
+  const [importing, setImporting] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const imageInputRef = useRef(null)
 
@@ -223,6 +224,66 @@ export default function Categories() {
     }
   }
 
+  const handleImportFromWoo = async () => {
+    setImporting(true)
+    try {
+      // Busca todas as categorias do WooCommerce (até 100)
+      const wooData = await wooProxy({ method: 'GET', endpoint: 'products/categories?per_page=100&hide_empty=false' })
+      const wooCats = Array.isArray(wooData) ? wooData : (wooData?.categories || [])
+
+      if (!wooCats.length) {
+        showAlert('error', 'Nenhuma categoria encontrada no WooCommerce.')
+        return
+      }
+
+      const existing = await api.getAllCategories()
+      const existingWooIds = new Set(existing.map(c => c.woo_id).filter(Boolean))
+
+      // Importa primeiro as categorias pai (parent === 0)
+      const parents = wooCats.filter(c => !c.parent || c.parent === 0)
+      const children = wooCats.filter(c => c.parent && c.parent !== 0)
+
+      let created = 0
+      const wooIdToLocalId = {}
+
+      // Mapeia categorias já existentes
+      existing.forEach(c => { if (c.woo_id) wooIdToLocalId[c.woo_id] = c.id })
+
+      for (const cat of parents) {
+        if (existingWooIds.has(cat.id)) continue
+        const novo = await api.createCategory({
+          name: cat.name,
+          slug: cat.slug,
+          woo_id: cat.id,
+          parent_id: null,
+          image_url: cat.image?.src || null,
+        })
+        wooIdToLocalId[cat.id] = novo.id
+        created++
+      }
+
+      for (const cat of children) {
+        if (existingWooIds.has(cat.id)) continue
+        const novo = await api.createCategory({
+          name: cat.name,
+          slug: cat.slug,
+          woo_id: cat.id,
+          parent_id: wooIdToLocalId[cat.parent] || null,
+          image_url: cat.image?.src || null,
+        })
+        wooIdToLocalId[cat.id] = novo.id
+        created++
+      }
+
+      await load()
+      showAlert('success', `${created} categoria(s) importada(s) do WooCommerce!`)
+    } catch (e) {
+      showAlert('error', 'Erro ao importar: ' + e.message)
+    } finally {
+      setImporting(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -230,9 +291,15 @@ export default function Categories() {
           <h1 className="text-xl font-bold text-gray-900">Categorias</h1>
           <p className="text-sm text-gray-500">{categories.length} categorias</p>
         </div>
-        <Button onClick={openCreate} className="gap-2">
-          <Plus className="h-4 w-4" /> Nova Categoria
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleImportFromWoo} disabled={importing} className="gap-2">
+            {importing ? <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> : <Download className="h-4 w-4" />}
+            {importing ? 'Importando...' : 'Importar do Woo'}
+          </Button>
+          <Button onClick={openCreate} className="gap-2">
+            <Plus className="h-4 w-4" /> Nova Categoria
+          </Button>
+        </div>
       </div>
 
       {alert && (
