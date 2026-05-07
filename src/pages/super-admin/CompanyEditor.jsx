@@ -152,6 +152,7 @@ export default function CompanyEditor() {
   // Usuários
   const [users, setUsers] = useState([])
   const [usersLoading, setUsersLoading] = useState(false)
+  const [newNome, setNewNome] = useState('')
   const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -187,13 +188,14 @@ export default function CompanyEditor() {
     setUserError(null)
     setUserSuccess(null)
     const { data, error } = await supabase.functions.invoke('manage-company-users', {
-      body: { action: 'create', company_id: Number(id), email: newEmail.trim(), password: newPassword }
+      body: { action: 'create', company_id: Number(id), email: newEmail.trim(), password: newPassword, nome: newNome.trim() || newEmail.split('@')[0] }
     })
     setUserSaving(false)
     if (error || data?.error) {
       setUserError(data?.error || error.message)
     } else {
       setUserSuccess(`Usuário "${newEmail}" criado com sucesso!`)
+      setNewNome('')
       setNewEmail('')
       setNewPassword('')
       loadUsers()
@@ -447,6 +449,13 @@ export default function CompanyEditor() {
               </div>
             )}
 
+            <Field label="Nome">
+              <TextInput
+                value={newNome}
+                onChange={setNewNome}
+                placeholder="Ex: João Silva"
+              />
+            </Field>
             <Field label="E-mail">
               <TextInput
                 value={newEmail}

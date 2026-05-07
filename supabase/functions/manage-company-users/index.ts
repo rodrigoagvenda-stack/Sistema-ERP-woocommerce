@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, company_id, email, password, user_id } = await req.json()
+    const { action, company_id, email, password, user_id, nome } = await req.json()
 
     // Admin client com service role (acesso total ao auth)
     const admin = createClient(
@@ -52,9 +52,10 @@ serve(async (req) => {
       const userId = authData.user.id
 
       // Vincula à empresa na tabela profiles (inclui email para listagem)
+      const nomeValue = nome?.trim() || email.split('@')[0]
       const { error: profileError } = await admin
         .from('profiles')
-        .insert({ id: userId, company_id, email })
+        .insert({ id: userId, company_id, email, nome: nomeValue })
 
       if (profileError) {
         // Rollback: remove o usuário do auth se o profile falhar
@@ -83,8 +84,9 @@ serve(async (req) => {
 
     throw new Error(`Ação desconhecida: ${action}`)
   } catch (e) {
+    console.error('[manage-company-users] erro:', e.message)
     return new Response(JSON.stringify({ error: e.message }), {
-      status: 400,
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
