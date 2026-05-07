@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, Search, CheckCircle2, AlertCircle, X, Upload, Globe, Download } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, CheckCircle2, AlertCircle, X, Upload, Globe, Download, Copy, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -20,7 +20,6 @@ const EMPTY_PRODUCT = {
   category_id: '', subcategory_id: '', brand_id: '', status: 'active', image_urls: [],
   weight: '', width: '', height: '', depth: '', woo_tags: [], style: ''
 }
-
 
 const STEPS = [
   { n: 1, label: 'Básico' },
@@ -153,7 +152,6 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
       {/* Step 3 — Mídia + Dimensões */}
       {step === 3 && (
         <div className="space-y-5">
-          {/* Imagem principal */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Imagem principal <span className="text-gray-400 font-normal text-xs">(destaque)</span></Label>
             <div className="flex items-center gap-4">
@@ -175,7 +173,6 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
             </div>
           </div>
 
-          {/* Galeria */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Galeria</Label>
             <div className="flex flex-wrap gap-2">
@@ -197,7 +194,6 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
             </div>
           </div>
 
-          {/* Dimensões */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Dimensões e peso</Label>
             <div className="grid grid-cols-4 gap-3">
@@ -212,7 +208,6 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
         </div>
       )}
 
-      {/* Footer nav */}
       <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
         <button
           type="button"
@@ -257,6 +252,14 @@ function AlertMsg({ alert }) {
   )
 }
 
+// Pills de filtro rápido
+const TABS = [
+  { key: 'all', label: 'Todos' },
+  { key: 'active', label: 'Ativos' },
+  { key: 'inactive', label: 'Inativos' },
+  { key: 'low_stock', label: '⚠️ Estoque crítico' },
+]
+
 export default function Products() {
   const { features } = useCompany()
   const [products, setProducts] = useState([])
@@ -266,24 +269,25 @@ export default function Products() {
   const [styles, setStyles] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [filterTab, setFilterTab] = useState('all')
+  const [filterCategory, setFilterCategory] = useState('all')
   const [alert, setAlert] = useState(null)
-  const [dialog, setDialog] = useState(null) // null | 'create' | 'edit' | 'delete'
+  const [dialog, setDialog] = useState(null)
   const [current, setCurrent] = useState(EMPTY_PRODUCT)
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
   const [imageLoading, setImageLoading] = useState(false)
-  const [syncing, setSyncing] = useState(null) // product id being synced
+  const [syncing, setSyncing] = useState(null)
+  const [syncingAll, setSyncingAll] = useState(false)
   const [importing, setImporting] = useState(false)
   const [step, setStep] = useState(1)
 
   const showAlert = (type, message) => {
     setAlert({ type, message })
-    setTimeout(() => setAlert(null), 4000)
+    setTimeout(() => setAlert(null), 5000)
   }
 
-  useEffect(() => {
-    loadAll()
-  }, [])
+  useEffect(() => { loadAll() }, [])
 
   const loadAll = async () => {
     setLoading(true)
@@ -312,6 +316,18 @@ export default function Products() {
   const openDelete = (p) => { setCurrent(p); setDialog('delete') }
   const closeDialog = () => { setDialog(null); setCurrent(EMPTY_PRODUCT); setStep(1) }
 
+  const handleDuplicate = async (p) => {
+    try {
+      const { id, woo_id, created_at, updated_at, category, brand, ...rest } = p
+      const clone = { ...rest, name: `${p.name} (cópia)`, woo_id: null, status: 'inactive' }
+      const created = await api.createProduct(clone)
+      setProducts(prev => [created, ...prev])
+      showAlert('success', `"${p.name}" duplicado como rascunho inativo.`)
+    } catch (e) {
+      showAlert('error', 'Erro ao duplicar: ' + e.message)
+    }
+  }
+
   const convertToJpeg = (file) => new Promise((resolve, reject) => {
     const img = new Image()
     const url = URL.createObjectURL(file)
@@ -335,7 +351,6 @@ export default function Products() {
     if (!file) return
     setImageLoading(true)
     try {
-      // Converte para JPEG (garante compatibilidade com WooCommerce/WordPress)
       const jpeg = await convertToJpeg(file)
       const path = `products/${Date.now()}.jpg`
       const { error } = await supabase.storage.from('product-images').upload(path, jpeg, { contentType: 'image/jpeg' })
@@ -386,7 +401,6 @@ export default function Products() {
       } else {
         const updated = await api.updateProduct(current.id, payload)
         setProducts(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p))
-        // Sincronizar com WooCommerce se tiver woo_id
         if (current.woo_id) {
           const images = (payload.image_urls || []).filter(url => url.startsWith('http')).map(src => ({ src }))
           const cat = categories.find(c => c.id === payload.category_id)
@@ -431,45 +445,41 @@ export default function Products() {
     }
   }
 
+  const buildWooPayload = (product) => {
+    const images = (product.image_urls || []).filter(url => url.startsWith('http')).map(src => ({ src }))
+    const cat = categories.find(c => c.id === product.category_id)
+    const subcat = categories.find(c => c.id === product.subcategory_id)
+    const wooCats = []
+    if (subcat?.woo_id) wooCats.push({ id: subcat.woo_id })
+    else if (cat?.woo_id) wooCats.push({ id: cat.woo_id })
+    const wooAttributes = product.style
+      ? [{ name: 'Estilo', slug: 'estilo', options: [product.style], visible: true }]
+      : []
+    return {
+      name: product.name,
+      regular_price: String(product.price || 0),
+      description: product.description || '',
+      manage_stock: true,
+      stock_quantity: Number(product.stock) || 0,
+      status: product.status === 'active' ? 'publish' : 'draft',
+      ...(wooCats.length > 0 && { categories: wooCats }),
+      ...(wooAttributes.length > 0 && { attributes: wooAttributes }),
+      ...(product.weight && { weight: String(product.weight) }),
+      ...(product.width && { dimensions: { width: String(product.width), height: String(product.height || 0), length: String(product.depth || 0) } }),
+      ...(images.length > 0 && { images }),
+    }
+  }
+
   const handleSync = async (product) => {
     setSyncing(product.id)
     try {
-      const images = (product.image_urls || [])
-        .filter(url => url.startsWith('http'))
-        .map(src => ({ src }))
-
-      const cat = categories.find(c => c.id === product.category_id)
-      const subcat = categories.find(c => c.id === product.subcategory_id)
-      // Monta lista de categorias WooCommerce: prioriza subcategoria (Woo inclui pai automaticamente)
-      const wooCats = []
-      if (subcat?.woo_id) wooCats.push({ id: subcat.woo_id })
-      else if (cat?.woo_id) wooCats.push({ id: cat.woo_id })
-
-      const wooAttributes = product.style
-        ? [{ name: 'Estilo', slug: 'estilo', options: [product.style], visible: true }]
-        : []
-
-      const payload = {
-        name: product.name,
-        regular_price: String(product.price || 0),
-        description: product.description || '',
-        manage_stock: true,
-        stock_quantity: Number(product.stock) || 0,
-        status: product.status === 'active' ? 'publish' : 'draft',
-        ...(wooCats.length > 0 && { categories: wooCats }),
-        ...(wooAttributes.length > 0 && { attributes: wooAttributes }),
-        ...(product.weight && { weight: String(product.weight) }),
-        ...(product.width && { dimensions: { width: String(product.width), height: String(product.height || 0), length: String(product.depth || 0) } }),
-        ...(images.length > 0 && { images }),
-      }
-
+      const payload = buildWooPayload(product)
       let wooData
       if (product.woo_id) {
         try {
           wooData = await wooProxy({ method: 'PUT', endpoint: `products/${product.woo_id}`, body: payload })
         } catch (e) {
           if (e.message?.includes('invalid_id') || e.message?.includes('ID inválido')) {
-            // woo_id inválido nesta loja — reseta e cria como novo
             const cid = await getCompanyId()
             await supabase.from('products').update({ woo_id: null }).eq('id', product.id).eq('company_id', cid)
             setProducts(prev => prev.map(p => p.id === product.id ? { ...p, woo_id: null } : p))
@@ -482,8 +492,7 @@ export default function Products() {
       const cid = await getCompanyId()
       await supabase.from('products').update({ woo_id: wooData.id }).eq('id', product.id).eq('company_id', cid)
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, woo_id: wooData.id } : p))
-
-      showAlert('success', `"${product.name}" sincronizado com WooCommerce! ID: ${wooData.id}`)
+      showAlert('success', `"${product.name}" sincronizado! ID Woo: ${wooData.id}`)
     } catch (e) {
       showAlert('error', 'Erro ao sincronizar: ' + e.message)
     } finally {
@@ -491,10 +500,34 @@ export default function Products() {
     }
   }
 
+  const handleSyncAll = async () => {
+    const unsynced = products.filter(p => !p.woo_id && p.status === 'active')
+    if (unsynced.length === 0) {
+      showAlert('success', 'Todos os produtos ativos já estão sincronizados!')
+      return
+    }
+    setSyncingAll(true)
+    let ok = 0, fail = 0
+    for (const product of unsynced) {
+      try {
+        const payload = buildWooPayload(product)
+        const wooData = await wooProxy({ method: 'POST', endpoint: 'products', body: { ...payload, type: 'simple' } })
+        const cid = await getCompanyId()
+        await supabase.from('products').update({ woo_id: wooData.id }).eq('id', product.id).eq('company_id', cid)
+        setProducts(prev => prev.map(p => p.id === product.id ? { ...p, woo_id: wooData.id } : p))
+        ok++
+      } catch {
+        fail++
+      }
+    }
+    setSyncingAll(false)
+    showAlert(fail === 0 ? 'success' : 'error',
+      `Sync em massa: ${ok} enviado(s)${fail > 0 ? `, ${fail} com erro` : ''}.`)
+  }
+
   const handleImportFromWoo = async () => {
     setImporting(true)
     try {
-      // Busca todos os produtos do WooCommerce (paginado 100/página)
       let page = 1
       let allWoo = []
       while (true) {
@@ -504,85 +537,45 @@ export default function Products() {
         if (batch.length < 100) break
         page++
       }
+      if (allWoo.length === 0) { showAlert('error', 'Nenhum produto encontrado no WooCommerce.'); return }
 
-      if (allWoo.length === 0) {
-        showAlert('error', 'Nenhum produto encontrado no WooCommerce.')
-        return
-      }
-
-      // IDs já importados para evitar duplicatas
       const existingWooIds = new Set(products.filter(p => p.woo_id).map(p => Number(p.woo_id)))
-
       const toImport = allWoo.filter(w => !existingWooIds.has(w.id))
-
-      if (toImport.length === 0) {
-        showAlert('success', 'Todos os produtos do WooCommerce já estão importados.')
-        return
-      }
+      if (toImport.length === 0) { showAlert('success', 'Todos os produtos do WooCommerce já estão importados.'); return }
 
       let created = 0
-      let updated = 0
-
       for (const w of toImport) {
-        // Mapeia categoria: usa subcategoria se houver, senão categoria raiz
-        let category_id = null
-        let subcategory_id = null
-        if (w.categories?.length > 0) {
-          for (const wc of w.categories) {
-            const match = categories.find(c => c.woo_id === wc.id)
-            if (match) {
-              if (match.parent_id) {
-                subcategory_id = match.id
-                // busca o pai
-                const parent = categories.find(c => c.id === match.parent_id)
-                if (parent) category_id = parent.id
-              } else {
-                category_id = match.id
-              }
-            }
+        let category_id = null, subcategory_id = null
+        for (const wc of (w.categories || [])) {
+          const match = categories.find(c => c.woo_id === wc.id)
+          if (match) {
+            if (match.parent_id) { subcategory_id = match.id; const par = categories.find(c => c.id === match.parent_id); if (par) category_id = par.id }
+            else category_id = match.id
           }
         }
-
-        // Estilo via attributes
         const estiloAttr = w.attributes?.find(a => a.slug === 'estilo' || a.name?.toLowerCase() === 'estilo')
-        const style = estiloAttr?.options?.[0] || null
-
-        // Imagens
-        const image_urls = (w.images || []).map(i => i.src).filter(Boolean)
-
         const payload = {
           name: w.name,
           description: w.description || w.short_description || '',
           price: parseFloat(w.regular_price || w.price || '0') || 0,
           stock: parseInt(w.stock_quantity) || 0,
           min_stock: 5,
-          category_id,
-          subcategory_id,
-          brand_id: null,
+          category_id, subcategory_id, brand_id: null,
           status: w.status === 'publish' ? 'active' : 'inactive',
-          image_urls,
+          image_urls: (w.images || []).map(i => i.src).filter(Boolean),
           weight: w.weight ? parseFloat(w.weight) : null,
           width: w.dimensions?.width ? parseFloat(w.dimensions.width) : null,
           height: w.dimensions?.height ? parseFloat(w.dimensions.height) : null,
           depth: w.dimensions?.length ? parseFloat(w.dimensions.length) : null,
           woo_tags: (w.tags || []).map(t => t.name).filter(Boolean),
-          style,
+          style: estiloAttr?.options?.[0] || null,
           woo_id: w.id,
         }
-
-        // Verifica se já existe pelo woo_id (segunda verificação com dados frescos)
-        const existing = products.find(p => p.woo_id === w.id)
-        if (existing) {
-          updated++
-          continue
-        }
-
         await api.createProduct(payload)
         created++
       }
-
       await loadAll()
-      showAlert('success', `Importação concluída! ${created} produto(s) importado(s)${updated > 0 ? `, ${updated} já existiam` : ''}.`)
+      showAlert('success', `Importação concluída! ${created} produto(s) importado(s).`)
     } catch (e) {
       showAlert('error', 'Erro ao importar produtos: ' + e.message)
     } finally {
@@ -593,13 +586,8 @@ export default function Products() {
   const handleDelete = async () => {
     setSaving(true)
     try {
-      // Deletar do WooCommerce primeiro se tiver woo_id
       if (current.woo_id) {
-        try {
-          await wooProxy({ method: 'DELETE', endpoint: `products/${current.woo_id}?force=true` })
-        } catch {
-          // Continua mesmo se falhar no Woo
-        }
+        try { await wooProxy({ method: 'DELETE', endpoint: `products/${current.woo_id}?force=true` }) } catch {}
       }
       await api.deleteProduct(current.id)
       setProducts(prev => prev.filter(p => p.id !== current.id))
@@ -612,26 +600,47 @@ export default function Products() {
     }
   }
 
-  const filtered = products.filter(p =>
-    p.name?.toLowerCase().includes(search.toLowerCase()) ||
-    p.description?.toLowerCase().includes(search.toLowerCase())
-  )
+  // Filtros combinados
+  const filtered = products.filter(p => {
+    const matchSearch = !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase())
+    const matchTab =
+      filterTab === 'all' ? true :
+      filterTab === 'active' ? p.status === 'active' :
+      filterTab === 'inactive' ? p.status === 'inactive' :
+      filterTab === 'low_stock' ? (p.stock || 0) < (p.min_stock || 5) : true
+    const matchCat = filterCategory === 'all' || p.category_id?.toString() === filterCategory
+    return matchSearch && matchTab && matchCat
+  })
 
+  const lowStockCount = products.filter(p => (p.stock || 0) < (p.min_stock || 5)).length
+  const unsyncedCount = products.filter(p => !p.woo_id && p.status === 'active').length
   const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n)
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Produtos</h1>
-          <p className="text-sm text-gray-500">{products.length} produtos cadastrados</p>
+          <p className="text-sm text-gray-500">
+            {products.length} cadastrados
+            {lowStockCount > 0 && <span className="ml-2 text-amber-600 font-medium">· {lowStockCount} com estoque crítico</span>}
+          </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {features.site && (
-            <Button variant="outline" onClick={handleImportFromWoo} disabled={importing} className="gap-2">
-              <Download className={`h-4 w-4 ${importing ? 'animate-bounce' : ''}`} />
-              {importing ? 'Importando...' : 'Importar do Woo'}
-            </Button>
+            <>
+              <Button variant="outline" onClick={handleImportFromWoo} disabled={importing} className="gap-2">
+                <Download className={`h-4 w-4 ${importing ? 'animate-bounce' : ''}`} />
+                {importing ? 'Importando...' : 'Importar do Woo'}
+              </Button>
+              {unsyncedCount > 0 && (
+                <Button variant="outline" onClick={handleSyncAll} disabled={syncingAll} className="gap-2 border-blue-200 text-blue-700 hover:bg-blue-50">
+                  <RefreshCw className={`h-4 w-4 ${syncingAll ? 'animate-spin' : ''}`} />
+                  {syncingAll ? 'Sincronizando...' : `Sync todos (${unsyncedCount})`}
+                </Button>
+              )}
+            </>
           )}
           <Button onClick={openCreate} className="gap-2">
             <Plus className="h-4 w-4" /> Novo Produto
@@ -642,17 +651,58 @@ export default function Products() {
       <AlertMsg alert={alert} />
 
       <Card>
-        <CardHeader className="pb-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Buscar produtos..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-9"
-            />
+        <CardHeader className="pb-3 space-y-3">
+          {/* Busca + Filtro por categoria */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Buscar produtos..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas categorias</SelectItem>
+                {categories.filter(c => !c.parent_id).map(c => (
+                  <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Pills de filtro rápido */}
+          <div className="flex gap-1.5 flex-wrap">
+            {TABS.map(tab => {
+              const count =
+                tab.key === 'all' ? products.length :
+                tab.key === 'active' ? products.filter(p => p.status === 'active').length :
+                tab.key === 'inactive' ? products.filter(p => p.status === 'inactive').length :
+                lowStockCount
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setFilterTab(tab.key)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border
+                    ${filterTab === tab.key
+                      ? tab.key === 'low_stock'
+                        ? 'bg-amber-100 border-amber-300 text-amber-800'
+                        : 'bg-gray-900 border-gray-900 text-white'
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}
+                >
+                  {tab.label} <span className="opacity-60 ml-0.5">{count}</span>
+                </button>
+              )
+            })}
           </div>
         </CardHeader>
+
         <CardContent className="p-0">
           {loading ? (
             <div className="p-8 text-center text-gray-400 text-sm">Carregando...</div>
@@ -671,12 +721,12 @@ export default function Products() {
                       <TableHead>Preço</TableHead>
                       <TableHead>Estoque</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="w-20" />
+                      <TableHead className="w-28" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filtered.map(p => (
-                      <TableRow key={p.id}>
+                      <TableRow key={p.id} className={(p.stock || 0) < (p.min_stock || 5) ? 'bg-amber-50/40' : ''}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             {p.image_urls?.[0] ? (
@@ -684,7 +734,12 @@ export default function Products() {
                             ) : (
                               <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center text-gray-300 text-xs">IMG</div>
                             )}
-                            <span className="font-medium text-sm text-gray-900">{p.name}</span>
+                            <div>
+                              <span className="font-medium text-sm text-gray-900">{p.name}</span>
+                              {!p.woo_id && p.status === 'active' && (
+                                <span className="ml-2 text-[10px] text-orange-500 font-medium">não sincronizado</span>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="text-sm text-gray-500">{p.category?.name || '—'}</TableCell>
@@ -702,19 +757,24 @@ export default function Products() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(p)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(p)} title="Editar">
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button
-                              variant="ghost" size="icon"
-                              className={`h-7 w-7 ${p.woo_id ? 'text-green-500 hover:text-green-700' : 'text-gray-400 hover:[color:var(--brand)]'}`}
-                              onClick={() => handleSync(p)}
-                              disabled={syncing === p.id}
-                              title={p.woo_id ? `Sincronizado (WooID: ${p.woo_id})` : 'Sincronizar com WooCommerce'}
-                            >
-                              <Globe className={`h-3.5 w-3.5 ${syncing === p.id ? 'animate-spin' : ''}`} />
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-gray-700" onClick={() => handleDuplicate(p)} title="Duplicar">
+                              <Copy className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600" onClick={() => openDelete(p)}>
+                            {features.site && (
+                              <Button
+                                variant="ghost" size="icon"
+                                className={`h-7 w-7 ${p.woo_id ? 'text-green-500 hover:text-green-700' : 'text-gray-400 hover:text-blue-500'}`}
+                                onClick={() => handleSync(p)}
+                                disabled={syncing === p.id}
+                                title={p.woo_id ? `Sincronizado (WooID: ${p.woo_id})` : 'Sincronizar com WooCommerce'}
+                              >
+                                <Globe className={`h-3.5 w-3.5 ${syncing === p.id ? 'animate-spin' : ''}`} />
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600" onClick={() => openDelete(p)} title="Excluir">
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -728,7 +788,7 @@ export default function Products() {
               {/* Mobile cards */}
               <div className="md:hidden divide-y divide-gray-100">
                 {filtered.map(p => (
-                  <div key={p.id} className="p-4 flex items-center gap-3">
+                  <div key={p.id} className={`p-4 flex items-center gap-3 ${(p.stock || 0) < (p.min_stock || 5) ? 'bg-amber-50/40' : ''}`}>
                     {p.image_urls?.[0] ? (
                       <img src={p.image_urls[0]} alt={p.name} className="w-14 h-14 rounded-lg object-cover shrink-0" />
                     ) : (
@@ -739,29 +799,19 @@ export default function Products() {
                       <p className="text-xs text-gray-500 mt-0.5">{p.category?.name || 'Sem categoria'}{p.brand?.name ? ` · ${p.brand.name}` : ''}</p>
                       <div className="flex items-center gap-2 mt-1.5">
                         <span className="text-sm font-bold text-gray-900">{fmt(p.price)}</span>
-                        <Badge variant={(p.stock || 0) < (p.min_stock || 5) ? 'warning' : 'success'} className="text-xs">
-                          {p.stock ?? 0} un.
-                        </Badge>
-                        <Badge variant={p.status === 'active' ? 'success' : 'secondary'} className="text-xs">
-                          {p.status === 'active' ? 'Ativo' : 'Inativo'}
-                        </Badge>
+                        <Badge variant={(p.stock || 0) < (p.min_stock || 5) ? 'warning' : 'success'} className="text-xs">{p.stock ?? 0} un.</Badge>
+                        <Badge variant={p.status === 'active' ? 'success' : 'secondary'} className="text-xs">{p.status === 'active' ? 'Ativo' : 'Inativo'}</Badge>
                       </div>
                     </div>
                     <div className="flex flex-col gap-1 shrink-0">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost" size="icon"
-                        className={`h-8 w-8 ${p.woo_id ? 'text-green-500' : 'text-gray-400'}`}
-                        onClick={() => handleSync(p)}
-                        disabled={syncing === p.id}
-                      >
-                        <Globe className={`h-4 w-4 ${syncing === p.id ? 'animate-spin' : ''}`} />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400" onClick={() => openDelete(p)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400" onClick={() => handleDuplicate(p)}><Copy className="h-4 w-4" /></Button>
+                      {features.site && (
+                        <Button variant="ghost" size="icon" className={`h-8 w-8 ${p.woo_id ? 'text-green-500' : 'text-gray-400'}`} onClick={() => handleSync(p)} disabled={syncing === p.id}>
+                          <Globe className={`h-4 w-4 ${syncing === p.id ? 'animate-spin' : ''}`} />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400" onClick={() => openDelete(p)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 ))}
@@ -777,13 +827,11 @@ export default function Products() {
           <DialogHeader>
             <DialogTitle>{dialog === 'create' ? 'Novo Produto' : 'Editar Produto'}</DialogTitle>
           </DialogHeader>
-
           <ProductStepper
             step={step} setStep={setStep}
             current={current} setCurrent={setCurrent}
             categories={categories} brands={brands}
-            styles={styles}
-            features={features}
+            styles={styles} features={features}
             imageLoading={imageLoading}
             handleUploadImage={handleUploadImage}
             removeImage={removeImage}
