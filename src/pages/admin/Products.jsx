@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, Search, CheckCircle2, AlertCircle, X, Upload, Globe } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, CheckCircle2, AlertCircle, X, Upload, Globe, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -273,6 +273,7 @@ export default function Products() {
   const savingRef = useRef(false)
   const [imageLoading, setImageLoading] = useState(false)
   const [syncing, setSyncing] = useState(null) // product id being synced
+  const [importing, setImporting] = useState(false)
   const [step, setStep] = useState(1)
 
   const showAlert = (type, message) => {
@@ -490,6 +491,105 @@ export default function Products() {
     }
   }
 
+  const handleImportFromWoo = async () => {
+    setImporting(true)
+    try {
+      // Busca todos os produtos do WooCommerce (paginado 100/página)
+      let page = 1
+      let allWoo = []
+      while (true) {
+        const batch = await wooProxy({ method: 'GET', endpoint: `products?per_page=100&page=${page}&status=any` })
+        if (!Array.isArray(batch) || batch.length === 0) break
+        allWoo = [...allWoo, ...batch]
+        if (batch.length < 100) break
+        page++
+      }
+
+      if (allWoo.length === 0) {
+        showAlert('error', 'Nenhum produto encontrado no WooCommerce.')
+        return
+      }
+
+      // IDs já importados para evitar duplicatas
+      const existingWooIds = new Set(products.filter(p => p.woo_id).map(p => Number(p.woo_id)))
+
+      const toImport = allWoo.filter(w => !existingWooIds.has(w.id))
+
+      if (toImport.length === 0) {
+        showAlert('success', 'Todos os produtos do WooCommerce já estão importados.')
+        return
+      }
+
+      let created = 0
+      let updated = 0
+
+      for (const w of toImport) {
+        // Mapeia categoria: usa subcategoria se houver, senão categoria raiz
+        let category_id = null
+        let subcategory_id = null
+        if (w.categories?.length > 0) {
+          for (const wc of w.categories) {
+            const match = categories.find(c => c.woo_id === wc.id)
+            if (match) {
+              if (match.parent_id) {
+                subcategory_id = match.id
+                // busca o pai
+                const parent = categories.find(c => c.id === match.parent_id)
+                if (parent) category_id = parent.id
+              } else {
+                category_id = match.id
+              }
+            }
+          }
+        }
+
+        // Estilo via attributes
+        const estiloAttr = w.attributes?.find(a => a.slug === 'estilo' || a.name?.toLowerCase() === 'estilo')
+        const style = estiloAttr?.options?.[0] || null
+
+        // Imagens
+        const image_urls = (w.images || []).map(i => i.src).filter(Boolean)
+
+        const payload = {
+          name: w.name,
+          description: w.description || w.short_description || '',
+          price: parseFloat(w.regular_price || w.price || '0') || 0,
+          stock: parseInt(w.stock_quantity) || 0,
+          min_stock: 5,
+          category_id,
+          subcategory_id,
+          brand_id: null,
+          status: w.status === 'publish' ? 'active' : 'inactive',
+          image_urls,
+          weight: w.weight ? parseFloat(w.weight) : null,
+          width: w.dimensions?.width ? parseFloat(w.dimensions.width) : null,
+          height: w.dimensions?.height ? parseFloat(w.dimensions.height) : null,
+          depth: w.dimensions?.length ? parseFloat(w.dimensions.length) : null,
+          woo_tags: (w.tags || []).map(t => t.name).filter(Boolean),
+          style,
+          woo_id: w.id,
+        }
+
+        // Verifica se já existe pelo woo_id (segunda verificação com dados frescos)
+        const existing = products.find(p => p.woo_id === w.id)
+        if (existing) {
+          updated++
+          continue
+        }
+
+        await api.createProduct(payload)
+        created++
+      }
+
+      await loadAll()
+      showAlert('success', `Importação concluída! ${created} produto(s) importado(s)${updated > 0 ? `, ${updated} já existiam` : ''}.`)
+    } catch (e) {
+      showAlert('error', 'Erro ao importar produtos: ' + e.message)
+    } finally {
+      setImporting(false)
+    }
+  }
+
   const handleDelete = async () => {
     setSaving(true)
     try {
@@ -526,9 +626,17 @@ export default function Products() {
           <h1 className="text-xl font-bold text-gray-900">Produtos</h1>
           <p className="text-sm text-gray-500">{products.length} produtos cadastrados</p>
         </div>
-        <Button onClick={openCreate} className="gap-2">
-          <Plus className="h-4 w-4" /> Novo Produto
-        </Button>
+        <div className="flex gap-2">
+          {features.site && (
+            <Button variant="outline" onClick={handleImportFromWoo} disabled={importing} className="gap-2">
+              <Download className={`h-4 w-4 ${importing ? 'animate-bounce' : ''}`} />
+              {importing ? 'Importando...' : 'Importar do Woo'}
+            </Button>
+          )}
+          <Button onClick={openCreate} className="gap-2">
+            <Plus className="h-4 w-4" /> Novo Produto
+          </Button>
+        </div>
       </div>
 
       <AlertMsg alert={alert} />
