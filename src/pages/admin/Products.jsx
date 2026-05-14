@@ -763,17 +763,15 @@ export default function Products() {
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-gray-700" onClick={() => handleDuplicate(p)} title="Duplicar">
                               <Copy className="h-3.5 w-3.5" />
                             </Button>
-                            {features.site && (
-                              <Button
-                                variant="ghost" size="icon"
-                                className={`h-7 w-7 ${p.woo_id ? 'text-green-500 hover:text-green-700' : 'text-gray-400 hover:text-blue-500'}`}
-                                onClick={() => handleSync(p)}
-                                disabled={syncing === p.id}
-                                title={p.woo_id ? `Sincronizado (WooID: ${p.woo_id})` : 'Sincronizar com WooCommerce'}
-                              >
-                                <Globe className={`h-3.5 w-3.5 ${syncing === p.id ? 'animate-spin' : ''}`} />
-                              </Button>
-                            )}
+                            <Button
+                              variant="ghost" size="icon"
+                              className={`h-7 w-7 ${p.woo_id ? 'text-green-500 hover:text-green-700' : 'text-gray-400 hover:text-blue-500'}`}
+                              onClick={() => handleSync(p)}
+                              disabled={syncing === p.id}
+                              title={p.woo_id ? `Sincronizado (WooID: ${p.woo_id})` : 'Sincronizar com WooCommerce'}
+                            >
+                              <Globe className={`h-3.5 w-3.5 ${syncing === p.id ? 'animate-spin' : ''}`} />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600" onClick={() => openDelete(p)} title="Excluir">
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
@@ -806,11 +804,9 @@ export default function Products() {
                     <div className="flex flex-col gap-1 shrink-0">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400" onClick={() => handleDuplicate(p)}><Copy className="h-4 w-4" /></Button>
-                      {features.site && (
-                        <Button variant="ghost" size="icon" className={`h-8 w-8 ${p.woo_id ? 'text-green-500' : 'text-gray-400'}`} onClick={() => handleSync(p)} disabled={syncing === p.id}>
-                          <Globe className={`h-4 w-4 ${syncing === p.id ? 'animate-spin' : ''}`} />
-                        </Button>
-                      )}
+                      <Button variant="ghost" size="icon" className={`h-8 w-8 ${p.woo_id ? 'text-green-500' : 'text-gray-400'}`} onClick={() => handleSync(p)} disabled={syncing === p.id}>
+                        <Globe className={`h-4 w-4 ${syncing === p.id ? 'animate-spin' : ''}`} />
+                      </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400" onClick={() => openDelete(p)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>

@@ -60,7 +60,15 @@ export default function Categories() {
       if (dialog === 'create') {
         const created = await api.createCategory(payload)
         setCategories(prev => [...prev, created])
-        showAlert('success', `Categoria "${created.name}" criada!`)
+        try {
+          const allCats = [...categories, created]
+          const { wooId } = await syncCategoryToWoo(created, allCats)
+          await api.updateCategory(created.id, { woo_id: wooId })
+          setCategories(prev => prev.map(c => c.id === created.id ? { ...c, woo_id: wooId } : c))
+          showAlert('success', `Categoria "${created.name}" criada e sincronizada com WooCommerce!`)
+        } catch {
+          showAlert('success', `Categoria "${created.name}" criada! Sincronize manualmente com o WooCommerce.`)
+        }
       } else {
         const updated = await api.updateCategory(current.id, payload)
         setCategories(prev => prev.map(c => c.id === updated.id ? updated : c))
