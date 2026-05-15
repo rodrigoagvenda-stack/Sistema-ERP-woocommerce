@@ -1,33 +1,38 @@
 import { useState, useEffect } from 'react'
-import { RefreshCw, AlertCircle } from 'lucide-react'
+import { RefreshCw, AlertCircle, XCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { wooProxy } from '@/lib/api'
 
 const getBrand = () => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#6366f1'
 
 const STATUS_LABELS = {
-  pending: { label: 'Pendente', variant: 'warning' },
-  processing: { label: 'Processando', variant: 'info' },
-  on_hold: { label: 'Em espera', variant: 'secondary' },
-  completed: { label: 'Concluído', variant: 'success' },
-  cancelled: { label: 'Cancelado', variant: 'destructive' },
-  refunded: { label: 'Reembolsado', variant: 'secondary' },
-  failed: { label: 'Falhou', variant: 'destructive' },
+  pending:    { label: 'Pendente',     variant: 'warning' },
+  processing: { label: 'Processando',  variant: 'info' },
+  on_hold:    { label: 'Em espera',    variant: 'secondary' },
+  completed:  { label: 'Concluído',   variant: 'success' },
+  cancelled:  { label: 'Cancelado',   variant: 'destructive' },
+  refunded:   { label: 'Reembolsado', variant: 'secondary' },
+  failed:     { label: 'Falhou',      variant: 'destructive' },
 }
 
-const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
+const CANCELLABLE = ['pending', 'processing', 'on_hold']
+
+const fmt     = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
 const fmtDate = (d) => new Date(d).toLocaleDateString('pt-BR')
 
 export default function Orders() {
-  const [orders, setOrders] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [page, setPage] = useState(1)
+  const [orders,    setOrders]    = useState([])
+  const [loading,   setLoading]   = useState(false)
+  const [error,     setError]     = useState(null)
+  const [page,      setPage]      = useState(1)
+  const [cancelling, setCancelling] = useState(null)   // order being confirmed
+  const [cancelBusy, setCancelBusy] = useState(false)
 
   const load = async () => {
     setLoading(true); setError(null)
@@ -40,11 +45,24 @@ export default function Orders() {
 
   useEffect(() => {
     load()
-    const interval = setInterval(load, 30000) // auto-refresh a cada 30s
+    const interval = setInterval(load, 30000)
     return () => clearInterval(interval)
   }, [page])
 
-  // Count by status for chart
+  const handleCancel = async () => {
+    if (!cancelling) return
+    setCancelBusy(true)
+    try {
+      await wooProxy({ method: 'PUT', endpoint: `orders/${cancelling.id}`, body: { status: 'cancelled' } })
+      setOrders(prev => prev.map(o => o.id === cancelling.id ? { ...o, status: 'cancelled' } : o))
+      setCancelling(null)
+    } catch (e) {
+      alert('Erro ao cancelar: ' + e.message)
+    } finally {
+      setCancelBusy(false)
+    }
+  }
+
   const statusCounts = orders.reduce((acc, o) => {
     acc[o.status] = (acc[o.status] || 0) + 1
     return acc
@@ -55,6 +73,25 @@ export default function Orders() {
 
   return (
     <div className="space-y-4">
+
+      {/* Confirm cancel dialog */}
+      <Dialog open={!!cancelling} onOpenChange={v => !v && setCancelling(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar pedido #{cancelling?.number || cancelling?.id}?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-500">
+            O pedido de <strong>{cancelling?.billing?.first_name} {cancelling?.billing?.last_name}</strong> ({fmt(cancelling?.total)}) será cancelado no WooCommerce. Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelling(null)} disabled={cancelBusy}>Voltar</Button>
+            <Button variant="destructive" onClick={handleCancel} disabled={cancelBusy}>
+              {cancelBusy ? 'Cancelando...' : 'Confirmar cancelamento'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Pedidos</h1>
@@ -92,7 +129,7 @@ export default function Orders() {
             <div className="p-8 text-center text-gray-400 text-sm">{error ? 'Erro ao carregar' : 'Nenhum pedido encontrado'}</div>
           ) : (
             <>
-              {/* Desktop table */}
+              {/* Desktop */}
               <div className="hidden md:block">
                 <Table>
                   <TableHeader>
@@ -102,6 +139,7 @@ export default function Orders() {
                       <TableHead>Status</TableHead>
                       <TableHead>Total</TableHead>
                       <TableHead>Data</TableHead>
+                      <TableHead />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -116,6 +154,19 @@ export default function Orders() {
                           <TableCell><Badge variant={statusInfo.variant}>{statusInfo.label}</Badge></TableCell>
                           <TableCell className="font-medium text-sm">{fmt(o.total)}</TableCell>
                           <TableCell className="text-sm text-gray-500">{fmtDate(o.date_created)}</TableCell>
+                          <TableCell>
+                            {CANCELLABLE.includes(o.status) && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-gray-400 hover:text-red-500"
+                                title="Cancelar pedido"
+                                onClick={() => setCancelling(o)}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </TableCell>
                         </TableRow>
                       )
                     })}
@@ -123,7 +174,7 @@ export default function Orders() {
                 </Table>
               </div>
 
-              {/* Mobile cards */}
+              {/* Mobile */}
               <div className="md:hidden divide-y divide-gray-100">
                 {orders.map(o => {
                   const statusInfo = STATUS_LABELS[o.status] || { label: o.status, variant: 'secondary' }
@@ -138,7 +189,19 @@ export default function Orders() {
                       </p>
                       <div className="flex items-center justify-between mt-2">
                         <Badge variant={statusInfo.variant} className="text-xs">{statusInfo.label}</Badge>
-                        <span className="text-xs text-gray-400">{fmtDate(o.date_created)}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-400">{fmtDate(o.date_created)}</span>
+                          {CANCELLABLE.includes(o.status) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-gray-400 hover:text-red-500"
+                              onClick={() => setCancelling(o)}
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )

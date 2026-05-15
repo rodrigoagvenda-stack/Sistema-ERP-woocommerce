@@ -339,8 +339,8 @@ export default function Products() {
 
   const handleDuplicate = async (p) => {
     try {
-      const { id, woo_id, created_at, updated_at, category, brand, ...rest } = p
-      const clone = { ...rest, name: `${p.name} (cópia)`, woo_id: null, status: 'inactive' }
+      const { id, woo_id, created_at, updated_at, category, brand, subcategory, ...rest } = p
+      const clone = { ...rest, name: `${p.name} (cópia)`, status: 'inactive' }
       const created = await api.createProduct(clone)
       setProducts(prev => [created, ...prev])
       showAlert('success', `"${p.name}" duplicado como rascunho inativo.`)

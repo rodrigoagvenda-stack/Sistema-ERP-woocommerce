@@ -1,163 +1,119 @@
-import { useState } from 'react'
-import { ChevronDown, Globe, MessageCircle, BookOpen, HelpCircle, Copy, RefreshCw, Download, FlaskConical } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { ChevronDown, Search, Globe, Download, RefreshCw, Copy, Package, Tag, BarChart2, Settings, HelpCircle, BookOpen, Layers, Palette } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
 
-/* ─── Data ──────────────────────────────────────────────────── */
-const guides = [
+/* ─── Seções ─────────────────────────────────────────────────── */
+const SECTIONS = [
   {
-    title: 'Configurar a integração com o WooCommerce',
-    steps: [
-      'Acesse WooCommerce → Configurações no menu lateral.',
-      'No painel do WordPress, vá em WooCommerce → Configurações → Avançado → API REST.',
-      'Clique em "Adicionar chave", dê um nome, selecione permissão de Leitura/Escrita e clique em "Gerar chave de API".',
-      'Copie a Consumer Key e a Consumer Secret geradas.',
-      'Cole as duas chaves no ERP (campo URL da loja + Consumer Key + Consumer Secret) e salve.',
-      'Se aparecer "Conexão OK" ou os dados carregarem no Dashboard, a integração está ativa.',
-    ],
-  },
-  {
-    title: 'Importar categorias do WooCommerce',
-    steps: [
-      'Vá em Produtos → Categorias.',
-      'Clique em "Importar do Woo" no canto superior direito.',
-      'O sistema buscará todas as categorias cadastradas no WooCommerce (incluindo subcategorias) e as importará automaticamente.',
-      'Categorias já importadas serão ignoradas — não haverá duplicatas.',
-      'Após a importação, cada categoria exibirá seu Woo ID, confirmando o vínculo.',
-    ],
-  },
-  {
-    title: 'Criar categorias e subcategorias manualmente',
-    steps: [
-      'Vá em Produtos → Categorias e clique em "+ Nova Categoria".',
-      'Crie primeiro as categorias PAI (ex: "Cervejas Artesanais"). Salve.',
-      'Clique no botão globo da categoria para sincronizar com o WooCommerce. Aguarde o Woo ID aparecer.',
-      'Agora crie as subcategorias: clique em "+ Nova Categoria", preencha o nome e selecione a categoria pai.',
-      'Salve e clique no globo para sincronizar a subcategoria.',
-      'Repita para todas as subcategorias necessárias.',
-    ],
-  },
-  {
-    title: 'Criar estilos de cerveja',
-    steps: [
-      'Vá em Produtos → Estilos e clique em "+ Novo Estilo".',
-      'Preencha o nome do estilo (ex: "IPA", "Stout", "Witbier") e salve.',
-      'Os estilos ficam disponíveis como atributo "Estilo" ao criar ou editar produtos.',
-      'Ao sincronizar um produto com estilo definido, o WooCommerce receberá o atributo automaticamente.',
-      'Para remover um estilo, o campo será limpo nos produtos que o usavam.',
-    ],
-  },
-  {
-    title: 'Importar produtos do WooCommerce',
-    steps: [
-      'Antes de importar produtos, importe as categorias para que o vínculo seja feito corretamente.',
-      'Vá em Produtos e clique em "Importar do Woo".',
-      'O sistema buscará todos os produtos do WooCommerce (paginado, sem limite de quantidade).',
-      'Cada produto terá nome, preço, estoque, categoria, estilo, imagens e dimensões preenchidos automaticamente.',
-      'Produtos já importados (com Woo ID) são ignorados — não haverá duplicatas.',
-      'Após a importação, os produtos aparecem na listagem prontos para uso.',
-    ],
-  },
-  {
-    title: 'Criar marcas',
-    steps: [
-      'Vá em Produtos → Marcas e clique em "+ Nova Marca".',
-      'Preencha o nome e o slug da marca.',
-      'Salve e clique no globo para sincronizar com o WooCommerce como atributo global "Marca".',
-    ],
-  },
-  {
-    title: 'Criar e sincronizar produtos manualmente',
-    steps: [
-      'Vá em Produtos → clique em "+ Novo Produto".',
-      'Passo 1 (Básico): preencha nome, preço, estoque e status.',
-      'Passo 2 (Detalhes): selecione categoria, subcategoria, marca e estilo.',
-      'Passo 3 (Mídia): faça upload da imagem principal e das fotos da galeria. Preencha dimensões e peso se necessário.',
-      'Clique em "Criar Produto" para salvar no ERP.',
-      'Clique no botão globo para enviar o produto ao WooCommerce.',
-    ],
-  },
-  {
-    title: 'Sincronizar todos os produtos de uma vez',
-    steps: [
-      'Vá em Produtos.',
-      'Se houver produtos ativos sem Woo ID, o botão "Sync todos (N)" aparecerá no canto superior direito.',
-      'Clique nele para enviar todos os produtos não sincronizados ao WooCommerce de uma só vez.',
-      'Ao final, um resumo mostrará quantos foram enviados e quantos tiveram erro.',
-    ],
-  },
-  {
-    title: 'Duplicar um produto',
-    steps: [
-      'Na listagem de produtos, clique no ícone de cópia ao lado do produto desejado.',
-      'Um clone será criado com o nome "(cópia)" e status Inativo.',
-      'O clone não possui Woo ID — edite-o e sincronize quando estiver pronto.',
-      'Útil para criar variações de um mesmo produto sem precisar preencher tudo do zero.',
-    ],
-  },
-]
-
-const faqs = [
-  {
-    section: 'Login e Acesso',
+    id: 'primeiros-passos',
+    icon: BookOpen,
+    label: 'Primeiros Passos',
+    color: 'text-emerald-600',
+    bg: 'bg-emerald-50',
     items: [
+      {
+        q: 'Como configurar a integração com o WooCommerce?',
+        a: `1. Vá em WooCommerce → Configurações no menu lateral.\n2. No painel do WordPress, acesse WooCommerce → Configurações → Avançado → API REST.\n3. Clique em "Adicionar chave", dê um nome, selecione Leitura/Escrita e clique em "Gerar chave de API".\n4. Copie a Consumer Key e a Consumer Secret.\n5. Cole as chaves no ERP (URL da loja + Consumer Key + Consumer Secret) e salve.\n6. Se "Conexão OK" aparecer ou os dados carregarem, a integração está ativa.`,
+      },
+      {
+        q: 'Qual a ordem correta para começar a usar o sistema?',
+        a: `Siga esta ordem para evitar problemas de vínculo:\n1. Configure a integração WooCommerce.\n2. Importe ou crie Categorias (sincronize cada uma).\n3. Crie Marcas e Estilos.\n4. Importe ou crie Produtos.\n5. Sincronize os produtos com o WooCommerce.`,
+      },
       {
         q: 'Como faço login no sistema?',
-        a: 'Acesse a página de login, insira seu e-mail e senha cadastrados e clique em "Entrar". Em caso de erro, verifique se as credenciais estão corretas.',
-      },
-      {
-        q: 'Esqueci minha senha, o que faço?',
-        a: 'Entre em contato com o administrador do sistema para redefinição de senha no painel do Supabase (Authentication → Users).',
+        a: 'Acesse a página de login, insira seu e-mail e senha cadastrados e clique em "Entrar". Em caso de erro, verifique as credenciais. Para redefinir senha, contate o administrador no painel do Supabase (Authentication → Users).',
       },
     ],
   },
   {
-    section: 'Dashboard',
+    id: 'categorias',
+    icon: Layers,
+    label: 'Categorias',
+    color: 'text-blue-600',
+    bg: 'bg-blue-50',
     items: [
       {
-        q: 'O que é exibido no Dashboard?',
-        a: 'Um resumo geral: total de produtos, categorias, marcas, tags, pedidos recentes, receita e indicadores de estoque baixo.',
+        q: 'Como importar categorias do WooCommerce?',
+        a: 'Vá em Produtos → Categorias e clique em "Importar do Woo". O sistema busca todas as categorias (incluindo hierarquia pai/filho). Categorias já cadastradas são ignoradas automaticamente.',
       },
       {
-        q: 'Os dados são em tempo real?',
-        a: 'Sim. Os pedidos e dados de analytics são buscados diretamente do WooCommerce via a integração ativa.',
-      },
-    ],
-  },
-  {
-    section: 'Categorias',
-    items: [
-      {
-        q: 'Qual a diferença entre categoria e subcategoria?',
-        a: 'Subcategoria é simplesmente uma categoria com uma "categoria pai" definida. O ERP cuida disso automaticamente quando você preenche o campo "Categoria Pai" ao criar.',
+        q: 'Como criar categorias e subcategorias manualmente?',
+        a: `1. Crie primeiro as categorias PAI (ex: "Cervejas Artesanais") e salve.\n2. Clique no botão globo para sincronizar com o WooCommerce — aguarde o Woo ID aparecer.\n3. Crie as subcategorias selecionando a categoria pai no campo "Categoria Pai".\n4. Salve e clique no globo para sincronizar a subcategoria.\nSempre sincronize categorias ANTES dos produtos.`,
       },
       {
-        q: 'Por que sincronizar categorias antes dos produtos?',
-        a: 'O WooCommerce usa um ID numérico próprio (Woo ID) para vincular categorias a produtos. Se a categoria não tiver Woo ID, o produto não consegue ser vinculado a ela. Sempre sincronize categorias antes dos produtos.',
+        q: 'Por que preciso sincronizar categorias antes dos produtos?',
+        a: 'O WooCommerce usa um ID numérico próprio (Woo ID) para vincular categorias a produtos. Se a categoria não tiver Woo ID, o produto não consegue ser vinculado a ela corretamente.',
       },
       {
-        q: 'Posso importar categorias direto do WooCommerce?',
-        a: 'Sim. Em Produtos → Categorias, clique em "Importar do Woo". O sistema importa todas as categorias (incluindo hierarquia pai/filho) de uma vez. Categorias já cadastradas são ignoradas automaticamente.',
+        q: 'Como adicionar imagem a uma categoria?',
+        a: 'Ao criar ou editar uma categoria, faça upload da imagem no campo disponível. A imagem é enviada ao WooCommerce automaticamente na sincronização via URL pública.',
       },
       {
         q: 'O que acontece ao deletar uma categoria?',
-        a: 'A categoria é removida do ERP e também do WooCommerce (via DELETE com force=true). Os produtos vinculados perdem a referência de categoria — recomendamos reatribuí-los antes de deletar.',
-      },
-      {
-        q: 'Posso adicionar imagem à categoria?',
-        a: 'Sim. Ao criar ou editar uma categoria, há um campo de upload de imagem. A imagem é enviada ao WooCommerce automaticamente na sincronização.',
+        a: 'A categoria é removida do ERP e também do WooCommerce (DELETE com force=true). Produtos vinculados perdem a referência — recomendamos reatribuí-los antes de deletar.',
       },
     ],
   },
   {
-    section: 'Estilos',
+    id: 'produtos',
+    icon: Package,
+    label: 'Produtos',
+    color: 'text-violet-600',
+    bg: 'bg-violet-50',
     items: [
       {
-        q: 'O que são os Estilos?',
-        a: 'Estilos são tipos de cerveja (ex: IPA, Stout, Pilsen). São cadastrados em Produtos → Estilos e ficam disponíveis como atributo nos produtos. No WooCommerce, são enviados como o atributo "Estilo".',
+        q: 'Como criar um novo produto?',
+        a: `Clique em "+ Novo Produto" na página de Produtos.\n• Passo 1 (Básico): nome, preço, estoque, status e estoque mínimo.\n• Passo 2 (Detalhes): categoria, subcategoria, marca, estilo, descrição e dimensões/peso.\n• Passo 3 (Mídia): imagem principal e galeria (mínimo 600px, redimensionada para 1200×1200).\nApós criar, clique no globo para enviar ao WooCommerce.`,
       },
       {
-        q: 'Como criar um novo estilo?',
-        a: 'Vá em Produtos → Estilos, clique em "+ Novo Estilo", preencha o nome e salve. O estilo estará disponível imediatamente no formulário de produtos.',
+        q: 'Como sincronizar um produto com o WooCommerce?',
+        a: 'Clique no botão globo ao lado do produto. Se ainda não existe no WooCommerce, será criado. Se já existe (tem Woo ID), será atualizado automaticamente ao editar e salvar.',
+      },
+      {
+        q: 'Como sincronizar todos os produtos de uma vez?',
+        a: 'Se houver produtos ativos sem Woo ID, o botão "Sync todos (N)" aparece no header da página. Clique nele para enviar todos de uma só vez. Um resumo mostrará quantos foram enviados e quantos tiveram erro.',
+      },
+      {
+        q: 'Como importar produtos do WooCommerce?',
+        a: 'Clique em "Importar do Woo" na página de Produtos. O sistema busca todos os produtos em lotes de 100, mapeando categorias, estilos e imagens automaticamente. Produtos já importados não são duplicados.',
+      },
+      {
+        q: 'Como duplicar um produto?',
+        a: 'Clique no ícone de cópia na linha do produto. Um clone é criado com nome "(cópia)", status Inativo e sem Woo ID. Edite e sincronize quando estiver pronto.',
+      },
+      {
+        q: 'Como filtrar produtos na listagem?',
+        a: 'Use a barra de busca para pesquisar por nome. Filtre por categoria no seletor ao lado. Use as pills para ver: Todos, Ativos, Inativos ou ⚠️ Estoque crítico.',
+      },
+      {
+        q: 'O que é Estoque crítico?',
+        a: 'Produtos cujo estoque atual está abaixo do Estoque Mínimo definido. Ficam destacados com fundo âmbar na listagem e contados na pill "⚠️ Estoque crítico".',
+      },
+      {
+        q: 'Ao excluir um produto ele some da loja também?',
+        a: 'Sim. Se o produto tiver Woo ID, é deletado do WooCommerce com force=true (remoção permanente, não vai para a lixeira) antes de ser removido do ERP.',
+      },
+      {
+        q: 'Qual o tamanho ideal para imagens de produto?',
+        a: 'O sistema aceita qualquer imagem a partir de 600×600px e redimensiona automaticamente para 1200×1200px com corte centralizado (cover crop). Imagens menores que 600px em ambas as dimensões são rejeitadas.',
+      },
+    ],
+  },
+  {
+    id: 'marcas-estilos',
+    icon: Palette,
+    label: 'Marcas e Estilos',
+    color: 'text-amber-600',
+    bg: 'bg-amber-50',
+    items: [
+      {
+        q: 'Como criar uma marca?',
+        a: 'Vá em Produtos → Marcas, clique em "+ Nova Marca", preencha nome e slug, salve e clique no globo para sincronizar com o WooCommerce como atributo global "Marca".',
+      },
+      {
+        q: 'O que são os Estilos?',
+        a: 'Estilos são tipos de produto (ex: IPA, Stout, Pilsen). Cadastre em Produtos → Estilos. No WooCommerce, são enviados como o atributo "Estilo" do produto.',
       },
       {
         q: 'O que acontece ao deletar um estilo?',
@@ -166,129 +122,96 @@ const faqs = [
     ],
   },
   {
-    section: 'Produtos',
-    items: [
-      {
-        q: 'Como criar um novo produto?',
-        a: 'Vá em Produtos → "+ Novo Produto", preencha os campos nas 3 etapas (Básico, Detalhes, Mídia) e clique em "Criar Produto". Após criar, clique no botão globo para enviar ao WooCommerce.',
-      },
-      {
-        q: 'Como filtrar os produtos na listagem?',
-        a: 'Use a barra de busca para pesquisar por nome. Filtre por categoria usando o seletor ao lado da busca. Use as pills rápidas para ver Todos, Ativos, Inativos ou apenas produtos com Estoque crítico.',
-      },
-      {
-        q: 'O que é o Estoque crítico?',
-        a: 'Produtos cujo estoque atual está abaixo do Estoque Mínimo definido. Ficam destacados na listagem com fundo âmbar e contados na pill "⚠️ Estoque crítico". O subtítulo da página também exibe a contagem.',
-      },
-      {
-        q: 'Como duplicar um produto?',
-        a: 'Clique no ícone de cópia na linha do produto. Um clone é criado com status Inativo e sem Woo ID. Edite o clone e sincronize quando estiver pronto. Útil para produtos similares.',
-      },
-      {
-        q: 'Como sincronizar todos os produtos de uma vez?',
-        a: 'Se houver produtos ativos sem Woo ID, o botão "Sync todos (N)" aparece no header da página. Clique nele para enviar todos de uma só vez.',
-      },
-      {
-        q: 'Posso importar produtos do WooCommerce?',
-        a: 'Sim. Clique em "Importar do Woo" na página de Produtos. O sistema busca todos os produtos (em lotes de 100), mapeia categorias, estilos e imagens automaticamente. Produtos já importados não são duplicados.',
-      },
-      {
-        q: 'O que significa "não sincronizado" no nome do produto?',
-        a: 'Significa que o produto está Ativo no ERP mas ainda não foi enviado ao WooCommerce (sem Woo ID). Clique no globo ou use o "Sync todos" para sincronizá-lo.',
-      },
-      {
-        q: 'Como sincronizar um produto com o WooCommerce?',
-        a: 'Clique no botão globo ao lado do produto. Se ainda não existe no WooCommerce, será criado. Se já existe, será atualizado. O ícone fica verde quando sincronizado.',
-      },
-      {
-        q: 'Criei o produto mas ele não aparece na loja, o que fazer?',
-        a: 'Certifique-se de ter clicado no globo para sincronizar. Verifique se o produto está "Ativo" e se as credenciais do WooCommerce estão corretas nos Logs de Sync.',
-      },
-      {
-        q: 'Ao excluir um produto, ele some da loja também?',
-        a: 'Sim. Se o produto tiver Woo ID, ele é deletado do WooCommerce com force=true (remoção permanente, não vai para a lixeira) antes de ser removido do ERP.',
-      },
-    ],
-  },
-  {
-    section: 'Analytics',
+    id: 'analytics',
+    icon: BarChart2,
+    label: 'Analytics',
+    color: 'text-cyan-600',
+    bg: 'bg-cyan-50',
     items: [
       {
         q: 'O que está disponível em Analytics?',
-        a: 'Visão Geral, Produtos mais vendidos, Receita por período, Pedidos, Variações, Categorias e Estoque.',
+        a: 'Visão Geral, Produtos mais vendidos, Receita por período, Pedidos (com opção de cancelar), Variações, Categorias e Estoque.',
+      },
+      {
+        q: 'Como cancelar um pedido?',
+        a: 'Na tela Analytics → Pedidos, clique no ícone de X ao lado do pedido (disponível para pedidos com status Pendente, Processando ou Em espera). Uma confirmação será exibida antes de cancelar no WooCommerce.',
       },
       {
         q: 'Como configurar metas de receita?',
-        a: 'Vá em Analytics → Configurações. Lá você pode definir meta de receita, período padrão e limiar de estoque baixo.',
+        a: 'Vá em Analytics → Configurações. Lá você define meta de receita, período padrão e limiar de estoque baixo.',
+      },
+      {
+        q: 'Os dados são em tempo real?',
+        a: 'Sim. Pedidos e analytics são buscados diretamente do WooCommerce via integração ativa. A página de Pedidos atualiza automaticamente a cada 30 segundos.',
       },
     ],
   },
   {
-    section: 'WooCommerce',
+    id: 'woocommerce',
+    icon: Globe,
+    label: 'WooCommerce',
+    color: 'text-purple-600',
+    bg: 'bg-purple-50',
     items: [
       {
-        q: 'Como configurar a integração?',
-        a: 'Vá em WooCommerce → Configurações. Insira a URL da loja, Consumer Key e Consumer Secret geradas no WordPress (WooCommerce → Avançado → API REST).',
-      },
-      {
         q: 'O que são os Logs de Sync?',
-        a: 'Registram todas as operações de sincronização entre o ERP e o WooCommerce: criações, atualizações e erros. Útil para diagnosticar falhas.',
+        a: 'Registram todas as operações de sincronização: criações, atualizações e erros. Acesse em WooCommerce → Logs de Sync para diagnosticar falhas.',
       },
       {
         q: 'O que fazer quando a sincronização falha?',
-        a: 'Verifique os Logs de Sync para ver o erro detalhado. Causas mais comuns: credenciais incorretas, categoria sem Woo ID ou conexão instável.',
+        a: 'Verifique os Logs de Sync para ver o erro detalhado. Causas comuns: credenciais incorretas, categoria sem Woo ID, produto com campos obrigatórios ausentes ou conexão instável.',
+      },
+      {
+        q: 'Salvar um produto atualiza a loja automaticamente?',
+        a: 'Sim, mas apenas para produtos que já possuem Woo ID (já foram sincronizados). Produtos novos precisam do clique no globo para a primeira sincronização.',
+      },
+      {
+        q: 'Como configurar frete e pagamentos?',
+        a: 'Acesse WooCommerce → Frete para configurar zonas e métodos de entrega. Acesse WooCommerce → Pagamentos para ativar e configurar os métodos de pagamento.',
+      },
+    ],
+  },
+  {
+    id: 'configuracoes',
+    icon: Settings,
+    label: 'Configurações',
+    color: 'text-gray-600',
+    bg: 'bg-gray-50',
+    items: [
+      {
+        q: 'Como ativar ou desativar funcionalidades?',
+        a: 'O super-admin pode ativar ou desativar módulos por empresa: Pagamentos, Frete, Cupons, Site e Dimensões/Peso. Acesse o painel do super-admin → Empresas → editar empresa.',
+      },
+      {
+        q: 'O que é a funcionalidade "Dimensões e Peso"?',
+        a: 'Quando ativada, os campos de peso (kg), largura, altura e profundidade (cm) ficam obrigatórios no cadastro de produto — necessário para cálculo de frete via Melhor Envio.',
+      },
+      {
+        q: 'Como criar cupons de desconto?',
+        a: 'Acesse Cupons no menu lateral (disponível se a funcionalidade estiver ativa). Crie cupons com tipo percentual ou valor fixo, validade e limite de uso.',
       },
     ],
   },
 ]
 
-/* ─── Components ────────────────────────────────────────────── */
-function GuideItem({ guide, index }) {
-  const [open, setOpen] = useState(false)
+/* ─── Components ─────────────────────────────────────────────── */
+function FAQItem({ item, defaultOpen }) {
+  const [open, setOpen] = useState(defaultOpen || false)
   return (
     <div className="border-b border-gray-100 last:border-0">
       <button
-        type="button"
+        className="w-full flex items-start justify-between gap-4 py-3.5 text-left group"
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between gap-4 py-4 text-left group"
       >
-        <div className="flex items-center gap-3">
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#15A344]/10 text-xs font-semibold text-[#15A344]">
-            {index + 1}
-          </span>
-          <span className="text-sm font-medium text-gray-800 group-hover:text-gray-900">{guide.title}</span>
-        </div>
-        <ChevronDown className={cn('h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200', open && 'rotate-180')} />
+        <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 leading-relaxed">{item.q}</span>
+        <ChevronDown className={cn('h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 mt-0.5', open && 'rotate-180')} />
       </button>
       {open && (
-        <ol className="mb-4 ml-9 space-y-2.5">
-          {guide.steps.map((step, i) => (
-            <li key={i} className="flex items-start gap-2.5 text-sm text-gray-500 leading-relaxed">
-              <span className="mt-0.5 text-[#15A344] font-medium shrink-0">{i + 1}.</span>
-              {step}
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
-  )
-}
-
-function FAQItem({ item }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="border-b border-gray-100 last:border-0">
-      <button
-        className="w-full flex items-center justify-between gap-4 py-3.5 text-left group"
-        onClick={() => setOpen(!open)}
-      >
-        <span className="text-sm text-gray-700 group-hover:text-gray-900">{item.q}</span>
-        <ChevronDown className={cn('h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200', open && 'rotate-180')} />
-      </button>
-      {open && (
-        <div className="pb-4 pr-8">
+        <div className="pb-4 pr-6 space-y-1">
           {item.a.split('\n').map((line, i) => (
-            <p key={i} className="text-sm text-gray-500 leading-relaxed">{line}</p>
+            <p key={i} className={cn('text-sm leading-relaxed', line.match(/^\d+\./) ? 'text-gray-600 ml-2' : 'text-gray-500')}>
+              {line}
+            </p>
           ))}
         </div>
       )}
@@ -296,98 +219,166 @@ function FAQItem({ item }) {
   )
 }
 
-export default function FAQ() {
+function SectionNav({ sections, active, onSelect }) {
   return (
-    <div className="max-w-2xl space-y-8">
+    <nav className="flex flex-col gap-0.5">
+      {sections.map(s => {
+        const Icon = s.icon
+        return (
+          <button
+            key={s.id}
+            onClick={() => onSelect(s.id)}
+            className={cn(
+              'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left',
+              active === s.id ? 'bg-gray-100 font-medium text-gray-900' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+            )}
+          >
+            <Icon className={cn('h-3.5 w-3.5 shrink-0', active === s.id ? s.color : 'text-gray-400')} />
+            {s.label}
+          </button>
+        )
+      })}
+    </nav>
+  )
+}
+
+/* ─── Main ───────────────────────────────────────────────────── */
+export default function FAQ() {
+  const [search,  setSearch]  = useState('')
+  const [active,  setActive]  = useState('primeiros-passos')
+
+  const query = search.trim().toLowerCase()
+
+  const results = useMemo(() => {
+    if (!query) return null
+    const hits = []
+    SECTIONS.forEach(s => {
+      s.items.forEach(item => {
+        if (item.q.toLowerCase().includes(query) || item.a.toLowerCase().includes(query)) {
+          hits.push({ ...item, section: s.label, sectionColor: s.color })
+        }
+      })
+    })
+    return hits
+  }, [query])
+
+  const activeSection = SECTIONS.find(s => s.id === active)
+
+  return (
+    <div className="max-w-5xl">
 
       {/* Header */}
-      <div>
-        <h1 className="text-lg font-semibold text-gray-900">Ajuda</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Guias e respostas para o sistema.</p>
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-gray-900">Documentação</h1>
+        <p className="text-sm text-gray-400 mt-0.5">Guias, funcionalidades e perguntas frequentes do sistema.</p>
       </div>
 
-      {/* Callouts */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex items-start gap-3 rounded-xl bg-gray-50 border border-gray-100 p-4">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white border border-gray-200">
-            <Globe className="h-4 w-4 text-gray-500" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-700">Salvar não atualiza a loja</p>
-            <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
-              Após editar, clique no botão globo para sincronizar com o WooCommerce.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3 rounded-xl bg-gray-50 border border-gray-100 p-4">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white border border-gray-200">
-            <Download className="h-4 w-4 text-blue-500" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-700">Importe do WooCommerce</p>
-            <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
-              Use "Importar do Woo" em Categorias e Produtos para trazer tudo de uma vez, sem digitar nada.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3 rounded-xl bg-gray-50 border border-gray-100 p-4">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white border border-gray-200">
-            <RefreshCw className="h-4 w-4 text-blue-500" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-700">Sync em massa</p>
-            <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
-              O botão "Sync todos" envia de uma vez todos os produtos ativos ainda não sincronizados.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3 rounded-xl bg-gray-50 border border-gray-100 p-4">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white border border-gray-200">
-            <Copy className="h-4 w-4 text-gray-500" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-700">Duplicar produto</p>
-            <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">
-              Clique no ícone de cópia para clonar um produto como rascunho inativo.
-            </p>
-          </div>
-        </div>
+      {/* Search */}
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        <Input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar em toda a documentação..."
+          className="pl-9 bg-white"
+        />
+        {search && (
+          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">✕</button>
+        )}
       </div>
 
-      {/* Guia passo a passo */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <BookOpen className="h-3.5 w-3.5 text-gray-400" />
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Guia passo a passo</span>
-        </div>
-        <div className="rounded-xl border border-gray-100 bg-white px-4 divide-y divide-gray-100">
-          {guides.map((g, i) => (
-            <GuideItem key={g.title} guide={g} index={i} />
-          ))}
-        </div>
-      </div>
-
-      {/* FAQ */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Perguntas frequentes</span>
-        </div>
-        <div className="space-y-2">
-          {faqs.map(section => (
-            <div key={section.section} className="rounded-xl border border-gray-100 bg-white px-4">
-              <div className="pt-4 pb-1">
-                <span className="text-[10px] font-bold text-[#15A344] uppercase tracking-widest">{section.section}</span>
+      {/* Search results */}
+      {results !== null ? (
+        <div className="rounded-xl border border-gray-100 bg-white divide-y divide-gray-100 px-4">
+          {results.length === 0 ? (
+            <div className="py-10 text-center text-sm text-gray-400">Nenhum resultado para "{search}"</div>
+          ) : results.map((item, i) => (
+            <div key={i}>
+              <div className="pt-3 pb-0">
+                <span className={cn('text-[10px] font-semibold uppercase tracking-wider', item.sectionColor)}>{item.section}</span>
               </div>
-              {section.items.map(item => (
-                <FAQItem key={item.q} item={item} />
-              ))}
+              <FAQItem item={item} defaultOpen />
             </div>
           ))}
         </div>
-      </div>
+      ) : (
+        /* Two-column layout */
+        <div className="flex gap-6">
 
-      <p className="text-xs text-gray-300 text-center pb-2">Sistema ERP · Codigin</p>
+          {/* Sidebar nav */}
+          <aside className="hidden md:block w-44 shrink-0">
+            <SectionNav sections={SECTIONS} active={active} onSelect={setActive} />
+          </aside>
+
+          {/* Mobile nav pills */}
+          <div className="md:hidden flex gap-2 overflow-x-auto pb-2 mb-2 w-full">
+            {SECTIONS.map(s => {
+              const Icon = s.icon
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setActive(s.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap border transition-colors',
+                    active === s.id ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-500 border-gray-200'
+                  )}
+                >
+                  <Icon className="h-3 w-3" />
+                  {s.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            {activeSection && (
+              <div>
+                {/* Section header */}
+                <div className={cn('flex items-center gap-2.5 px-4 py-3 rounded-xl mb-3', activeSection.bg)}>
+                  <activeSection.icon className={cn('h-4 w-4', activeSection.color)} />
+                  <span className={cn('text-sm font-semibold', activeSection.color)}>{activeSection.label}</span>
+                  <span className="ml-auto text-xs text-gray-400">{activeSection.items.length} tópicos</span>
+                </div>
+
+                {/* Items */}
+                <div className="rounded-xl border border-gray-100 bg-white px-4">
+                  {activeSection.items.map(item => (
+                    <FAQItem key={item.q} item={item} />
+                  ))}
+                </div>
+
+                {/* Quick tips */}
+                {active === 'primeiros-passos' && (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {[
+                      { icon: Globe,     color: 'text-gray-500',   title: 'Salvar ≠ sincronizar', desc: 'Editar e salvar atualiza o ERP. O globo envia ao WooCommerce.' },
+                      { icon: Download,  color: 'text-blue-500',   title: 'Importe do Woo',       desc: 'Use "Importar do Woo" em Categorias e Produtos para trazer tudo de uma vez.' },
+                      { icon: RefreshCw, color: 'text-blue-500',   title: 'Sync em massa',        desc: 'O botão "Sync todos" envia de uma vez todos os produtos não sincronizados.' },
+                      { icon: Copy,      color: 'text-gray-500',   title: 'Duplicar produto',     desc: 'Ícone de cópia clona um produto como rascunho inativo, pronto para editar.' },
+                    ].map(tip => {
+                      const Icon = tip.icon
+                      return (
+                        <div key={tip.title} className="flex items-start gap-3 rounded-xl bg-gray-50 border border-gray-100 p-4">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white border border-gray-200">
+                            <Icon className={cn('h-4 w-4', tip.color)} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-gray-700">{tip.title}</p>
+                            <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{tip.desc}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <p className="text-xs text-gray-300 text-center mt-8 pb-2">Sistema ERP · Codigin</p>
     </div>
   )
 }
