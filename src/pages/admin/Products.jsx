@@ -413,10 +413,10 @@ export default function Products() {
     if (!current.name?.trim()) return showAlert('error', 'Nome é obrigatório')
     if (!current.price) return showAlert('error', 'Preço é obrigatório')
     if (features.dimensions) {
-      if (!current.weight || parseFloat(current.weight) <= 0) return showAlert('error', 'Peso é obrigatório para cálculo de frete')
-      if (!current.width || parseFloat(current.width) <= 0) return showAlert('error', 'Largura é obrigatória para cálculo de frete')
-      if (!current.height || parseFloat(current.height) <= 0) return showAlert('error', 'Altura é obrigatória para cálculo de frete')
-      if (!current.depth || parseFloat(current.depth) <= 0) return showAlert('error', 'Profundidade é obrigatória para cálculo de frete')
+      if (!current.weight || parseFloat(current.weight) <= 0) { setImageError('Peso é obrigatório para cálculo de frete'); return }
+      if (!current.width  || parseFloat(current.width)  <= 0) { setImageError('Largura é obrigatória para cálculo de frete'); return }
+      if (!current.height || parseFloat(current.height) <= 0) { setImageError('Altura é obrigatória para cálculo de frete'); return }
+      if (!current.depth  || parseFloat(current.depth)  <= 0) { setImageError('Profundidade é obrigatória para cálculo de frete'); return }
     }
     savingRef.current = true
     setSaving(true)
