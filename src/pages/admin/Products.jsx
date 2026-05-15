@@ -449,14 +449,10 @@ export default function Products() {
         setProducts(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p))
         if (current.woo_id) {
           const wooPayload = buildWooPayload(fullProduct)
-          console.log('[SYNC] woo_id:', current.woo_id)
-          console.log('[SYNC] payload enviado:', JSON.stringify(wooPayload, null, 2))
           try {
-            const wooResponse = await wooProxy({ method: 'PUT', endpoint: `products/${current.woo_id}`, body: wooPayload })
-            console.log('[SYNC] resposta WooCommerce:', JSON.stringify(wooResponse, null, 2))
-            showAlert('success', `Produto "${updated.name}" salvo e sincronizado! (WooID: ${wooResponse?.id})`)
+            await wooProxy({ method: 'PUT', endpoint: `products/${current.woo_id}`, body: wooPayload })
+            showAlert('success', `Produto "${updated.name}" salvo e sincronizado com WooCommerce!`)
           } catch (e) {
-            console.error('[SYNC] erro:', e.message)
             if (e.message?.includes('invalid_id') || e.message?.includes('ID inválido')) {
               await api.updateProduct(current.id, { woo_id: null })
               setProducts(prev => prev.map(p => p.id === current.id ? { ...p, woo_id: null } : p))
@@ -466,7 +462,6 @@ export default function Products() {
             }
           }
         } else {
-          console.log('[SYNC] produto sem woo_id, não sincronizado')
           showAlert('success', `Produto "${updated.name}" salvo! (não vinculado ao WooCommerce)`)
         }
       }
