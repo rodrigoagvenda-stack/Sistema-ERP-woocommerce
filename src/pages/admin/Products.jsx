@@ -215,9 +215,9 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
                     {label}{features.dimensions && <span className="text-red-500 ml-0.5">*</span>}
                   </Label>
                   <Input
-                    type="number" step="any" min="0"
+                    type="text" inputMode="decimal"
                     value={current[field] || ''}
-                    onChange={e => set(field, e.target.value)}
+                    onChange={e => set(field, e.target.value.replace(',', '.'))}
                     placeholder="0"
                     className={features.dimensions && !current[field] ? 'border-red-200 focus-visible:ring-red-300' : ''}
                   />
