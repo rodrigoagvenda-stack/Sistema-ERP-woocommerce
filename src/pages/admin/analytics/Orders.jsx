@@ -14,14 +14,14 @@ const getBrand = () => getComputedStyle(document.documentElement).getPropertyVal
 const STATUS_LABELS = {
   pending:    { label: 'Pendente',     variant: 'warning' },
   processing: { label: 'Processando',  variant: 'info' },
-  on_hold:    { label: 'Em espera',    variant: 'secondary' },
-  completed:  { label: 'Concluído',   variant: 'success' },
-  cancelled:  { label: 'Cancelado',   variant: 'destructive' },
-  refunded:   { label: 'Reembolsado', variant: 'secondary' },
-  failed:     { label: 'Falhou',      variant: 'destructive' },
+  'on-hold':  { label: 'Em espera',    variant: 'secondary' },
+  completed:  { label: 'Concluído',    variant: 'success' },
+  cancelled:  { label: 'Cancelado',    variant: 'destructive' },
+  refunded:   { label: 'Reembolsado',  variant: 'secondary' },
+  failed:     { label: 'Falhou',       variant: 'destructive' },
 }
 
-const CANCELLABLE = ['pending', 'processing', 'on_hold']
+const CANCELLABLE = ['pending', 'processing', 'on-hold']
 
 const fmt     = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
 const fmtDate = (d) => new Date(d).toLocaleDateString('pt-BR')
