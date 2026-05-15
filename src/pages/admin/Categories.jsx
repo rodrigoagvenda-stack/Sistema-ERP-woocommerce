@@ -335,7 +335,17 @@ export default function Categories() {
                   <TableBody>
                     {categories.map(c => (
                       <TableRow key={c.id}>
-                        <TableCell className="font-medium text-sm">{c.name}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0 bg-gray-100 flex items-center justify-center">
+                              {c.image_url
+                                ? <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" />
+                                : <span className="text-gray-400 font-bold text-sm">{c.name[0]?.toUpperCase()}</span>
+                              }
+                            </div>
+                            <span className="font-medium text-sm">{c.name}</span>
+                          </div>
+                        </TableCell>
                         <TableCell className="text-sm text-gray-500">{c.slug || '—'}</TableCell>
                         <TableCell className="text-sm text-gray-500">{c.parent?.name || '—'}</TableCell>
                         <TableCell>
