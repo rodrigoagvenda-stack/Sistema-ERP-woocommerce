@@ -71,11 +71,11 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Preço (R$) *</Label>
-              <Input type="number" step="0.01" value={current.price} onChange={e => set('price', e.target.value)} placeholder="0.00" />
+              <Input type="text" inputMode="decimal" value={current.price} onChange={e => set('price', e.target.value.replace(',', '.'))} placeholder="0.00" />
             </div>
             <div className="space-y-1.5">
               <Label>Estoque</Label>
-              <Input type="number" value={current.stock} onChange={e => set('stock', e.target.value)} placeholder="0" />
+              <Input type="text" inputMode="numeric" value={current.stock} onChange={e => set('stock', e.target.value.replace(',', '.'))} placeholder="0" />
             </div>
             <div className="space-y-1.5">
               <Label>Status</Label>
@@ -89,7 +89,7 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
             </div>
             <div className="space-y-1.5">
               <Label>Estoque Mínimo</Label>
-              <Input type="number" value={current.min_stock} onChange={e => set('min_stock', e.target.value)} />
+              <Input type="text" inputMode="numeric" value={current.min_stock} onChange={e => set('min_stock', e.target.value.replace(',', '.'))} />
             </div>
           </div>
         </div>
