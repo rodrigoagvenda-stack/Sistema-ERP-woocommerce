@@ -195,12 +195,21 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Dimensões e peso</Label>
+            <Label className="text-sm font-medium">
+              Dimensões e peso <span className="text-red-500">*</span>
+              <span className="ml-1 text-xs font-normal text-gray-400">(obrigatório para cálculo de frete)</span>
+            </Label>
             <div className="grid grid-cols-4 gap-3">
               {[['Peso (kg)', 'weight'], ['Largura (cm)', 'width'], ['Altura (cm)', 'height'], ['Prof. (cm)', 'depth']].map(([label, field]) => (
                 <div key={field} className="space-y-1">
-                  <Label className="text-xs text-gray-500">{label}</Label>
-                  <Input type="number" step="0.01" value={current[field] || ''} onChange={e => set(field, e.target.value)} placeholder="0" />
+                  <Label className="text-xs text-gray-500">{label} <span className="text-red-500">*</span></Label>
+                  <Input
+                    type="number" step="0.01"
+                    value={current[field] || ''}
+                    onChange={e => set(field, e.target.value)}
+                    placeholder="0"
+                    className={!current[field] ? 'border-red-200 focus-visible:ring-red-300' : ''}
+                  />
                 </div>
               ))}
             </div>
@@ -373,6 +382,10 @@ export default function Products() {
     if (savingRef.current) return
     if (!current.name?.trim()) return showAlert('error', 'Nome é obrigatório')
     if (!current.price) return showAlert('error', 'Preço é obrigatório')
+    if (!current.weight || parseFloat(current.weight) <= 0) return showAlert('error', 'Peso é obrigatório para cálculo de frete')
+    if (!current.width || parseFloat(current.width) <= 0) return showAlert('error', 'Largura é obrigatória para cálculo de frete')
+    if (!current.height || parseFloat(current.height) <= 0) return showAlert('error', 'Altura é obrigatória para cálculo de frete')
+    if (!current.depth || parseFloat(current.depth) <= 0) return showAlert('error', 'Profundidade é obrigatória para cálculo de frete')
     savingRef.current = true
     setSaving(true)
     try {
