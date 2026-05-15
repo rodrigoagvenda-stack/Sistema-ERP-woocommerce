@@ -442,43 +442,43 @@ export default function Products() {
       if (dialog === 'create') {
         const created = await api.createProduct(payload)
         setProducts(prev => [created, ...prev])
-        showAlert('success', `Produto "${created.name}" criado! Use o botão de sync para enviar ao WooCommerce.`)
+        try {
+          const wooPayload = buildWooPayload(payload)
+          const wooData = await wooProxy({ method: 'POST', endpoint: 'products', body: { ...wooPayload, type: 'simple' } })
+          const cid = await getCompanyId()
+          await supabase.from('products').update({ woo_id: wooData.id }).eq('id', created.id).eq('company_id', cid)
+          setProducts(prev => prev.map(p => p.id === created.id ? { ...p, woo_id: wooData.id } : p))
+          showAlert('success', `Produto "${created.name}" criado e sincronizado com WooCommerce!`)
+        } catch {
+          showAlert('success', `Produto "${created.name}" criado! Sincronize manualmente com o WooCommerce.`)
+        }
       } else {
         const updated = await api.updateProduct(current.id, payload)
         setProducts(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p))
-        if (current.woo_id) {
-          const images = (payload.image_urls || []).filter(url => url.startsWith('http')).map(src => ({ src }))
-          const cat = categories.find(c => c.id === payload.category_id)
-          const subcat = categories.find(c => c.id === payload.subcategory_id)
-          const wooCats = []
-          if (subcat?.woo_id) wooCats.push({ id: subcat.woo_id })
-          else if (cat?.woo_id) wooCats.push({ id: cat.woo_id })
-          const wooAttributes = payload.style
-            ? [{ name: 'Estilo', slug: 'estilo', options: [payload.style], visible: true }]
-            : []
-          const wooPayload = {
-            name: payload.name,
-            regular_price: String(payload.price || 0),
-            description: payload.description || '',
-            manage_stock: true,
-            stock_quantity: Number(payload.stock) || 0,
-            status: payload.status === 'active' ? 'publish' : 'draft',
-            ...(wooCats.length > 0 && { categories: wooCats }),
-            ...(wooAttributes.length > 0 && { attributes: wooAttributes }),
-            ...(images.length > 0 && { images }),
-          }
-          try {
-            await wooProxy({ method: 'PUT', endpoint: `products/${current.woo_id}`, body: wooPayload })
-            showAlert('success', `Produto "${updated.name}" atualizado e sincronizado com WooCommerce!`)
-          } catch (e) {
-            if (e.message?.includes('invalid_id') || e.message?.includes('ID inválido')) {
-              await api.updateProduct(current.id, { woo_id: null })
-              setProducts(prev => prev.map(p => p.id === current.id ? { ...p, woo_id: null } : p))
+        const wooPayload = buildWooPayload(payload)
+        try {
+          if (current.woo_id) {
+            try {
+              await wooProxy({ method: 'PUT', endpoint: `products/${current.woo_id}`, body: wooPayload })
+            } catch (e) {
+              if (e.message?.includes('invalid_id') || e.message?.includes('ID inválido')) {
+                await api.updateProduct(current.id, { woo_id: null })
+                setProducts(prev => prev.map(p => p.id === current.id ? { ...p, woo_id: null } : p))
+                const wooData = await wooProxy({ method: 'POST', endpoint: 'products', body: { ...wooPayload, type: 'simple' } })
+                const cid = await getCompanyId()
+                await supabase.from('products').update({ woo_id: wooData.id }).eq('id', updated.id).eq('company_id', cid)
+                setProducts(prev => prev.map(p => p.id === updated.id ? { ...p, woo_id: wooData.id } : p))
+              } else throw e
             }
-            showAlert('success', `Produto "${updated.name}" atualizado no ERP (sincronize manualmente com o WooCommerce).`)
+          } else {
+            const wooData = await wooProxy({ method: 'POST', endpoint: 'products', body: { ...wooPayload, type: 'simple' } })
+            const cid = await getCompanyId()
+            await supabase.from('products').update({ woo_id: wooData.id }).eq('id', updated.id).eq('company_id', cid)
+            setProducts(prev => prev.map(p => p.id === updated.id ? { ...p, woo_id: wooData.id } : p))
           }
-        } else {
-          showAlert('success', `Produto "${updated.name}" atualizado!`)
+          showAlert('success', `Produto "${updated.name}" salvo e sincronizado com WooCommerce!`)
+        } catch {
+          showAlert('success', `Produto "${updated.name}" salvo no ERP. Sincronize manualmente com o WooCommerce.`)
         }
       }
       closeDialog()
