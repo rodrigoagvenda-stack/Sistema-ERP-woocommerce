@@ -445,9 +445,10 @@ export default function Products() {
         showAlert('success', `Produto "${created.name}" criado! Use o botão de sync para enviar ao WooCommerce.`)
       } else {
         const updated = await api.updateProduct(current.id, payload)
+        const fullProduct = { ...current, ...updated, ...payload, woo_id: current.woo_id }
         setProducts(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p))
         if (current.woo_id) {
-          const wooPayload = buildWooPayload(payload)
+          const wooPayload = buildWooPayload(fullProduct)
           try {
             await wooProxy({ method: 'PUT', endpoint: `products/${current.woo_id}`, body: wooPayload })
             showAlert('success', `Produto "${updated.name}" salvo e sincronizado com WooCommerce!`)
@@ -455,13 +456,13 @@ export default function Products() {
             if (e.message?.includes('invalid_id') || e.message?.includes('ID inválido')) {
               await api.updateProduct(current.id, { woo_id: null })
               setProducts(prev => prev.map(p => p.id === current.id ? { ...p, woo_id: null } : p))
-              showAlert('error', `Produto salvo no ERP, mas o vínculo WooCommerce estava inválido e foi removido. Pressione o globo para re-vincular.`)
+              showAlert('error', `Vínculo WooCommerce inválido e removido. Pressione o globo para re-vincular.`)
             } else {
-              showAlert('error', `Produto salvo no ERP, mas erro ao sincronizar com WooCommerce: ${e.message}`)
+              showAlert('error', `Salvo no ERP, erro no WooCommerce: ${e.message}`)
             }
           }
         } else {
-          showAlert('success', `Produto "${updated.name}" atualizado! (não vinculado ao WooCommerce)`)
+          showAlert('success', `Produto "${updated.name}" salvo! (não vinculado ao WooCommerce)`)
         }
       }
       closeDialog()
