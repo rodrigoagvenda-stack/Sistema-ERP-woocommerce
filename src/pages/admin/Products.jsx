@@ -201,41 +201,45 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">
-                Dimensões e peso
-                {features.dimensions && <span className="text-red-500 ml-0.5">*</span>}
-                <span className="ml-1 text-xs font-normal text-gray-400">
-                  {features.dimensions ? '(obrigatório para cálculo de frete)' : '(opcional)'}
-                </span>
-              </Label>
-              <span className="text-xs text-gray-400 italic">use vírgula: ex. 0,486</span>
-            </div>
-            <div className="rounded-md border border-gray-200 overflow-hidden">
-              <table className="w-full text-xs">
+            <Label className="text-sm font-medium">
+              Dimensões e peso
+              {features.dimensions && <span className="text-red-500 ml-0.5">*</span>}
+              <span className="ml-1 text-xs font-normal text-gray-400">
+                {features.dimensions ? '(obrigatório para cálculo de frete)' : '(opcional)'}
+              </span>
+            </Label>
+            <div className="rounded-md border border-gray-200 overflow-hidden text-xs">
+              <table className="w-full border-collapse">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    {[['Peso (kg)', 'weight', '0,486'], ['Largura (cm)', 'width', '30,5'], ['Altura (cm)', 'height', '20,0'], ['Prof. (cm)', 'depth', '15,0']].map(([label, field]) => (
-                      <th key={field} className="px-2 py-1.5 text-left font-medium text-gray-500">
-                        {label}{features.dimensions && <span className="text-red-500 ml-0.5">*</span>}
-                      </th>
-                    ))}
+                  <tr className="bg-gray-100 border-b border-gray-200">
+                    <th className="px-3 py-2 text-left font-semibold text-gray-500 w-40">Campo</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-500">Valor</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-500 text-gray-400">Exemplo</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr>
-                    {[['Peso (kg)', 'weight', '0,486'], ['Largura (cm)', 'width', '30,5'], ['Altura (cm)', 'height', '20,0'], ['Prof. (cm)', 'depth', '15,0']].map(([, field, placeholder]) => (
-                      <td key={field} className="px-1.5 py-1.5">
+                <tbody className="divide-y divide-gray-100">
+                  {[
+                    ['Peso (kg)', 'weight', '0,486'],
+                    ['Largura (cm)', 'width', '30,5'],
+                    ['Altura (cm)', 'height', '20,0'],
+                    ['Prof. (cm)', 'depth', '15,0'],
+                  ].map(([label, field, example]) => (
+                    <tr key={field} className="hover:bg-gray-50">
+                      <td className="px-3 py-1.5 font-medium text-gray-600">
+                        {label}{features.dimensions && <span className="text-red-500 ml-0.5">*</span>}
+                      </td>
+                      <td className="px-2 py-1.5">
                         <Input
                           type="text" inputMode="decimal"
                           value={current[field] || ''}
                           onChange={e => set(field, e.target.value.replace(',', '.'))}
-                          placeholder={placeholder}
-                          className={`h-8 text-xs ${features.dimensions && !current[field] ? 'border-red-200 focus-visible:ring-red-300' : ''}`}
+                          placeholder={example}
+                          className={`h-8 text-xs w-full ${features.dimensions && !current[field] ? 'border-red-200 focus-visible:ring-red-300' : ''}`}
                         />
                       </td>
-                    ))}
-                  </tr>
+                      <td className="px-3 py-1.5 text-gray-400 font-mono">{example}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
