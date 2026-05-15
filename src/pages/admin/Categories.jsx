@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { api, wooProxy, wooUploadMedia } from '@/lib/api'
+import { api, wooProxy } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 
 const EMPTY = { name: '', slug: '', status: 'active', parent_id: null, woo_id: null, image_url: '' }
@@ -133,15 +133,9 @@ export default function Categories() {
     img.src = url
   })
 
-  const resolveWooImage = async (image_url) => {
+  const resolveWooImage = (image_url) => {
     if (!image_url) return null
-    try {
-      const filename = image_url.split('/').pop() || 'category.jpg'
-      const media = await wooUploadMedia(image_url, filename)
-      return media?.id ? { id: media.id } : null
-    } catch {
-      return null
-    }
+    return { src: image_url }
   }
 
   const handleUploadImage = async (file) => {
