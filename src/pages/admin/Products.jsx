@@ -455,11 +455,13 @@ export default function Products() {
             if (e.message?.includes('invalid_id') || e.message?.includes('ID inválido')) {
               await api.updateProduct(current.id, { woo_id: null })
               setProducts(prev => prev.map(p => p.id === current.id ? { ...p, woo_id: null } : p))
+              showAlert('error', `Produto salvo no ERP, mas o vínculo WooCommerce estava inválido e foi removido. Pressione o globo para re-vincular.`)
+            } else {
+              showAlert('error', `Produto salvo no ERP, mas erro ao sincronizar com WooCommerce: ${e.message}`)
             }
-            showAlert('success', `Produto "${updated.name}" salvo no ERP. Sincronize manualmente com o WooCommerce.`)
           }
         } else {
-          showAlert('success', `Produto "${updated.name}" atualizado!`)
+          showAlert('success', `Produto "${updated.name}" atualizado! (não vinculado ao WooCommerce)`)
         }
       }
       closeDialog()
@@ -473,8 +475,10 @@ export default function Products() {
 
   const buildWooPayload = (product) => {
     const images = (product.image_urls || []).filter(url => url.startsWith('http')).map(src => ({ src }))
-    const cat = categories.find(c => c.id === product.category_id)
-    const subcat = categories.find(c => c.id === product.subcategory_id)
+    const catId = product.category_id ? Number(product.category_id) : null
+    const subcatId = product.subcategory_id ? Number(product.subcategory_id) : null
+    const cat = categories.find(c => c.id === catId)
+    const subcat = categories.find(c => c.id === subcatId)
     const wooCats = []
     if (subcat?.woo_id) wooCats.push({ id: subcat.woo_id })
     else if (cat?.woo_id) wooCats.push({ id: cat.woo_id })
