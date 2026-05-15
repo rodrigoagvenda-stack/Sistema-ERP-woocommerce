@@ -48,12 +48,18 @@ function StepIndicator({ step }) {
   )
 }
 
-function ProductStepper({ step, setStep, current, setCurrent, categories, brands, styles, features, imageLoading, handleUploadImage, removeImage, saving, onSave, onCancel, isEdit }) {
+function ProductStepper({ step, setStep, current, setCurrent, categories, brands, styles, features, imageLoading, imageError, handleUploadImage, removeImage, saving, onSave, onCancel, isEdit }) {
   const set = (key, val) => setCurrent(p => ({ ...p, [key]: val }))
 
   return (
     <div>
       <StepIndicator step={step} />
+      {imageError && (
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+          <span className="mt-0.5 shrink-0">⚠️</span>
+          <span>{imageError}</span>
+        </div>
+      )}
 
       {/* Step 1 — Básico */}
       {step === 1 && (
@@ -291,6 +297,7 @@ export default function Products() {
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
   const [imageLoading, setImageLoading] = useState(false)
+  const [imageError, setImageError] = useState(null)
   const [syncing, setSyncing] = useState(null)
   const [syncingAll, setSyncingAll] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -328,7 +335,7 @@ export default function Products() {
   const openCreate = () => { setCurrent(EMPTY_PRODUCT); setStep(1); setDialog('create') }
   const openEdit = (p) => { setCurrent({ ...p }); setStep(1); setDialog('edit') }
   const openDelete = (p) => { setCurrent(p); setDialog('delete') }
-  const closeDialog = () => { setDialog(null); setCurrent(EMPTY_PRODUCT); setStep(1) }
+  const closeDialog = () => { setDialog(null); setCurrent(EMPTY_PRODUCT); setStep(1); setImageError(null) }
 
   const handleDuplicate = async (p) => {
     try {
@@ -381,6 +388,7 @@ export default function Products() {
     const file = e.target.files?.[0]
     if (!file) return
     setImageLoading(true)
+    setImageError(null)
     try {
       const jpeg = await convertToJpeg(file)
       const path = `products/${Date.now()}.jpg`
@@ -389,7 +397,7 @@ export default function Products() {
       const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(path)
       setCurrent(prev => ({ ...prev, image_urls: [...(prev.image_urls || []), publicUrl] }))
     } catch (err) {
-      showAlert('error', 'Erro ao fazer upload: ' + err.message)
+      setImageError(err.message)
     } finally {
       setImageLoading(false)
       e.target.value = ''
@@ -866,6 +874,7 @@ export default function Products() {
             categories={categories} brands={brands}
             styles={styles} features={features}
             imageLoading={imageLoading}
+            imageError={imageError}
             handleUploadImage={handleUploadImage}
             removeImage={removeImage}
             saving={saving}
