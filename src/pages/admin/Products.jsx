@@ -63,7 +63,7 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
 
       {/* Step 1 — Básico */}
       {step === 1 && (
-        <div className="space-y-4">
+        <div className="space-y-4 min-h-[420px]">
           <div className="space-y-1.5">
             <Label>Nome *</Label>
             <Input value={current.name} onChange={e => set('name', e.target.value)} placeholder="Nome do produto" autoFocus />
@@ -97,7 +97,7 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
 
       {/* Step 2 — Detalhes */}
       {step === 2 && (
-        <div className="space-y-4">
+        <div className="space-y-4 min-h-[420px]">
           {!current.category_id && (
             <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
               <span>⚠️</span>
@@ -157,7 +157,7 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
 
       {/* Step 3 — Mídia + Dimensões */}
       {step === 3 && (
-        <div className="space-y-5">
+        <div className="space-y-5 min-h-[420px]">
           <div className="space-y-2">
             <Label className="text-sm font-medium">Imagem principal <span className="text-gray-400 font-normal text-xs">(destaque)</span></Label>
             <div className="flex items-center gap-4">
