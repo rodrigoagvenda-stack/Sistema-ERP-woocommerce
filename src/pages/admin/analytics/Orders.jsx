@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { wooProxy } from '@/lib/api'
 
 const getBrand = () => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#6366f1'
@@ -67,8 +67,9 @@ export default function Orders() {
     acc[o.status] = (acc[o.status] || 0) + 1
     return acc
   }, {})
+  const STATUS_COLORS = { cancelled: '#ef4444', failed: '#f97316' }
   const chartData = Object.entries(statusCounts).map(([status, count]) => ({
-    name: STATUS_LABELS[status]?.label || status, count
+    name: STATUS_LABELS[status]?.label || status, count, status
   }))
 
   return (
@@ -114,7 +115,11 @@ export default function Orders() {
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                 <Tooltip />
-                <Bar dataKey="count" fill={getBrand()} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                  {chartData.map((entry, i) => (
+                    <Cell key={i} fill={STATUS_COLORS[entry.status] || getBrand()} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
