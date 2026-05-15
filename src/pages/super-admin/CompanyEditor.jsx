@@ -10,11 +10,12 @@ const DEFAULT_FORM = {
   whatsapp_number:  '',
   logo_url:         '',
   favicon_url:      '',
-  feature_payments: false,
-  feature_shipping: false,
-  feature_coupons:  false,
-  feature_site:     false,
-  has_woocommerce:  true,
+  feature_payments:   false,
+  feature_shipping:   false,
+  feature_coupons:    false,
+  feature_site:       false,
+  feature_dimensions: false,
+  has_woocommerce:    true,
 }
 
 // ── File Upload Zone ──────────────────────────────────────────────────────────
@@ -225,11 +226,12 @@ export default function CompanyEditor() {
         whatsapp_number:  form.whatsapp_number,
         logo_url:         form.logo_url,
         favicon_url:      form.favicon_url,
-        feature_payments: form.feature_payments,
-        feature_shipping: form.feature_shipping,
-        feature_coupons:  form.feature_coupons,
-        feature_site:     form.feature_site,
-        has_woocommerce:  form.has_woocommerce,
+        feature_payments:   form.feature_payments,
+        feature_shipping:   form.feature_shipping,
+        feature_coupons:    form.feature_coupons,
+        feature_site:       form.feature_site,
+        feature_dimensions: form.feature_dimensions,
+        has_woocommerce:    form.has_woocommerce,
       }
       if (isNew) {
         const { error } = await supabase.from('companies').insert([payload])
@@ -394,6 +396,12 @@ export default function CompanyEditor() {
             description="Slider de produtos no site"
             checked={form.feature_site}
             onChange={v => set('feature_site', v)}
+          />
+          <Toggle
+            label="Dimensões e Peso Obrigatórios"
+            description="Exige peso e medidas no cadastro de produto (necessário para cálculo de frete)"
+            checked={form.feature_dimensions}
+            onChange={v => set('feature_dimensions', v)}
           />
         </div>
       </section>

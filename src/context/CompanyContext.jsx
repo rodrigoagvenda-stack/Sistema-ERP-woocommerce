@@ -56,10 +56,11 @@ export function CompanyProvider({ children }) {
   }
 
   const features = {
-    payments: company?.feature_payments ?? true,
-    shipping: company?.feature_shipping ?? true,
-    coupons:  company?.feature_coupons  ?? true,
-    site:     company?.feature_site     ?? true,
+    payments:   company?.feature_payments   ?? true,
+    shipping:   company?.feature_shipping   ?? true,
+    coupons:    company?.feature_coupons    ?? true,
+    site:       company?.feature_site       ?? true,
+    dimensions: company?.feature_dimensions ?? false,
   }
 
   return (
