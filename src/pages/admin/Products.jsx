@@ -215,7 +215,7 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
                     {label}{features.dimensions && <span className="text-red-500 ml-0.5">*</span>}
                   </Label>
                   <Input
-                    type="number" step="0.01"
+                    type="number" step="any" min="0"
                     value={current[field] || ''}
                     onChange={e => set(field, e.target.value)}
                     placeholder="0"
