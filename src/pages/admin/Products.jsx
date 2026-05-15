@@ -442,43 +442,24 @@ export default function Products() {
       if (dialog === 'create') {
         const created = await api.createProduct(payload)
         setProducts(prev => [created, ...prev])
-        try {
-          const wooPayload = buildWooPayload(payload)
-          const wooData = await wooProxy({ method: 'POST', endpoint: 'products', body: { ...wooPayload, type: 'simple' } })
-          const cid = await getCompanyId()
-          await supabase.from('products').update({ woo_id: wooData.id }).eq('id', created.id).eq('company_id', cid)
-          setProducts(prev => prev.map(p => p.id === created.id ? { ...p, woo_id: wooData.id } : p))
-          showAlert('success', `Produto "${created.name}" criado e sincronizado com WooCommerce!`)
-        } catch {
-          showAlert('success', `Produto "${created.name}" criado! Sincronize manualmente com o WooCommerce.`)
-        }
+        showAlert('success', `Produto "${created.name}" criado! Use o botão de sync para enviar ao WooCommerce.`)
       } else {
         const updated = await api.updateProduct(current.id, payload)
         setProducts(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p))
-        const wooPayload = buildWooPayload(payload)
-        try {
-          if (current.woo_id) {
-            try {
-              await wooProxy({ method: 'PUT', endpoint: `products/${current.woo_id}`, body: wooPayload })
-            } catch (e) {
-              if (e.message?.includes('invalid_id') || e.message?.includes('ID inválido')) {
-                await api.updateProduct(current.id, { woo_id: null })
-                setProducts(prev => prev.map(p => p.id === current.id ? { ...p, woo_id: null } : p))
-                const wooData = await wooProxy({ method: 'POST', endpoint: 'products', body: { ...wooPayload, type: 'simple' } })
-                const cid = await getCompanyId()
-                await supabase.from('products').update({ woo_id: wooData.id }).eq('id', updated.id).eq('company_id', cid)
-                setProducts(prev => prev.map(p => p.id === updated.id ? { ...p, woo_id: wooData.id } : p))
-              } else throw e
+        if (current.woo_id) {
+          const wooPayload = buildWooPayload(payload)
+          try {
+            await wooProxy({ method: 'PUT', endpoint: `products/${current.woo_id}`, body: wooPayload })
+            showAlert('success', `Produto "${updated.name}" salvo e sincronizado com WooCommerce!`)
+          } catch (e) {
+            if (e.message?.includes('invalid_id') || e.message?.includes('ID inválido')) {
+              await api.updateProduct(current.id, { woo_id: null })
+              setProducts(prev => prev.map(p => p.id === current.id ? { ...p, woo_id: null } : p))
             }
-          } else {
-            const wooData = await wooProxy({ method: 'POST', endpoint: 'products', body: { ...wooPayload, type: 'simple' } })
-            const cid = await getCompanyId()
-            await supabase.from('products').update({ woo_id: wooData.id }).eq('id', updated.id).eq('company_id', cid)
-            setProducts(prev => prev.map(p => p.id === updated.id ? { ...p, woo_id: wooData.id } : p))
+            showAlert('success', `Produto "${updated.name}" salvo no ERP. Sincronize manualmente com o WooCommerce.`)
           }
-          showAlert('success', `Produto "${updated.name}" salvo e sincronizado com WooCommerce!`)
-        } catch {
-          showAlert('success', `Produto "${updated.name}" salvo no ERP. Sincronize manualmente com o WooCommerce.`)
+        } else {
+          showAlert('success', `Produto "${updated.name}" atualizado!`)
         }
       }
       closeDialog()
