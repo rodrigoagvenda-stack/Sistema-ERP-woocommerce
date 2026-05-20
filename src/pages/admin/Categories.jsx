@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, Globe, CheckCircle2, AlertCircle, X, ImageIcon, Download } from 'lucide-react'
+import { Plus, Pencil, Trash2, Globe, CheckCircle2, AlertCircle, X, ImageIcon, Download, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -302,6 +302,13 @@ export default function Categories() {
             <Plus className="h-4 w-4" /> Nova Categoria
           </Button>
         </div>
+      </div>
+
+      <div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2.5 text-xs text-blue-700">
+        <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+        <span>
+          <strong>Categoria vs Subcategoria:</strong> a categoria PAI é o agrupamento principal. Para criar uma subcategoria, selecione uma categoria existente no campo <em>"Categoria Pai"</em> ao criar uma nova. No produto, o campo "Categoria" lista as PAIs e "Subcategoria" filtra as filhas automaticamente.
+        </span>
       </div>
 
       {alert && (

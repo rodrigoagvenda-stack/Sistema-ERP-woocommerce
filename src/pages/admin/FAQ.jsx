@@ -42,6 +42,10 @@ const SECTIONS = [
         a: `1. Crie primeiro as categorias PAI (ex: "Cervejas Artesanais") e salve.\n2. Clique no botão globo para sincronizar com o WooCommerce — aguarde o Woo ID aparecer.\n3. Crie as subcategorias selecionando a categoria pai no campo "Categoria Pai".\n4. Salve e clique no globo para sincronizar a subcategoria.\nSempre sincronize categorias ANTES dos produtos.`,
       },
       {
+        q: 'Qual a diferença entre Categoria e Subcategoria?',
+        a: `A Categoria PAI é o agrupamento principal (ex: "Telhas Metálicas").\nA Subcategoria é um nível abaixo da pai — para criá-la, basta selecionar uma categoria existente no campo "Categoria Pai" ao criar uma nova categoria (ex: "Telhas Onduladas" com pai "Telhas Metálicas").\n\nNo cadastro de produto:\n• O campo "Categoria" lista apenas as categorias PAI.\n• O campo "Subcategoria" filtra automaticamente as filhas da categoria escolhida.\n\nDica: sempre crie e sincronize as categorias PAI antes das subcategorias.`,
+      },
+      {
         q: 'Por que preciso sincronizar categorias antes dos produtos?',
         a: 'O WooCommerce usa um ID numérico próprio (Woo ID) para vincular categorias a produtos. Se a categoria não tiver Woo ID, o produto não consegue ser vinculado a ela corretamente.',
       },
