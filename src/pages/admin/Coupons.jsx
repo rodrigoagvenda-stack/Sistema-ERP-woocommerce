@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { wooProxy } from '@/lib/api'
-import Pagination, { paginate } from '@/components/Pagination'
 
 const EMPTY = {
   code: '',
@@ -45,7 +44,6 @@ export default function Coupons() {
   const [dialog, setDialog] = useState(null) // 'create' | 'edit' | 'delete'
   const [current, setCurrent] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
-  const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
 
   const showAlert = (type, message) => {
@@ -198,7 +196,7 @@ export default function Coupons() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginate(coupons, page).map(c => (
+                    {coupons.map(c => (
                       <TableRow key={c.id}>
                         <TableCell>
                           <span className="font-mono font-semibold text-sm uppercase">{c.code}</span>
@@ -243,7 +241,7 @@ export default function Coupons() {
 
               {/* Mobile cards */}
               <div className="md:hidden divide-y divide-gray-100">
-                {paginate(coupons, page).map(c => (
+                {coupons.map(c => (
                   <div key={c.id} className="p-4 flex items-start gap-3">
                     <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                       <Ticket className="h-5 w-5 text-gray-400" />
@@ -283,7 +281,6 @@ export default function Coupons() {
         </CardContent>
       </Card>
 
-      <Pagination page={page} total={coupons.length} onChange={setPage} />
 
       {/* Create / Edit Dialog */}
       <Dialog open={dialog === 'create' || dialog === 'edit'} onOpenChange={() => { setDialog(null); setCurrent(EMPTY) }}>
