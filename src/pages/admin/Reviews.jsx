@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { wooProxy } from '@/lib/api'
+import Pagination, { paginate } from '@/components/Pagination'
 
 function StarRating({ rating }) {
   return (
@@ -103,7 +104,7 @@ export default function Reviews() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {reviews.map(r => (
+                {paginate(reviews, page).map(r => (
                   <TableRow key={r.id}>
                     <TableCell className="text-sm font-medium text-gray-900">{r.product_name || `#${r.product_id}`}</TableCell>
                     <TableCell className="text-sm text-gray-600">{r.reviewer}</TableCell>

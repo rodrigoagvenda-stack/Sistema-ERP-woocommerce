@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { api, wooProxy } from '@/lib/api'
+import Pagination, { paginate } from '@/components/Pagination'
 
 const EMPTY = { name: '', slug: '' }
 
@@ -20,6 +21,7 @@ export default function Tags() {
   const [current, setCurrent] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [syncing, setSyncing] = useState(null)
+  const [page, setPage] = useState(1)
 
   const showAlert = (type, message) => {
     setAlert({ type, message })
@@ -141,7 +143,7 @@ export default function Tags() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {tags.map(t => (
+                      {paginate(tags, page).map(t => (
                         <TableRow key={t.id}>
                           <TableCell className="font-medium text-sm">{t.name}</TableCell>
                           <TableCell className="text-sm text-gray-500">{t.slug || '—'}</TableCell>
@@ -163,7 +165,7 @@ export default function Tags() {
 
                 {/* Mobile cards */}
                 <div className="md:hidden divide-y divide-gray-100">
-                  {tags.map(t => (
+                  {paginate(tags, page).map(t => (
                     <div key={t.id} className="p-4 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                         <span className="text-gray-500 font-bold text-sm">#</span>

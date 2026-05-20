@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { api } from '@/lib/api'
+import Pagination, { paginate } from '@/components/Pagination'
 
 const EMPTY = { name: '' }
 
@@ -18,6 +19,7 @@ export default function Styles() {
   const [dialog, setDialog] = useState(null)
   const [current, setCurrent] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [page, setPage] = useState(1)
 
   const showAlert = (type, message) => {
     setAlert({ type, message })
@@ -106,7 +108,7 @@ export default function Styles() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {styles.map(s => (
+                    {paginate(styles, page).map(s => (
                       <TableRow key={s.id}>
                         <TableCell className="font-medium text-sm">{s.name}</TableCell>
                         <TableCell>
@@ -127,7 +129,7 @@ export default function Styles() {
 
               {/* Mobile */}
               <div className="md:hidden divide-y divide-gray-100">
-                {styles.map(s => (
+                {paginate(styles, page).map(s => (
                   <div key={s.id} className="p-4 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
                       <FlaskConical className="w-4 h-4 text-gray-400" />

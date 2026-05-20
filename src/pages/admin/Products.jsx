@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea'
 import RichTextEditor from '@/components/RichTextEditor'
 import { api, wooProxy } from '@/lib/api'
+import Pagination, { paginate, PAGE_SIZE } from '@/components/Pagination'
 import { supabase } from '@/lib/supabase'
 import { getCompanyId } from '@/lib/company'
 import { useCompany } from '@/context/CompanyContext'
@@ -311,6 +312,7 @@ export default function Products() {
   const [search, setSearch] = useState('')
   const [filterTab, setFilterTab] = useState('all')
   const [filterCategory, setFilterCategory] = useState('all')
+  const [page, setPage] = useState(1)
   const [alert, setAlert] = useState(null)
   const [dialog, setDialog] = useState(null)
   const [current, setCurrent] = useState(EMPTY_PRODUCT)
@@ -663,6 +665,7 @@ export default function Products() {
     return matchSearch && matchTab && matchCat
   })
 
+  const paged = paginate(filtered, page)
   const lowStockCount = products.filter(p => (p.stock || 0) < (p.min_stock || 5)).length
   const unsyncedCount = products.filter(p => !p.woo_id && p.status === 'active').length
   const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n)
@@ -710,7 +713,7 @@ export default function Products() {
               <Input
                 placeholder="Buscar produtos..."
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={e => { setSearch(e.target.value); setPage(1) }}
                 className="pl-9"
               />
             </div>
@@ -776,7 +779,7 @@ export default function Products() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filtered.map(p => (
+                    {paged.map(p => (
                       <TableRow key={p.id} className={(p.stock || 0) < (p.min_stock || 5) ? 'bg-amber-50/40' : ''}>
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -836,7 +839,7 @@ export default function Products() {
 
               {/* Mobile cards */}
               <div className="md:hidden divide-y divide-gray-100">
-                {filtered.map(p => (
+                {paged.map(p => (
                   <div key={p.id} className={`p-4 flex items-center gap-3 ${(p.stock || 0) < (p.min_stock || 5) ? 'bg-amber-50/40' : ''}`}>
                     {p.image_urls?.[0] ? (
                       <img src={p.image_urls[0]} alt={p.name} className="w-14 h-14 rounded-lg object-cover shrink-0" />
@@ -867,6 +870,8 @@ export default function Products() {
           )}
         </CardContent>
       </Card>
+
+      <Pagination page={page} total={filtered.length} onChange={p => { setPage(p); window.scrollTo(0,0) }} />
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialog === 'create' || dialog === 'edit'} onOpenChange={closeDialog}>

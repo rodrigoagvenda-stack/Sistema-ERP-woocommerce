@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { api, wooProxy } from '@/lib/api'
+import Pagination, { paginate } from '@/components/Pagination'
 import { supabase } from '@/lib/supabase'
 
 const EMPTY = { name: '', slug: '', status: 'active', parent_id: null, woo_id: null, image_url: '' }
@@ -23,6 +24,7 @@ export default function Categories() {
   const [saving, setSaving] = useState(false)
   const [syncing, setSyncing] = useState(null)
   const [importing, setImporting] = useState(false)
+  const [page, setPage] = useState(1)
   const [uploadingImage, setUploadingImage] = useState(false)
   const imageInputRef = useRef(null)
 
@@ -340,7 +342,7 @@ export default function Categories() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {categories.map(c => (
+                    {paginate(categories, page).map(c => (
                       <TableRow key={c.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -384,7 +386,7 @@ export default function Categories() {
 
               {/* Mobile cards */}
               <div className="md:hidden divide-y divide-gray-100">
-                {categories.map(c => (
+                {paginate(categories, page).map(c => (
                   <div key={c.id} className="p-4 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-gray-100 flex items-center justify-center">
                       {c.image_url
@@ -420,6 +422,8 @@ export default function Categories() {
           )}
         </CardContent>
       </Card>
+
+      <Pagination page={page} total={categories.length} onChange={setPage} />
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialog === 'create' || dialog === 'edit'} onOpenChange={closeDialog}>

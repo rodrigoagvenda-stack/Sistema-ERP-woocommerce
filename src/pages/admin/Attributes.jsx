@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { api, wooProxy } from '@/lib/api'
+import Pagination, { paginate } from '@/components/Pagination'
 
 export default function Attributes() {
   const [attributes, setAttributes] = useState([])
@@ -18,6 +19,7 @@ export default function Attributes() {
   const [form, setForm] = useState({ name: '', slug: '' })
   const [saving, setSaving] = useState(false)
   const [expanded, setExpanded] = useState({})
+  const [page, setPage] = useState(1)
   const [syncing, setSyncing] = useState(null)
 
   const showAlert = (type, message) => {
@@ -139,7 +141,7 @@ export default function Attributes() {
       <div className="space-y-3">
         {loading ? <Card><CardContent className="p-8 text-center text-gray-400 text-sm">Carregando...</CardContent></Card> :
           attributes.length === 0 ? <Card><CardContent className="p-8 text-center text-gray-400 text-sm">Nenhum atributo cadastrado</CardContent></Card> :
-          attributes.map(attr => (
+          paginate(attributes, page).map(attr => (
             <Card key={attr.id}>
               <CardContent className="p-0">
                 {/* Attribute row */}
@@ -212,6 +214,8 @@ export default function Attributes() {
             </Card>
           ))}
       </div>
+
+      <Pagination page={page} total={attributes.length} onChange={setPage} />
 
       {/* Attribute Create/Edit */}
       <Dialog open={dialog?.type === 'attr' && (dialog?.mode === 'create' || dialog?.mode === 'edit')} onOpenChange={() => setDialog(null)}>

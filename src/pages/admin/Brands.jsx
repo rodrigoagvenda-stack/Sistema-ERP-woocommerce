@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { api, wooProxy } from '@/lib/api'
+import Pagination, { paginate } from '@/components/Pagination'
 
 const EMPTY = { name: '', slug: '' }
 
@@ -20,6 +21,7 @@ export default function Brands() {
   const [current, setCurrent] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [syncing, setSyncing] = useState(null)
+  const [page, setPage] = useState(1)
 
   const showAlert = (type, message) => {
     setAlert({ type, message })
@@ -163,7 +165,7 @@ export default function Brands() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {brands.map(b => (
+                      {paginate(brands, page).map(b => (
                         <TableRow key={b.id}>
                           <TableCell className="font-medium text-sm">{b.name}</TableCell>
                           <TableCell className="text-sm text-gray-500">{b.slug || '—'}</TableCell>
@@ -185,7 +187,7 @@ export default function Brands() {
 
                 {/* Mobile cards */}
                 <div className="md:hidden divide-y divide-gray-100">
-                  {brands.map(b => (
+                  {paginate(brands, page).map(b => (
                     <div key={b.id} className="p-4 flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg [background-color:color-mix(in_srgb,var(--brand)_10%,transparent)] flex items-center justify-center shrink-0">
                         <span className="[color:var(--brand)] font-bold text-sm">{b.name[0]?.toUpperCase()}</span>
