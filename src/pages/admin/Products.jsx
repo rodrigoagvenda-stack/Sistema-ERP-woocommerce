@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
+import RichTextEditor from '@/components/RichTextEditor'
 import { api, wooProxy } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 import { getCompanyId } from '@/lib/company'
@@ -150,7 +151,7 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
           </div>
           <div className="space-y-1.5">
             <Label>Descrição</Label>
-            <Textarea value={current.description} onChange={e => set('description', e.target.value)} rows={4} placeholder="Descreva o produto..." />
+            <RichTextEditor value={current.description} onChange={v => set('description', v)} />
           </div>
         </div>
       )}
