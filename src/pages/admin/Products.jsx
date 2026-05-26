@@ -543,8 +543,10 @@ export default function Products() {
         wooData = await wooProxy({ method: 'POST', endpoint: 'products', body: { ...payload, type: 'simple' } })
       }
       const cid = await getCompanyId()
-      await supabase.from('products').update({ woo_id: wooData.id }).eq('id', product.id).eq('company_id', cid)
-      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, woo_id: wooData.id } : p))
+      const wooImageUrls = (wooData.images || []).map(i => i.src).filter(Boolean)
+      const updateData = { woo_id: wooData.id, ...(wooImageUrls.length > 0 && { image_urls: wooImageUrls }) }
+      await supabase.from('products').update(updateData).eq('id', product.id).eq('company_id', cid)
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, ...updateData } : p))
       showAlert('success', `"${product.name}" sincronizado! ID Woo: ${wooData.id}`)
     } catch (e) {
       showAlert('error', 'Erro ao sincronizar: ' + e.message)
@@ -566,8 +568,10 @@ export default function Products() {
         const payload = buildWooPayload(product)
         const wooData = await wooProxy({ method: 'POST', endpoint: 'products', body: { ...payload, type: 'simple' } })
         const cid = await getCompanyId()
-        await supabase.from('products').update({ woo_id: wooData.id }).eq('id', product.id).eq('company_id', cid)
-        setProducts(prev => prev.map(p => p.id === product.id ? { ...p, woo_id: wooData.id } : p))
+        const wooImageUrls = (wooData.images || []).map(i => i.src).filter(Boolean)
+        const updateData = { woo_id: wooData.id, ...(wooImageUrls.length > 0 && { image_urls: wooImageUrls }) }
+        await supabase.from('products').update(updateData).eq('id', product.id).eq('company_id', cid)
+        setProducts(prev => prev.map(p => p.id === product.id ? { ...p, ...updateData } : p))
         ok++
       } catch {
         fail++
