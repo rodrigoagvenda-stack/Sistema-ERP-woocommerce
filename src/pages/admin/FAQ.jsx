@@ -141,6 +141,10 @@ const SECTIONS = [
         a: 'Na tela Analytics → Pedidos, clique no ícone de X ao lado do pedido (disponível para pedidos com status Pendente, Processando ou Em espera). Uma confirmação será exibida antes de cancelar no WooCommerce.',
       },
       {
+        q: 'Como enviar mensagem de WhatsApp para um cliente pelo painel?',
+        a: `Na tela Analytics → Pedidos, há um botão verde de WhatsApp ao lado de cada pedido. Ao clicar, o WhatsApp Web (ou app do celular) abre automaticamente com uma mensagem já escrita, incluindo o nome do cliente, número do pedido e valor.\n\nA mensagem muda de acordo com o status do pedido:\n• Pendente: lembrete para finalizar a compra.\n• Em espera: aviso de que aguardamos confirmação de pagamento.\n• Processando: confirmação do pedido e aviso de envio em breve.\n• Concluído: agradecimento e pedido de avaliação.\n• Cancelado: convite para fazer um novo pedido.\n\nRequisitos:\n• O WhatsApp deve estar aberto no computador (WhatsApp Web) ou celular onde o sistema está sendo usado.\n• O cliente precisa ter preenchido o telefone corretamente no checkout — se não houver número cadastrado, o sistema avisa na hora.`,
+      },
+      {
         q: 'Como configurar metas de receita?',
         a: 'Vá em Analytics → Configurações. Lá você define meta de receita, período padrão e limiar de estoque baixo.',
       },
