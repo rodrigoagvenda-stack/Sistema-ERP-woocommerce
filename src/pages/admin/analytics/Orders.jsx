@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { RefreshCw, AlertCircle, XCircle } from 'lucide-react'
+import { RefreshCw, AlertCircle, XCircle, MessageCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -25,6 +25,23 @@ const CANCELLABLE = ['pending', 'processing', 'on-hold']
 
 const fmt     = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
 const fmtDate = (d) => new Date(d).toLocaleDateString('pt-BR')
+
+const WHATSAPP_MESSAGES = {
+  pending:    (o) => `Olá, ${o.billing?.first_name}! 😊 Vimos que você iniciou o pedido #${o.number || o.id} no valor de ${fmt(o.total)} em nossa loja, mas o pagamento ainda não foi confirmado. Precisa de ajuda para finalizar? Estamos à disposição!`,
+  'on-hold':  (o) => `Olá, ${o.billing?.first_name}! Seu pedido #${o.number || o.id} (${fmt(o.total)}) está aguardando confirmação de pagamento. Assim que confirmarmos, você receberá uma atualização. Qualquer dúvida, é só falar! 🍺`,
+  processing: (o) => `Olá, ${o.billing?.first_name}! Seu pedido #${o.number || o.id} (${fmt(o.total)}) foi confirmado e está sendo preparado. Em breve você receberá informações de rastreamento. Obrigado pela compra! 🍺`,
+  completed:  (o) => `Olá, ${o.billing?.first_name}! Esperamos que tenha curtido seu pedido #${o.number || o.id}. Deixa uma avaliação, é rápido e nos ajuda muito! Qualquer dúvida, estamos aqui. 😊`,
+  cancelled:  (o) => `Olá, ${o.billing?.first_name}! Vimos que seu pedido #${o.number || o.id} foi cancelado. Se foi um engano ou quiser fazer um novo pedido, é só nos chamar! 🍺`,
+}
+
+const openWhatsApp = (order) => {
+  const raw = (order.billing?.phone || '').replace(/\D/g, '')
+  if (!raw) return alert('Este pedido não possui telefone cadastrado.')
+  const phone = raw.startsWith('55') ? raw : `55${raw}`
+  const msgFn = WHATSAPP_MESSAGES[order.status] || ((o) => `Olá, ${o.billing?.first_name}! Tudo bem com seu pedido #${o.number || o.id}?`)
+  const text = encodeURIComponent(msgFn(order))
+  window.open(`https://wa.me/${phone}?text=${text}`, '_blank')
+}
 
 export default function Orders() {
   const [orders,    setOrders]    = useState([])
@@ -160,17 +177,28 @@ export default function Orders() {
                           <TableCell className="font-medium text-sm">{fmt(o.total)}</TableCell>
                           <TableCell className="text-sm text-gray-500">{fmtDate(o.date_created)}</TableCell>
                           <TableCell>
-                            {CANCELLABLE.includes(o.status) && (
+                            <div className="flex items-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-gray-400 hover:text-red-500"
-                                title="Cancelar pedido"
-                                onClick={() => setCancelling(o)}
+                                className="h-7 w-7 text-green-500 hover:text-green-700"
+                                title="Enviar mensagem no WhatsApp"
+                                onClick={() => openWhatsApp(o)}
                               >
-                                <XCircle className="h-4 w-4" />
+                                <MessageCircle className="h-4 w-4" />
                               </Button>
-                            )}
+                              {CANCELLABLE.includes(o.status) && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-gray-400 hover:text-red-500"
+                                  title="Cancelar pedido"
+                                  onClick={() => setCancelling(o)}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       )
@@ -194,8 +222,16 @@ export default function Orders() {
                       </p>
                       <div className="flex items-center justify-between mt-2">
                         <Badge variant={statusInfo.variant} className="text-xs">{statusInfo.label}</Badge>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <span className="text-xs text-gray-400">{fmtDate(o.date_created)}</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-green-500 hover:text-green-700"
+                            onClick={() => openWhatsApp(o)}
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" />
+                          </Button>
                           {CANCELLABLE.includes(o.status) && (
                             <Button
                               variant="ghost"
