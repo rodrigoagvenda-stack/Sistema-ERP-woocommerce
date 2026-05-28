@@ -441,3 +441,36 @@ export async function wooProxy({ method = 'GET', endpoint, body, credentials, ac
 export async function wooUploadMedia(image_url, filename) {
   return wooProxy({ action: 'upload_media', image_url, filename })
 }
+
+// PagBank proxy via Supabase Edge Function
+export async function pagbankProxy({ method = 'GET', endpoint, body } = {}) {
+  const company_id = await getCompanyId()
+  const { data, error } = await supabase.functions.invoke('pagbank-proxy', {
+    body: { method, endpoint, body, company_id }
+  })
+  if (error) throw new Error(error.message)
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
+// Melhor Envio proxy via Supabase Edge Function
+export async function melhorEnvioProxy({ method = 'GET', endpoint, body, action, order, order_id } = {}) {
+  const company_id = await getCompanyId()
+  const { data, error } = await supabase.functions.invoke('melhor-envio-proxy', {
+    body: { method, endpoint, body, action, order, order_id, company_id }
+  })
+  if (error) throw new Error(error.message)
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
+// Bling proxy via Supabase Edge Function
+export async function blingProxy({ method = 'GET', endpoint, body, action, order } = {}) {
+  const company_id = await getCompanyId()
+  const { data, error } = await supabase.functions.invoke('bling-proxy', {
+    body: { method, endpoint, body, action, order, company_id }
+  })
+  if (error) throw new Error(error.message)
+  if (data?.error) throw new Error(data.error)
+  return data
+}

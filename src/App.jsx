@@ -29,6 +29,7 @@ const SyncLogs       = lazy(() => import('@/pages/admin/SyncLogs'))
 const Coupons        = lazy(() => import('@/pages/admin/Coupons'))
 const NossasCervejas = lazy(() => import('@/pages/admin/NossasCervejas'))
 const FAQ            = lazy(() => import('@/pages/admin/FAQ'))
+const Integrations   = lazy(() => import('@/pages/admin/Integrations'))
 
 // Analytics
 const AnalyticsOverview    = lazy(() => import('@/pages/admin/analytics/Overview'))
@@ -90,6 +91,7 @@ export default function App() {
         {/* Admin — Features opcionais */}
         <Route path="/admin/:slug/coupons"         element={<AdminPage><Coupons /></AdminPage>} />
         <Route path="/admin/:slug/nossas-cervejas" element={<AdminPage><NossasCervejas /></AdminPage>} />
+        <Route path="/admin/:slug/integrations"    element={<AdminPage><Integrations /></AdminPage>} />
 
         {/* Admin — Analytics */}
         <Route path="/admin/:slug/analytics/overview"   element={<AdminPage><AnalyticsOverview /></AdminPage>} />
