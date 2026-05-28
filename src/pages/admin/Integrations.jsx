@@ -37,7 +37,7 @@ const INTEGRATIONS = [
       { key: 'sender_city', label: 'Cidade', placeholder: 'Botucatu' },
       { key: 'sender_state', label: 'Estado (UF)', placeholder: 'SP' },
       { key: 'sender_cep', label: 'CEP', placeholder: '18600-000' },
-      { key: 'default_service', label: 'Serviço padrão', placeholder: '1 = PAC, 2 = SEDEX, 3 = Jadlog' },
+      { key: 'default_service', label: 'Serviço fallback (opcional)', placeholder: '1 = PAC, 2 = SEDEX, 3 = JadLog — usado só se não detectar pelo pedido' },
       { key: 'default_weight', label: 'Peso padrão (kg)', placeholder: '0.5' },
     ],
     docs: 'https://docs.melhorenvio.com.br',

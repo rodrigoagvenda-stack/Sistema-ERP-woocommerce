@@ -49,9 +49,39 @@ serve(async (req) => {
       const shipping = order.shipping || {}
       const billing  = order.billing  || {}
 
+      // Resolve serviço ME a partir do pedido WooCommerce
+      // Evita divergência entre o serviço escolhido no checkout e a etiqueta gerada
+      const resolveServiceId = (): number => {
+        const line = order.shipping_lines?.[0]
+
+        if (line) {
+          // Melhor Envio plugin guarda o ID do serviço no meta_data
+          const metaId = line.meta_data?.find(
+            (m: any) => m.key === '_melhor_envio_service_id' || m.key === 'service_id'
+          )?.value
+          if (metaId) return parseInt(metaId)
+
+          // method_id costuma ter o formato "melhor_envio_correios_1" — extrai o número final
+          const fromMethod = (line.method_id || '').match(/_(\d+)$/)
+          if (fromMethod) return parseInt(fromMethod[1])
+
+          // Fallback por palavras-chave no título (ex: "SEDEX", "PAC", "JadLog")
+          const title = (line.method_title || line.title || '').toLowerCase()
+          if (title.includes('sedex'))                              return 2
+          if (title.includes('pac'))                               return 1
+          if (title.includes('jadlog') && title.includes('pack'))  return 18
+          if (title.includes('jadlog'))                            return 3
+          if (title.includes('mini'))                              return 17
+          if (title.includes('carta') || title.includes('impresso')) return 8
+        }
+
+        // Último recurso: default configurado nas Integrações
+        return parseInt(extra.default_service) || 1
+      }
+
       // 1. Adicionar ao carrinho ME
       const cartPayload = {
-        service: extra.default_service || 1, // 1=Correios PAC, 2=SEDEX, etc
+        service: resolveServiceId(), // 1=Correios PAC, 2=SEDEX, etc
         agency: null,
         from: {
           name:       extra.sender_name     || 'Remetente',
