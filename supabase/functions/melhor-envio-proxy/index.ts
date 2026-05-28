@@ -109,7 +109,7 @@ serve(async (req) => {
 
       const cartId = cartData.id
 
-      // 2. Checkout (gerar etiqueta)
+      // 2. Checkout (debita saldo)
       const checkoutRes = await fetch(`${ME_BASE}/shipment/checkout`, {
         method: 'POST',
         headers: meHeaders,
@@ -121,18 +121,30 @@ serve(async (req) => {
         throw new Error(checkoutData.message || 'Erro no checkout ME')
       }
 
-      // 3. Gerar PDF
+      // 3. Generate (prepara etiqueta para impressão)
+      const generateRes = await fetch(`${ME_BASE}/shipment/generate`, {
+        method: 'POST',
+        headers: meHeaders,
+        body: JSON.stringify({ orders: [cartId] }),
+      })
+      const generateData = await generateRes.json()
+
+      if (!generateRes.ok) {
+        throw new Error(generateData.message || 'Erro ao gerar etiqueta ME')
+      }
+
+      // 4. Print (URL pública do PDF — não exige login no ME)
       const printRes = await fetch(`${ME_BASE}/shipment/print`, {
         method: 'POST',
         headers: meHeaders,
-        body: JSON.stringify({ mode: 'private', orders: [cartId] }),
+        body: JSON.stringify({ mode: 'public', orders: [cartId] }),
       })
       const printData = await printRes.json()
 
       return new Response(JSON.stringify({
         label_url: printData.url || null,
-        tracking: cartData.tracking || null,
-        cart_id: cartId,
+        tracking:  generateData[cartId]?.tracking || cartData.tracking || null,
+        cart_id:   cartId,
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
