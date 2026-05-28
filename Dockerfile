@@ -15,7 +15,7 @@ RUN npm ci && npm cache clean --force
 COPY . .
 
 # Build da aplicação (as variáveis de ambiente serão injetadas em runtime)
-RUN npm run build
+RUN NODE_OPTIONS=--max-old-space-size=1536 npm run build
 
 # Stage 2: Servir com nginx
 FROM nginx:alpine
