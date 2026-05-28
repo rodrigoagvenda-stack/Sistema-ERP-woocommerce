@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { RefreshCw, AlertCircle, XCircle, MessageCircle } from 'lucide-react'
+import { RefreshCw, AlertCircle, XCircle, MessageCircle, ChevronDown, ChevronRight } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -48,8 +48,11 @@ export default function Orders() {
   const [loading,   setLoading]   = useState(false)
   const [error,     setError]     = useState(null)
   const [page,      setPage]      = useState(1)
-  const [cancelling, setCancelling] = useState(null)   // order being confirmed
+  const [cancelling, setCancelling] = useState(null)
   const [cancelBusy, setCancelBusy] = useState(false)
+  const [expanded,   setExpanded]   = useState({})
+
+  const toggleExpand = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }))
 
   const load = async () => {
     setLoading(true); setError(null)
@@ -167,40 +170,54 @@ export default function Orders() {
                   <TableBody>
                     {orders.map(o => {
                       const statusInfo = STATUS_LABELS[o.status] || { label: o.status, variant: 'secondary' }
+                      const isExpanded = !!expanded[o.id]
                       return (
-                        <TableRow key={o.id}>
-                          <TableCell className="font-medium text-sm">#{o.number || o.id}</TableCell>
-                          <TableCell className="text-sm text-gray-600">
-                            {o.billing?.first_name} {o.billing?.last_name}
-                          </TableCell>
-                          <TableCell><Badge variant={statusInfo.variant}>{statusInfo.label}</Badge></TableCell>
-                          <TableCell className="font-medium text-sm">{fmt(o.total)}</TableCell>
-                          <TableCell className="text-sm text-gray-500">{fmtDate(o.date_created)}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-green-500 hover:text-green-700"
-                                title="Enviar mensagem no WhatsApp"
-                                onClick={() => openWhatsApp(o)}
-                              >
-                                <MessageCircle className="h-4 w-4" />
-                              </Button>
-                              {CANCELLABLE.includes(o.status) && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 text-gray-400 hover:text-red-500"
-                                  title="Cancelar pedido"
-                                  onClick={() => setCancelling(o)}
-                                >
-                                  <XCircle className="h-4 w-4" />
+                        <>
+                          <TableRow key={o.id} className="cursor-pointer hover:bg-gray-50/50" onClick={() => toggleExpand(o.id)}>
+                            <TableCell className="font-medium text-sm">
+                              <div className="flex items-center gap-1.5">
+                                {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-gray-400" /> : <ChevronRight className="h-3.5 w-3.5 text-gray-400" />}
+                                #{o.number || o.id}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm text-gray-600">{o.billing?.first_name} {o.billing?.last_name}</TableCell>
+                            <TableCell><Badge variant={statusInfo.variant}>{statusInfo.label}</Badge></TableCell>
+                            <TableCell className="font-medium text-sm">{fmt(o.total)}</TableCell>
+                            <TableCell className="text-sm text-gray-500">{fmtDate(o.date_created)}</TableCell>
+                            <TableCell onClick={e => e.stopPropagation()}>
+                              <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-green-500 hover:text-green-700" title="Enviar mensagem no WhatsApp" onClick={() => openWhatsApp(o)}>
+                                  <MessageCircle className="h-4 w-4" />
                                 </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                                {CANCELLABLE.includes(o.status) && (
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-red-500" title="Cancelar pedido" onClick={() => setCancelling(o)}>
+                                    <XCircle className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          {isExpanded && (
+                            <TableRow key={`${o.id}-items`} className="bg-gray-50/50">
+                              <TableCell colSpan={6} className="py-2 px-6">
+                                <div className="space-y-1">
+                                  {(o.line_items || []).map((item, i) => (
+                                    <div key={i} className="flex items-center justify-between py-1 border-b border-gray-100 last:border-0">
+                                      <div className="flex items-center gap-2">
+                                        {item.image?.src && <img src={item.image.src} alt="" className="w-8 h-8 rounded object-cover" />}
+                                        <span className="text-sm text-gray-700">{item.name}</span>
+                                      </div>
+                                      <div className="flex items-center gap-6 text-sm">
+                                        <span className="text-gray-400">x{item.quantity}</span>
+                                        <span className="font-medium text-gray-700">{fmt(item.total)}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
                       )
                     })}
                   </TableBody>
@@ -211,34 +228,39 @@ export default function Orders() {
               <div className="md:hidden divide-y divide-gray-100">
                 {orders.map(o => {
                   const statusInfo = STATUS_LABELS[o.status] || { label: o.status, variant: 'secondary' }
+                  const isExpanded = !!expanded[o.id]
                   return (
                     <div key={o.id} className="p-4">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-sm text-gray-900">#{o.number || o.id}</span>
+                      <div className="flex items-center justify-between mb-1" onClick={() => toggleExpand(o.id)}>
+                        <span className="font-semibold text-sm text-gray-900 flex items-center gap-1">
+                          {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-gray-400" /> : <ChevronRight className="h-3.5 w-3.5 text-gray-400" />}
+                          #{o.number || o.id}
+                        </span>
                         <span className="font-bold text-sm text-gray-900">{fmt(o.total)}</span>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        {o.billing?.first_name} {o.billing?.last_name}
-                      </p>
+                      <p className="text-xs text-gray-500">{o.billing?.first_name} {o.billing?.last_name}</p>
+                      {isExpanded && (
+                        <div className="mt-2 space-y-1 bg-gray-50 rounded-lg p-2">
+                          {(o.line_items || []).map((item, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs py-0.5">
+                              <span className="text-gray-600">{item.name}</span>
+                              <div className="flex items-center gap-3">
+                                <span className="text-gray-400">x{item.quantity}</span>
+                                <span className="font-medium">{fmt(item.total)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <div className="flex items-center justify-between mt-2">
                         <Badge variant={statusInfo.variant} className="text-xs">{statusInfo.label}</Badge>
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-gray-400">{fmtDate(o.date_created)}</span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-green-500 hover:text-green-700"
-                            onClick={() => openWhatsApp(o)}
-                          >
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-green-500 hover:text-green-700" onClick={() => openWhatsApp(o)}>
                             <MessageCircle className="h-3.5 w-3.5" />
                           </Button>
                           {CANCELLABLE.includes(o.status) && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-gray-400 hover:text-red-500"
-                              onClick={() => setCancelling(o)}
-                            >
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-red-500" onClick={() => setCancelling(o)}>
                               <XCircle className="h-3.5 w-3.5" />
                             </Button>
                           )}
