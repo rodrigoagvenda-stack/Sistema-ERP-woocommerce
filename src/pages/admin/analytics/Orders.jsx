@@ -44,6 +44,11 @@ const wa = (order) => {
 const getPagBankId = (order) =>
   (order.meta_data || []).find(m => m.key?.includes('pagbank') || m.key?.includes('charge_id'))?.value || null
 
+const getCPF = (order) =>
+  order.billing?.cpf
+  || (order.meta_data || []).find(m => ['_billing_cpf','billing_cpf','_cpf','cpf','vindi_cpf','wc_cpf'].includes(m.key))?.value
+  || null
+
 function StatusPill({ status }) {
   const s = STATUS[status] || { label: status, color: 'bg-gray-100 text-gray-600' }
   return (
@@ -178,6 +183,15 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
 
               {/* Info + Actions grid */}
               <div className="flex flex-wrap gap-8">
+
+                {/* Customer */}
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">Cliente</p>
+                  <p className="text-sm font-medium text-gray-700">{order.billing?.first_name} {order.billing?.last_name}</p>
+                  {order.billing?.email && <p className="text-xs text-gray-400 mt-0.5">{order.billing.email}</p>}
+                  {getCPF(order) && <p className="text-xs font-mono text-gray-500 mt-0.5">CPF {getCPF(order)}</p>}
+                  {order.billing?.phone && <p className="text-xs text-gray-400 mt-0.5">{order.billing.phone}</p>}
+                </div>
 
                 {/* Delivery */}
                 <div>
