@@ -60,7 +60,7 @@ export default function Kits() {
   const [saving,    setSaving]    = useState(false)
   const [companyId, setCompanyId] = useState(null)
   const [alert,     setAlert]     = useState(null)
-  const [form,      setForm]      = useState({ name: '', price: '', success_url: '' })
+  const [form,      setForm]      = useState({ name: '', price: '', success_url: '', weight_g: '', dimensions: '' })
 
   const showAlert = (type, msg) => {
     setAlert({ type, msg })
@@ -91,11 +91,11 @@ export default function Kits() {
       const cid = await getCompanyId()
       const { data, error } = await supabase
         .from('kits')
-        .insert({ company_id: cid, name: form.name.trim(), price: parseFloat(form.price), success_url: form.success_url || null, active: true })
+        .insert({ company_id: cid, name: form.name.trim(), price: parseFloat(form.price), success_url: form.success_url || null, weight_g: form.weight_g ? parseInt(form.weight_g) : 500, dimensions: form.dimensions || '20x15x10', active: true })
         .select()
       if (error) throw error
       setKits(prev => [...prev, data[0]])
-      setForm({ name: '', price: '', success_url: '' })
+      setForm({ name: '', price: '', success_url: '', weight_g: '', dimensions: '' })
       showAlert('success', 'Kit criado!')
     } catch (e) { showAlert('error', e.message) }
     finally { setSaving(false) }
@@ -129,7 +129,7 @@ export default function Kits() {
           <CardDescription>O cliente clica no botão e vai direto para o checkout do Mercado Pago numa nova aba.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="space-y-1.5 sm:col-span-1">
               <Label className="text-xs">Nome do kit</Label>
               <Input value={form.name} onChange={e => set('name', e.target.value)} placeholder="Kit 3 Frascos" className="text-sm" />
@@ -138,6 +138,16 @@ export default function Kits() {
               <Label className="text-xs">Preço (R$)</Label>
               <Input value={form.price} onChange={e => set('price', e.target.value)} placeholder="605.00" type="number" step="0.01" className="text-sm" />
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Peso (g)</Label>
+              <Input value={form.weight_g} onChange={e => set('weight_g', e.target.value)} placeholder="500" type="number" className="text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Dimensões (CxLxA cm)</Label>
+              <Input value={form.dimensions} onChange={e => set('dimensions', e.target.value)} placeholder="20x15x10" className="text-sm" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs">URL de retorno após pagamento (opcional)</Label>
               <Input value={form.success_url} onChange={e => set('success_url', e.target.value)} placeholder="https://seusite.com/obrigado" className="text-sm" />

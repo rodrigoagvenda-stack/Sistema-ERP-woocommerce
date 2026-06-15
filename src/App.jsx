@@ -31,6 +31,7 @@ const NossasCervejas = lazy(() => import('@/pages/admin/NossasCervejas'))
 const FAQ            = lazy(() => import('@/pages/admin/FAQ'))
 const Integrations   = lazy(() => import('@/pages/admin/Integrations'))
 const Kits           = lazy(() => import('@/pages/admin/Kits'))
+const Cupons         = lazy(() => import('@/pages/admin/Cupons'))
 
 // Analytics
 const AnalyticsOverview    = lazy(() => import('@/pages/admin/analytics/Overview'))
@@ -94,6 +95,7 @@ export default function App() {
         <Route path="/admin/:slug/nossas-cervejas" element={<AdminPage><NossasCervejas /></AdminPage>} />
         <Route path="/admin/:slug/integrations"    element={<AdminPage><Integrations /></AdminPage>} />
         <Route path="/admin/:slug/kits"            element={<AdminPage><Kits /></AdminPage>} />
+        <Route path="/admin/:slug/cupons-kit"     element={<AdminPage><Cupons /></AdminPage>} />
 
         {/* Admin — Analytics */}
         <Route path="/admin/:slug/analytics/overview"   element={<AdminPage><AnalyticsOverview /></AdminPage>} />
