@@ -78,10 +78,12 @@ serve(async (req) => {
     }
 
     const finalPrice = Math.max(0.01, parseFloat(kit.price) - discountAmount)
-    const weightG    = Math.round((kit.weight_kg || 0.5) * 1000)
+    const qty        = kit.quantity || 1
+    const weightG    = Math.round((kit.weight_kg || 0.5) * qty * 1000)
     const lengthCm   = kit.length_cm || 20
     const widthCm    = kit.width_cm  || 15
     const heightCm   = kit.height_cm || 10
+    log(`frete: ${qty}un × ${kit.weight_kg}kg = ${weightG}g | dim=${lengthCm}x${widthCm}x${heightCm}`)
 
     // Monta preference
     const prefBody: Record<string, unknown> = {

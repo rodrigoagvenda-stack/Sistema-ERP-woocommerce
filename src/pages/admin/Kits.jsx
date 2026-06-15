@@ -60,7 +60,7 @@ export default function Kits() {
   const [saving,    setSaving]    = useState(false)
   const [companyId, setCompanyId] = useState(null)
   const [alert,     setAlert]     = useState(null)
-  const [form,      setForm]      = useState({ name: '', price: '', success_url: '', weight_kg: '', length_cm: '', width_cm: '', height_cm: '' })
+  const [form,      setForm]      = useState({ name: '', price: '', success_url: '', quantity: '1', weight_kg: '', length_cm: '', width_cm: '', height_cm: '' })
 
   const showAlert = (type, msg) => {
     setAlert({ type, msg })
@@ -91,11 +91,11 @@ export default function Kits() {
       const cid = await getCompanyId()
       const { data, error } = await supabase
         .from('kits')
-        .insert({ company_id: cid, name: form.name.trim(), price: parseFloat(form.price), success_url: form.success_url || null, weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : 0.5, length_cm: form.length_cm ? parseFloat(form.length_cm) : 20, width_cm: form.width_cm ? parseFloat(form.width_cm) : 15, height_cm: form.height_cm ? parseFloat(form.height_cm) : 10, active: true })
+        .insert({ company_id: cid, name: form.name.trim(), price: parseFloat(form.price), success_url: form.success_url || null, quantity: form.quantity ? parseInt(form.quantity) : 1, weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : 0.5, length_cm: form.length_cm ? parseFloat(form.length_cm) : 20, width_cm: form.width_cm ? parseFloat(form.width_cm) : 15, height_cm: form.height_cm ? parseFloat(form.height_cm) : 10, active: true })
         .select()
       if (error) throw error
       setKits(prev => [...prev, data[0]])
-      setForm({ name: '', price: '', success_url: '', weight_kg: '', length_cm: '', width_cm: '', height_cm: '' })
+      setForm({ name: '', price: '', success_url: '', quantity: '1', weight_kg: '', length_cm: '', width_cm: '', height_cm: '' })
       showAlert('success', 'Kit criado!')
     } catch (e) { showAlert('error', e.message) }
     finally { setSaving(false) }
@@ -138,6 +138,12 @@ export default function Kits() {
               <Label className="text-xs">Preço (R$)</Label>
               <Input value={form.price} onChange={e => set('price', e.target.value)} placeholder="605.00" type="number" step="0.01" className="text-sm" />
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Quantidade de unidades</Label>
+              <Input value={form.quantity} onChange={e => set('quantity', e.target.value)} placeholder="1" type="number" min="1" className="text-sm" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs">URL pós-pagamento (opcional)</Label>
               <Input value={form.success_url} onChange={e => set('success_url', e.target.value)} placeholder="https://seusite.com/obrigado" className="text-sm" />
@@ -190,7 +196,7 @@ export default function Kits() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-gray-800">{kit.name}</p>
-                      <p className="text-xs text-gray-400">{fmt(kit.price)}</p>
+                      <p className="text-xs text-gray-400">{fmt(kit.price)} · {kit.quantity || 1} un · {kit.weight_kg || 0.5}kg/un</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
