@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, CheckCircle2, AlertCircle, Eye, EyeOff, RefreshCw } from 'lucide-react'
+import { Save, CheckCircle2, AlertCircle, Eye, EyeOff, RefreshCw, Wifi } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +8,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase'
 import { getCompanyId } from '@/lib/company'
+import { mercadoPagoProxy, pagbankProxy, melhorEnvioProxy } from '@/lib/api'
+
+const TEST_FNS = {
+  mercadopago: () => mercadoPagoProxy({ endpoint: 'v1/payment_methods' }),
+  pagbank:     () => pagbankProxy({ endpoint: 'public-keys/card' }),
+  melhorenvio: () => melhorEnvioProxy({ endpoint: 'me' }),
+}
 
 const INTEGRATIONS = [
   {
@@ -71,6 +78,7 @@ function IntegrationCard({ integration }) {
   const [form,    setForm]    = useState({})
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(false)
+  const [testing, setTesting] = useState(false)
   const [alert,   setAlert]   = useState(null)
   const [show,    setShow]    = useState({})
 
@@ -139,8 +147,23 @@ function IntegrationCard({ integration }) {
       setSaving(false) }
   }
 
+  const handleTest = async () => {
+    const testFn = TEST_FNS[integration.key]
+    if (!testFn) return
+    setTesting(true)
+    try {
+      await testFn()
+      showAlert('success', `Conexão com ${integration.name} OK! Token válido.`)
+    } catch (e) {
+      showAlert('error', `Falha na conexão: ${e.message}`)
+    } finally {
+      setTesting(false)
+    }
+  }
+
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
   const isConfigured = !!form.access_token
+  const canTest = isConfigured && !!TEST_FNS[integration.key]
 
   return (
     <Card>
@@ -195,8 +218,14 @@ function IntegrationCard({ integration }) {
               ))}
             </div>
 
-            <div className="flex justify-end pt-2">
-              <Button onClick={handleSave} disabled={saving} className="gap-2">
+            <div className="flex items-center justify-end gap-2 pt-2">
+              {canTest && (
+                <Button variant="outline" onClick={handleTest} disabled={testing || saving} className="gap-2">
+                  {testing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
+                  {testing ? 'Testando...' : 'Testar conexão'}
+                </Button>
+              )}
+              <Button onClick={handleSave} disabled={saving || testing} className="gap-2">
                 {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 {saving ? 'Salvando...' : 'Salvar configurações'}
               </Button>
