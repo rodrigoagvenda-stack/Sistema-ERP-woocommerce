@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { ChevronDown, Search, Globe, Download, RefreshCw, Copy, Package, Tag, BarChart2, Settings, HelpCircle, BookOpen, Layers, Palette } from 'lucide-react'
+import { ChevronDown, Search, Globe, Download, RefreshCw, Copy, Package, Tag, BarChart2, Settings, HelpCircle, BookOpen, Layers, Palette, Gift, BadgePercent, CreditCard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 
@@ -176,6 +176,93 @@ const SECTIONS = [
       {
         q: 'Como configurar frete e pagamentos?',
         a: 'Acesse WooCommerce → Frete para configurar zonas e métodos de entrega. Acesse WooCommerce → Pagamentos para ativar e configurar os métodos de pagamento.',
+      },
+    ],
+  },
+  {
+    id: 'mercadopago',
+    icon: CreditCard,
+    label: 'Mercado Pago',
+    color: 'text-sky-600',
+    bg: 'bg-sky-50',
+    items: [
+      {
+        q: 'Como configurar o Mercado Pago?',
+        a: `1. Acesse Integrações no menu lateral.\n2. Clique em "Mercado Pago" e insira o Access Token (começa com APP_USR-).\n3. Você encontra o token em mercadopago.com.br → Sua loja → Credenciais → Credenciais de produção.\n4. Clique em "Salvar" e depois em "Testar conexão" para validar.`,
+      },
+      {
+        q: 'Como funciona o Checkout Pro (Kits)?',
+        a: `O cliente clica no botão do kit na landing page → o sistema cria uma preferência de pagamento no Mercado Pago via Edge Function → o checkout abre em uma nova aba com todas as opções de pagamento (cartão, Pix, boleto).\n\nO processo é 100% seguro: o token do Mercado Pago fica apenas no servidor (Edge Function), nunca exposto ao navegador.`,
+      },
+      {
+        q: 'Como verificar ou reembolsar um pagamento MP?',
+        a: `Na tela Analytics → Pedidos, expanda o pedido e acesse a seção "Pagamento".\n• Verificar MP: consulta o status real do pagamento na API do Mercado Pago.\n• Reembolsar: inicia o reembolso total. O valor é devolvido ao cliente via MP.\n\nO botão só aparece para pedidos com método de pagamento Mercado Pago.`,
+      },
+      {
+        q: 'O que é o Mercado Envios (frete ME2)?',
+        a: `O Mercado Envios é o sistema de frete integrado ao checkout do Mercado Pago. Quando habilitado, o cliente informa o CEP no checkout e visualiza as opções de entrega com custo calculado automaticamente (Correios, transportadoras parceiras).\n\nPara funcionar:\n1. Configure Peso (kg) e Dimensões (Comprimento × Largura × Altura em cm) no cadastro de cada kit.\n2. A conta do Mercado Pago precisa estar inscrita no Mercado Envios (ativação gratuita no painel MP).\n\nSe o frete não aparecer no checkout, verifique se a conta MP está habilitada para ME2.`,
+      },
+      {
+        q: 'Como aplicar frete grátis para um cupom?',
+        a: `Crie um cupom do tipo "Frete grátis" em Cupons Kit.\nAo ser aplicado, o custo de frete é zerado na preferência do Mercado Pago — o cliente ainda escolhe o método de entrega, mas não paga nada pelo envio.`,
+      },
+    ],
+  },
+  {
+    id: 'kits',
+    icon: Gift,
+    label: 'Kits de Venda',
+    color: 'text-rose-600',
+    bg: 'bg-rose-50',
+    items: [
+      {
+        q: 'O que são os Kits de Venda?',
+        a: `Kits são produtos compostos (ex: Kit 3 Frascos, Kit 6 Frascos) vendidos diretamente pelo Mercado Pago, sem passar pelo WooCommerce.\n\nIdeal para landing pages — o cliente clica no botão e vai direto para o checkout com o preço e quantidade travados.`,
+      },
+      {
+        q: 'Como criar um kit?',
+        a: `Acesse Kits no menu lateral e clique em "Criar kit".\n\nCampos obrigatórios:\n• Nome do kit (ex: "Kit 3 Frascos")\n• Preço (R$)\n• Peso (kg), Comprimento, Largura e Altura (cm) — necessários para cálculo de frete\n\nCampo opcional:\n• URL pós-pagamento: página para redirecionar o cliente após pagamento aprovado.`,
+      },
+      {
+        q: 'Como usar o botão gerado pelo kit?',
+        a: `Após criar o kit, um snippet HTML é gerado automaticamente.\n\n1. Clique em "Copiar código" no card do kit.\n2. No WordPress, adicione um bloco "HTML personalizado" na página.\n3. Cole o código e publique.\n\nO botão já inclui a lógica de abertura do checkout — não precisa editar nada.`,
+      },
+      {
+        q: 'Posso ter kits com preços diferentes para o mesmo produto?',
+        a: `Sim. Crie um kit para cada variação (1 frasco, 3 frascos, 6 frascos) com nomes e preços distintos. Cada kit gera um botão independente.`,
+      },
+      {
+        q: 'Como atualizar o preço de um kit?',
+        a: `No momento, exclua o kit antigo e crie um novo com o preço atualizado. O snippet gerado terá o novo kit_id — atualize o botão na landing page.`,
+      },
+    ],
+  },
+  {
+    id: 'cupons-kit',
+    icon: BadgePercent,
+    label: 'Cupons Kit',
+    color: 'text-orange-600',
+    bg: 'bg-orange-50',
+    items: [
+      {
+        q: 'Como criar um cupom de desconto para kit?',
+        a: `Acesse "Cupons Kit" no menu lateral e clique em "Novo cupom".\n\nCampos:\n• Código: texto único que o cliente digita (ex: BEMVINDO10). Fica em maiúsculas automaticamente.\n• Tipo: % Desconto, R$ Fixo ou Frete grátis.\n• Valor: percentual ou valor em reais (não aparece para Frete grátis).\n• Kit específico (opcional): limita o cupom a um kit. Vazio = vale para todos.\n• Validade (opcional): data de expiração.\n• Limite de usos (opcional): quantas vezes o cupom pode ser usado no total.`,
+      },
+      {
+        q: 'Como o cliente usa o cupom na landing page?',
+        a: `Acima dos cards de kit, há um campo "Tem cupom de desconto?". O cliente digita o código e clica em "Aplicar". Ao clicar em "Comprar agora" em qualquer kit, o cupom é enviado automaticamente junto ao checkout.\n\nSe o cupom for inválido, expirado ou não for válido para o kit escolhido, o cliente recebe uma mensagem de erro antes de ir ao checkout.`,
+      },
+      {
+        q: 'Como funciona o desconto percentual vs. valor fixo?',
+        a: `• % Desconto: reduz o preço proporcionalmente. Ex: cupom de 10% num kit de R$ 302 → desconto de R$ 30,20 → cliente paga R$ 271,80.\n• R$ Fixo: subtrai um valor fixo do preço. Ex: R$ 50 off em kit de R$ 302 → cliente paga R$ 252.\n• Frete grátis: não altera o preço do produto, apenas zera o custo de entrega no checkout.`,
+      },
+      {
+        q: 'Como acompanhar o uso dos cupons?',
+        a: `Na lista de cupons, cada card exibe o contador "X usos" (ou "X/Limite usos" se tiver limite definido). O contador é incrementado automaticamente a cada compra concluída com o cupom.`,
+      },
+      {
+        q: 'Posso desativar um cupom sem excluir?',
+        a: `Sim. Clique em "Desativar" no card do cupom. O cupom fica inativo (aparece com opacidade reduzida) e o cliente recebe erro ao tentar usá-lo. Para reativar, clique em "Ativar".`,
       },
     ],
   },

@@ -78,8 +78,10 @@ serve(async (req) => {
     }
 
     const finalPrice = Math.max(0.01, parseFloat(kit.price) - discountAmount)
-    const weightG = kit.weight_g || 500
-    const dimensions = kit.dimensions || '20x15x10'
+    const weightG    = Math.round((kit.weight_kg || 0.5) * 1000)
+    const lengthCm   = kit.length_cm || 20
+    const widthCm    = kit.width_cm  || 15
+    const heightCm   = kit.height_cm || 10
 
     // Monta preference
     const prefBody: Record<string, unknown> = {
@@ -92,7 +94,7 @@ serve(async (req) => {
       }],
       shipments: {
         mode: 'me2',
-        dimensions: `${dimensions},${weightG}`,
+        dimensions: `${lengthCm}x${widthCm}x${heightCm},${weightG}`,
         local_pickup: false,
         ...(freeShipping ? { cost: 0, free_shipping: true } : {}),
       },

@@ -60,7 +60,7 @@ export default function Kits() {
   const [saving,    setSaving]    = useState(false)
   const [companyId, setCompanyId] = useState(null)
   const [alert,     setAlert]     = useState(null)
-  const [form,      setForm]      = useState({ name: '', price: '', success_url: '', weight_g: '', dimensions: '' })
+  const [form,      setForm]      = useState({ name: '', price: '', success_url: '', weight_kg: '', length_cm: '', width_cm: '', height_cm: '' })
 
   const showAlert = (type, msg) => {
     setAlert({ type, msg })
@@ -91,11 +91,11 @@ export default function Kits() {
       const cid = await getCompanyId()
       const { data, error } = await supabase
         .from('kits')
-        .insert({ company_id: cid, name: form.name.trim(), price: parseFloat(form.price), success_url: form.success_url || null, weight_g: form.weight_g ? parseInt(form.weight_g) : 500, dimensions: form.dimensions || '20x15x10', active: true })
+        .insert({ company_id: cid, name: form.name.trim(), price: parseFloat(form.price), success_url: form.success_url || null, weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : 0.5, length_cm: form.length_cm ? parseFloat(form.length_cm) : 20, width_cm: form.width_cm ? parseFloat(form.width_cm) : 15, height_cm: form.height_cm ? parseFloat(form.height_cm) : 10, active: true })
         .select()
       if (error) throw error
       setKits(prev => [...prev, data[0]])
-      setForm({ name: '', price: '', success_url: '', weight_g: '', dimensions: '' })
+      setForm({ name: '', price: '', success_url: '', weight_kg: '', length_cm: '', width_cm: '', height_cm: '' })
       showAlert('success', 'Kit criado!')
     } catch (e) { showAlert('error', e.message) }
     finally { setSaving(false) }
@@ -130,7 +130,7 @@ export default function Kits() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="space-y-1.5 sm:col-span-1">
+            <div className="space-y-1.5 sm:col-span-2">
               <Label className="text-xs">Nome do kit</Label>
               <Input value={form.name} onChange={e => set('name', e.target.value)} placeholder="Kit 3 Frascos" className="text-sm" />
             </div>
@@ -139,18 +139,29 @@ export default function Kits() {
               <Input value={form.price} onChange={e => set('price', e.target.value)} placeholder="605.00" type="number" step="0.01" className="text-sm" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Peso (g)</Label>
-              <Input value={form.weight_g} onChange={e => set('weight_g', e.target.value)} placeholder="500" type="number" className="text-sm" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Dimensões (CxLxA cm)</Label>
-              <Input value={form.dimensions} onChange={e => set('dimensions', e.target.value)} placeholder="20x15x10" className="text-sm" />
+              <Label className="text-xs">URL pós-pagamento (opcional)</Label>
+              <Input value={form.success_url} onChange={e => set('success_url', e.target.value)} placeholder="https://seusite.com/obrigado" className="text-sm" />
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs">URL de retorno após pagamento (opcional)</Label>
-              <Input value={form.success_url} onChange={e => set('success_url', e.target.value)} placeholder="https://seusite.com/obrigado" className="text-sm" />
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-2">Peso e dimensões <span className="text-red-400">*</span> <span className="font-normal text-gray-400">(necessário para cálculo de frete)</span></p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Peso (kg)</Label>
+                <Input value={form.weight_kg} onChange={e => set('weight_kg', e.target.value)} placeholder="0.200" type="number" step="0.001" className="text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Comprimento (cm)</Label>
+                <Input value={form.length_cm} onChange={e => set('length_cm', e.target.value)} placeholder="17.00" type="number" step="0.01" className="text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Largura (cm)</Label>
+                <Input value={form.width_cm} onChange={e => set('width_cm', e.target.value)} placeholder="12.00" type="number" step="0.01" className="text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Altura (cm)</Label>
+                <Input value={form.height_cm} onChange={e => set('height_cm', e.target.value)} placeholder="8.00" type="number" step="0.01" className="text-sm" />
+              </div>
             </div>
           </div>
           <div className="flex justify-end">
