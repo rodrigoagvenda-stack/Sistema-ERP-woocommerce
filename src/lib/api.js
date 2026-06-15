@@ -464,6 +464,17 @@ export async function melhorEnvioProxy({ method = 'GET', endpoint, body, action,
   return data
 }
 
+// Mercado Pago proxy via Supabase Edge Function
+export async function mercadoPagoProxy({ method = 'GET', endpoint, body, action, payment_id, amount, order } = {}) {
+  const company_id = await getCompanyId()
+  const { data, error } = await supabase.functions.invoke('mercadopago-proxy', {
+    body: { method, endpoint, body, action, payment_id, amount, order, company_id }
+  })
+  if (error) throw new Error(error.message)
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
 // Bling proxy via Supabase Edge Function
 export async function blingProxy({ method = 'GET', endpoint, body, action, order } = {}) {
   const company_id = await getCompanyId()

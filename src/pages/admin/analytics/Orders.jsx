@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { wooProxy, pagbankProxy, melhorEnvioProxy, blingProxy } from '@/lib/api'
+import { wooProxy, pagbankProxy, melhorEnvioProxy, blingProxy, mercadoPagoProxy } from '@/lib/api'
 
 const getBrand = () => getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#6366f1'
 
@@ -43,6 +43,23 @@ const wa = (order) => {
 
 const getPagBankId = (order) =>
   (order.meta_data || []).find(m => m.key?.includes('pagbank') || m.key?.includes('charge_id'))?.value || null
+
+const getMPPaymentId = (order) =>
+  (order.meta_data || []).find(m =>
+    ['_Mercado_Pago_Payment_Id','_mp_payment_id','mp_payment_id','_mp-payment-id'].includes(m.key)
+  )?.value || null
+
+const MP_STATUS = {
+  approved:    { label: 'Aprovado',     color: 'text-green-600' },
+  pending:     { label: 'Pendente',     color: 'text-amber-600' },
+  authorized:  { label: 'Autorizado',   color: 'text-blue-600' },
+  in_process:  { label: 'Em análise',   color: 'text-blue-600' },
+  in_mediation:{ label: 'Em disputa',   color: 'text-orange-600' },
+  rejected:    { label: 'Rejeitado',    color: 'text-red-600' },
+  cancelled:   { label: 'Cancelado',    color: 'text-red-600' },
+  refunded:    { label: 'Reembolsado',  color: 'text-purple-600' },
+  charged_back:{ label: 'Estorno',      color: 'text-purple-600' },
+}
 
 const getCPF = (order) =>
   order.billing?.cpf
@@ -98,7 +115,30 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
     alert(`NF-e emitida! Nº ${r.numero}`)
   })
 
+  const [mpInfo, setMpInfo] = useState(null)
+
+  const checkMP = () => act('mp', async () => {
+    const pid = getMPPaymentId(order)
+    const r = await mercadoPagoProxy({ action: 'check_payment', payment_id: pid, order })
+    setMpInfo(r)
+    const s = MP_STATUS[r.status]
+    if (r.status === 'approved' && !['processing','completed'].includes(order.status)) {
+      await changeStatus('processing')
+    }
+    alert(`Mercado Pago: ${s?.label || r.status}\n${r.status_detail || ''}\nValor: ${fmt(r.amount)}`)
+  })
+
+  const refundMP = () => act('mp', async () => {
+    const pid = getMPPaymentId(order) || mpInfo?.id
+    if (!pid) throw new Error('Consulte o pagamento primeiro para obter o ID MP.')
+    if (!confirm(`Reembolsar ${fmt(order.total)} para ${order.billing?.first_name}?`)) return
+    await mercadoPagoProxy({ action: 'refund', payment_id: pid })
+    await changeStatus('refunded')
+    alert('Reembolso solicitado ao Mercado Pago!')
+  })
+
   const isPagBank = order.payment_method?.includes('pagbank') || order.payment_method_title?.toLowerCase().includes('pagbank')
+  const isMP = order.payment_method?.includes('mercado') || order.payment_method?.includes('woo-mercado-pago') || order.payment_method_title?.toLowerCase().includes('mercado')
   const phone = (order.billing?.phone || '').replace(/\D/g, '')
   const rowBg = open ? 'bg-gray-50/60' : 'hover:bg-gray-50/60'
 
@@ -228,6 +268,35 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
                           Reembolsar
                         </button>
                       )}
+                    </div>
+                  )}
+                  {isMP && (
+                    <div className="flex flex-col gap-1.5 mt-2">
+                      {mpInfo && (
+                        <span className={`text-xs font-medium ${MP_STATUS[mpInfo.status]?.color || 'text-gray-500'}`}>
+                          {MP_STATUS[mpInfo.status]?.label || mpInfo.status}
+                          {mpInfo.status_detail ? ` · ${mpInfo.status_detail}` : ''}
+                        </span>
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={checkMP}
+                          disabled={!!busy}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 disabled:opacity-40 transition-colors"
+                        >
+                          {busy === 'mp' ? <RefreshCw className="h-3 w-3 animate-spin" /> : <CreditCard className="h-3 w-3" />}
+                          Verificar MP
+                        </button>
+                        {['processing', 'completed'].includes(order.status) && (
+                          <button
+                            onClick={refundMP}
+                            disabled={!!busy}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-red-50 hover:bg-red-100 text-red-600 disabled:opacity-40 transition-colors"
+                          >
+                            Reembolsar
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

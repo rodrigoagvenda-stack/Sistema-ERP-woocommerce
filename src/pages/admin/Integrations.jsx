@@ -11,6 +11,16 @@ import { getCompanyId } from '@/lib/company'
 
 const INTEGRATIONS = [
   {
+    key: 'mercadopago',
+    name: 'Mercado Pago',
+    description: 'Verificar pagamentos e processar reembolsos direto no painel de pedidos.',
+    fields: [
+      { key: 'access_token', label: 'Access Token', secret: true, placeholder: 'APP_USR-...' },
+    ],
+    docs: 'https://www.mercadopago.com.br/developers/pt/docs/checkout-api/additional-content/your-integrations/credentials',
+    badge: 'Pagamentos',
+  },
+  {
     key: 'pagbank',
     name: 'PagBank',
     description: 'Verificar pagamentos e reembolsos direto no painel de pedidos.',
