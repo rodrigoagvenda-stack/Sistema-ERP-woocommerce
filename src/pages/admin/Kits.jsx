@@ -7,11 +7,14 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { supabase } from '@/lib/supabase'
 import { getCompanyId } from '@/lib/company'
-
 const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
 
-const SUPABASE_URL  = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY
+const SUPABASE_URL  = typeof window !== 'undefined' && window._env_?.VITE_SUPABASE_URL
+  ? window._env_.VITE_SUPABASE_URL
+  : import.meta.env.VITE_SUPABASE_URL || ''
+const SUPABASE_ANON = typeof window !== 'undefined' && window._env_?.VITE_SUPABASE_ANON_KEY
+  ? window._env_.VITE_SUPABASE_ANON_KEY
+  : import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
 function buildSnippet(kit, companyId) {
   return `<!-- Botão Kit: ${kit.name} -->
