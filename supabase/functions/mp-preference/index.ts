@@ -12,7 +12,8 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { kit_id, company_id, coupon_code, payer, shipping_cost, shipping_name } = await req.json()
+    const { kit_id, company_id, coupon_code, payer, shipping_cost, shipping_name, shipping_service_id, customer_address } = await req.json()
+    const ME_BASE = 'https://melhorenvio.com.br/api/v2/me'
     log(`kit_id=${kit_id} company_id=${company_id} coupon_code=${coupon_code || 'none'}`)
 
     const supabase = createClient(
@@ -146,23 +147,117 @@ serve(async (req) => {
         .eq('id', coupon.id)
     }
 
+    // Adiciona ao carrinho do ME imediatamente (sem checkout — sem debitar saldo)
+    // Assim o pedido aparece no painel ME igual ao WooCommerce, antes do pagamento
+    let meCartId: string | null = null
+    if (customer_address && shipping_service_id) {
+      try {
+        const { data: meCreds } = await supabase
+          .from('marketplace_credentials')
+          .select('access_token, extra_data')
+          .eq('marketplace', 'melhorenvio')
+          .eq('company_id', company_id)
+          .eq('is_active', true)
+          .limit(1)
+          .single()
+
+        if (meCreds?.access_token) {
+          const extra = meCreds.extra_data || {}
+          const qty    = kit.quantity || 1
+          const weight = parseFloat(((kit.weight_kg || 0.5) * qty).toFixed(3))
+          const addr   = customer_address
+
+          const cartPayload = {
+            service: shipping_service_id,
+            agency:  null,
+            from: {
+              name:             extra.sender_name     || 'Remetente',
+              phone:            (extra.sender_phone   || '').replace(/\D/g, ''),
+              email:            extra.sender_email    || '',
+              company_document: (extra.sender_document || '').replace(/\D/g, ''),
+              state_register:   extra.sender_state_register || 'ISENTO',
+              address:          extra.sender_address  || '',
+              complement:       extra.sender_complement || '',
+              number:           extra.sender_number   || '',
+              district:         extra.sender_district || '',
+              city:             extra.sender_city     || '',
+              state_abbr:       extra.sender_state    || '',
+              postal_code:      (extra.sender_cep     || '').replace(/\D/g, ''),
+              note:             '',
+            },
+            to: {
+              name:        payer?.name  || 'Destinatário',
+              phone:       (payer?.phone || '').replace(/\D/g, ''),
+              email:       payer?.email || '',
+              document:    '',
+              address:     addr.street       || '',
+              complement:  addr.complement   || '',
+              number:      addr.number       || 'S/N',
+              district:    addr.neighborhood || '',
+              city:        addr.city         || '',
+              state_abbr:  addr.state        || '',
+              postal_code: (addr.postal_code || '').replace(/\D/g, ''),
+              note:        '',
+            },
+            products: [{
+              name:            kit.name,
+              quantity:        qty,
+              unitary_value:   finalPrice,
+              weight:          kit.weight_kg || 0.3,
+              width:           kit.width_cm  || 15,
+              height:          kit.height_cm || 10,
+              length:          kit.length_cm || 20,
+              insurance_value: finalPrice,
+            }],
+            volumes: [{ height: kit.height_cm || 10, width: kit.width_cm || 15, length: kit.length_cm || 20, weight }],
+            options: { insurance_value: finalPrice + (shipping_cost ? parseFloat(shipping_cost) : 0), receipt: false, own_hand: false, reverse: false, non_commercial: false },
+            invoice: { key: '' },
+          }
+
+          const cartRes  = await fetch(`${ME_BASE}/cart`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${meCreds.access_token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'User-Agent': `ERP-Codigin (${extra.email || 'admin@codigin.com.br'})`,
+            },
+            body: JSON.stringify(cartPayload),
+          })
+          const cartData = await cartRes.json()
+          if (cartRes.ok && cartData.id) {
+            meCartId = cartData.id
+            log(`ME cart criado: ${meCartId}`)
+          } else {
+            log('ME cart erro (não bloqueante):', JSON.stringify(cartData.errors || cartData.message))
+          }
+        }
+      } catch (meErr) {
+        log('ME cart exceção (não bloqueante):', meErr.message)
+      }
+    }
+
     // Salva pedido pendente
     await supabase.from('kit_orders').insert({
-      company_id:         parseInt(company_id),
+      company_id:          parseInt(company_id),
       kit_id,
-      mp_preference_id:   pref.id,
-      external_reference: prefBody.external_reference,
-      status:             'pending',
-      customer_name:      payer?.name  || null,
-      customer_email:     payer?.email || null,
-      customer_phone:     payer?.phone || null,
-      kit_name:           kit.name,
-      kit_price:          finalPrice,
-      shipping_cost:      shipping_cost ? parseFloat(shipping_cost) : 0,
-      shipping_name:      shipping_name || null,
-      discount_amount:    discountAmount,
-      coupon_code:        coupon_code   || null,
-      total_amount:       finalPrice + (shipping_cost ? parseFloat(shipping_cost) : 0),
+      mp_preference_id:    pref.id,
+      external_reference:  prefBody.external_reference,
+      status:              'pending',
+      customer_name:       payer?.name  || null,
+      customer_email:      payer?.email || null,
+      customer_phone:      payer?.phone || null,
+      customer_cep:        customer_address?.postal_code || null,
+      customer_address:    customer_address || null,
+      shipping_service_id: shipping_service_id || null,
+      me_cart_id:          meCartId,
+      kit_name:            kit.name,
+      kit_price:           finalPrice,
+      shipping_cost:       shipping_cost ? parseFloat(shipping_cost) : 0,
+      shipping_name:       shipping_name || null,
+      discount_amount:     discountAmount,
+      coupon_code:         coupon_code   || null,
+      total_amount:        finalPrice + (shipping_cost ? parseFloat(shipping_cost) : 0),
     })
 
     return new Response(JSON.stringify({

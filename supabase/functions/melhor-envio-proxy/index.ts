@@ -12,7 +12,8 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { method = 'GET', endpoint, body, action, order, order_id, company_id, kit_id, postal_code } = await req.json()
+    const body_parsed = await req.json()
+    const { method = 'GET', endpoint, body, action, order, order_id, company_id, kit_id, postal_code } = body_parsed
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -170,6 +171,109 @@ serve(async (req) => {
         headers: meHeaders,
         body: JSON.stringify({ mode: 'public', orders: [cartId] }),
       })
+      const printData = await printRes.json()
+
+      return new Response(JSON.stringify({
+        label_url: printData.url || null,
+        tracking:  generateData[cartId]?.tracking || cartData.tracking || null,
+        cart_id:   cartId,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // ── Checkout + etiqueta do cart já criado (chamado pelo webhook após pagamento) ──
+    if (action === 'checkout_kit_label') {
+      const { cart_id } = body_parsed
+      if (!cart_id) throw new Error('cart_id obrigatório para checkout_kit_label')
+
+      const checkoutRes  = await fetch(`${ME_BASE}/shipment/checkout`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ orders: [cart_id] }) })
+      const checkoutData = await checkoutRes.json()
+      if (!checkoutRes.ok) throw new Error(checkoutData.message || 'Erro no checkout ME')
+
+      const generateRes  = await fetch(`${ME_BASE}/shipment/generate`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ orders: [cart_id] }) })
+      const generateData = await generateRes.json()
+      if (!generateRes.ok) throw new Error(generateData.message || 'Erro ao gerar etiqueta ME')
+
+      const printRes  = await fetch(`${ME_BASE}/shipment/print`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ mode: 'public', orders: [cart_id] }) })
+      const printData = await printRes.json()
+
+      return new Response(JSON.stringify({
+        label_url: printData.url || null,
+        tracking:  generateData[cart_id]?.tracking || null,
+        cart_id,
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // ── Gerar etiqueta kit (pedido de landing page) ───────────────
+    if (action === 'generate_kit_label') {
+      const { kit_order, kit } = body_parsed || {}
+      if (!kit_order || !kit) throw new Error('kit_order e kit são obrigatórios para generate_kit_label')
+
+      const addr = kit_order.customer_address || {}
+      const serviceId = kit_order.shipping_service_id || parseInt(extra.default_service) || 1
+      const qty    = kit.quantity || 1
+      const weight = parseFloat((kit.weight_kg * qty).toFixed(3))
+
+      const cartPayload = {
+        service: serviceId,
+        agency:  null,
+        from: {
+          name:             extra.sender_name     || 'Remetente',
+          phone:            (extra.sender_phone   || '').replace(/\D/g, ''),
+          email:            extra.sender_email    || '',
+          company_document: (extra.sender_document || '').replace(/\D/g, ''),
+          state_register:   extra.sender_state_register || 'ISENTO',
+          address:          extra.sender_address  || '',
+          complement:       extra.sender_complement || '',
+          number:           extra.sender_number   || '',
+          district:         extra.sender_district || '',
+          city:             extra.sender_city     || '',
+          state_abbr:       extra.sender_state    || '',
+          postal_code:      (extra.sender_cep     || '').replace(/\D/g, ''),
+          note:             '',
+        },
+        to: {
+          name:        kit_order.customer_name  || 'Destinatário',
+          phone:       (kit_order.customer_phone || '').replace(/\D/g, ''),
+          email:       kit_order.customer_email || '',
+          document:    '',
+          address:     addr.street        || '',
+          complement:  addr.complement    || '',
+          number:      addr.number        || 'S/N',
+          district:    addr.neighborhood  || '',
+          city:        addr.city          || '',
+          state_abbr:  addr.state         || '',
+          postal_code: (addr.postal_code  || '').replace(/\D/g, ''),
+          note:        '',
+        },
+        products: [{
+          name:            kit.name,
+          quantity:        qty,
+          unitary_value:   parseFloat(kit.price) || 0,
+          weight:          parseFloat(kit.weight_kg) || 0.3,
+          width:           kit.width_cm  || 15,
+          height:          kit.height_cm || 10,
+          length:          kit.length_cm || 20,
+          insurance_value: parseFloat(kit_order.kit_price) || 0,
+        }],
+        volumes: [{ height: kit.height_cm || 10, width: kit.width_cm || 15, length: kit.length_cm || 20, weight }],
+        options: { insurance_value: parseFloat(kit_order.total_amount) || 0, receipt: false, own_hand: false, reverse: false, non_commercial: false },
+        invoice: { key: '' },
+      }
+
+      const cartRes  = await fetch(`${ME_BASE}/cart`, { method: 'POST', headers: meHeaders, body: JSON.stringify(cartPayload) })
+      const cartData = await cartRes.json()
+      if (!cartRes.ok || cartData.errors) throw new Error(JSON.stringify(cartData.errors || cartData.message || 'Erro ao adicionar ao carrinho ME'))
+      const cartId = cartData.id
+
+      const checkoutRes = await fetch(`${ME_BASE}/shipment/checkout`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ orders: [cartId] }) })
+      const checkoutData = await checkoutRes.json()
+      if (!checkoutRes.ok) throw new Error(checkoutData.message || 'Erro no checkout ME')
+
+      const generateRes  = await fetch(`${ME_BASE}/shipment/generate`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ orders: [cartId] }) })
+      const generateData = await generateRes.json()
+      if (!generateRes.ok) throw new Error(generateData.message || 'Erro ao gerar etiqueta ME')
+
+      const printRes  = await fetch(`${ME_BASE}/shipment/print`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ mode: 'public', orders: [cartId] }) })
       const printData = await printRes.json()
 
       return new Response(JSON.stringify({
