@@ -95,38 +95,6 @@ serve(async (req) => {
 
     console.log('[MP-WEBHOOK] kit_order atualizado:', order?.id, '->', newStatus)
 
-    // Ao aprovar: faz checkout + gera etiqueta no ME usando o cart_id já criado
-    if (newStatus === 'approved' && order?.me_cart_id) {
-      try {
-        const meRes = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/melhor-envio-proxy`, {
-          method: 'POST',
-          headers: {
-            'Content-Type':  'application/json',
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-            'apikey':        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-          },
-          body: JSON.stringify({
-            action:     'checkout_kit_label',
-            company_id: order.company_id,
-            cart_id:    order.me_cart_id,
-          }),
-        })
-        const meData = await meRes.json()
-
-        await supabase
-          .from('kit_orders')
-          .update({
-            me_label_url: meData.label_url || null,
-            me_tracking:  meData.tracking  || null,
-          })
-          .eq('id', order.id)
-
-        console.log('[MP-WEBHOOK] ME etiqueta gerada, tracking:', meData.tracking)
-      } catch (meErr) {
-        console.error('[MP-WEBHOOK] Erro ao gerar etiqueta ME:', meErr.message)
-      }
-    }
-
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
