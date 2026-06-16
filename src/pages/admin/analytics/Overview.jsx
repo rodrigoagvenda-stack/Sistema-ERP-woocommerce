@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
-import { RefreshCw, DollarSign, ShoppingCart, TrendingUp, Package, AlertCircle } from 'lucide-react'
+import { RefreshCw, DollarSign, ShoppingCart, TrendingUp, Package, AlertCircle, ShoppingBag } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { wooProxy } from '@/lib/api'
+import { supabase } from '@/lib/supabase'
+import { getCompanyId } from '@/lib/company'
 
 function StatCard({ title, value, icon: Icon, sub }) {
   return (
@@ -26,38 +28,56 @@ function StatCard({ title, value, icon: Icon, sub }) {
 }
 
 export default function AnalyticsOverview() {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const [data,     setData]     = useState(null)
+  const [kitData,  setKitData]  = useState(null)
+  const [loading,  setLoading]  = useState(false)
+  const [error,    setError]    = useState(null)
 
-  const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
+  const fmt  = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
   const fmtN = (n) => new Intl.NumberFormat('pt-BR').format(n || 0)
 
   const load = async () => {
     setLoading(true)
     setError(null)
     try {
-      const now = new Date()
+      const now   = new Date()
       const start = new Date(now.getFullYear(), now.getMonth(), 1)
-      const after = start.toISOString()
+      const after  = start.toISOString()
       const before = now.toISOString()
 
-      const orders = await wooProxy({
-        endpoint: `orders?status=completed,processing&after=${after}&before=${before}&per_page=100`,
-      })
+      const [wooOrders, cid] = await Promise.all([
+        wooProxy({ endpoint: `orders?status=completed,processing&after=${after}&before=${before}&per_page=100` }).catch(() => []),
+        getCompanyId(),
+      ])
 
-      const arr = Array.isArray(orders) ? orders : []
-      const total_sales = arr.reduce((s, o) => s + parseFloat(o.total || 0), 0)
-      const total_orders = arr.length
-      const total_items = arr.reduce((s, o) => s + (o.line_items?.reduce((a, i) => a + i.quantity, 0) || 0), 0)
-      const total_shipping = arr.reduce((s, o) => s + parseFloat(o.shipping_total || 0), 0)
-      const total_discount = arr.reduce((s, o) => s + parseFloat(o.discount_total || 0), 0)
-      const gross_sales = total_sales + total_discount
+      // WooCommerce
+      const arr = Array.isArray(wooOrders) ? wooOrders : []
+      const total_sales         = arr.reduce((s, o) => s + parseFloat(o.total || 0), 0)
+      const total_orders        = arr.length
+      const total_items         = arr.reduce((s, o) => s + (o.line_items?.reduce((a, i) => a + i.quantity, 0) || 0), 0)
+      const total_shipping      = arr.reduce((s, o) => s + parseFloat(o.shipping_total || 0), 0)
+      const total_discount      = arr.reduce((s, o) => s + parseFloat(o.discount_total || 0), 0)
+      const gross_sales         = total_sales + total_discount
       const average_total_sales = total_orders > 0 ? total_sales / total_orders : 0
-      const days = Math.max(1, Math.ceil((now - start) / 86400000))
-      const average_sales = total_sales / days
-
+      const days                = Math.max(1, Math.ceil((now - start) / 86400000))
+      const average_sales       = total_sales / days
       setData({ total_sales, total_orders, total_items, average_total_sales, total_shipping, total_discount, gross_sales, total_refunds: 0, average_sales })
+
+      // Kit Orders
+      const { data: kOrders } = await supabase
+        .from('kit_orders')
+        .select('total_amount, kit_price, shipping_cost, status, created_at')
+        .eq('company_id', cid)
+        .gte('created_at', after)
+        .lte('created_at', before)
+
+      const ko      = kOrders || []
+      const kappr   = ko.filter(o => o.status === 'approved')
+      const krev    = kappr.reduce((s, o) => s + parseFloat(o.total_amount || 0), 0)
+      const kship   = kappr.reduce((s, o) => s + parseFloat(o.shipping_cost || 0), 0)
+      const kpend   = ko.filter(o => o.status === 'pending').length
+      setKitData({ total: ko.length, approved: kappr.length, pending: kpend, revenue: krev, shipping: kship })
+
     } catch (e) {
       setError(e.message)
     } finally {
@@ -114,10 +134,25 @@ export default function AnalyticsOverview() {
               <CardContent><p className="text-xl font-bold text-orange-500">{fmt(data.total_discount)}</p></CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Frete</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Frete WooCommerce</CardTitle></CardHeader>
               <CardContent><p className="text-xl font-bold">{fmt(data.total_shipping)}</p></CardContent>
             </Card>
           </div>
+
+          {kitData && (
+            <>
+              <div className="flex items-center gap-2 pt-2">
+                <ShoppingBag className="h-4 w-4 text-gray-400" />
+                <p className="text-sm font-semibold text-gray-600">Pedidos de Kit — mês atual</p>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard title="Receita Kits" value={fmt(kitData.revenue)} icon={DollarSign} sub={`${kitData.approved} aprovados`} />
+                <StatCard title="Total de Pedidos" value={fmtN(kitData.total)} icon={ShoppingCart} sub={`${kitData.pending} pendentes`} />
+                <StatCard title="Frete Kits" value={fmt(kitData.shipping)} icon={Package} sub="Total cobrado" />
+                <StatCard title="Ticket Médio Kit" value={fmt(kitData.approved > 0 ? kitData.revenue / kitData.approved : 0)} icon={TrendingUp} />
+              </div>
+            </>
+          )}
         </>
       ) : !error ? (
         <Card>

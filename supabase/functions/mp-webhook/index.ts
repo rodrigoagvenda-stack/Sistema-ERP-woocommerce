@@ -95,6 +95,21 @@ serve(async (req) => {
 
     console.log('[MP-WEBHOOK] kit_order atualizado:', order?.id, '->', newStatus)
 
+    // Decrementa estoque do kit ao aprovar
+    if (newStatus === 'approved' && order?.kit_id) {
+      const { data: kit } = await supabase
+        .from('kits')
+        .select('stock_qty, quantity')
+        .eq('id', order.kit_id)
+        .single()
+
+      if (kit?.stock_qty != null) {
+        const novoEstoque = Math.max(0, kit.stock_qty - (kit.quantity || 1))
+        await supabase.from('kits').update({ stock_qty: novoEstoque }).eq('id', order.kit_id)
+        console.log('[MP-WEBHOOK] estoque decrementado:', kit.stock_qty, '->', novoEstoque)
+      }
+    }
+
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

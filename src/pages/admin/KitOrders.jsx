@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
-import { RefreshCw, Package } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
+import { RefreshCw, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase'
 import { getCompanyId } from '@/lib/company'
 
@@ -10,16 +8,17 @@ const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency:
 const fmtDate = (d) => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
 
 const STATUS = {
-  pending:   { label: 'Pendente',   color: 'bg-yellow-100 text-yellow-700' },
-  approved:  { label: 'Aprovado',   color: 'bg-green-100 text-green-700'  },
-  rejected:  { label: 'Rejeitado',  color: 'bg-red-100 text-red-700'      },
-  cancelled: { label: 'Cancelado',  color: 'bg-gray-100 text-gray-500'    },
-  refunded:  { label: 'Reembolsado',color: 'bg-purple-100 text-purple-700'},
+  pending:   { label: 'Pendente',    color: 'bg-yellow-100 text-yellow-700' },
+  approved:  { label: 'Aprovado',    color: 'bg-green-100 text-green-700'   },
+  rejected:  { label: 'Rejeitado',   color: 'bg-red-100 text-red-700'       },
+  cancelled: { label: 'Cancelado',   color: 'bg-gray-100 text-gray-500'     },
+  refunded:  { label: 'Reembolsado', color: 'bg-purple-100 text-purple-700' },
 }
 
 export default function KitOrders() {
   const [orders,  setOrders]  = useState([])
   const [loading, setLoading] = useState(true)
+  const [expanded, setExpanded] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -38,8 +37,8 @@ export default function KitOrders() {
 
   useEffect(() => { load() }, [])
 
-  const approved  = orders.filter(o => o.status === 'approved')
-  const revenue   = approved.reduce((s, o) => s + parseFloat(o.total_amount || 0), 0)
+  const approved = orders.filter(o => o.status === 'approved')
+  const revenue  = approved.reduce((s, o) => s + parseFloat(o.total_amount || 0), 0)
 
   return (
     <div className="space-y-6">
@@ -64,6 +63,7 @@ export default function KitOrders() {
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
               <tr>
                 <th className="text-left px-4 py-3">Cliente</th>
+                <th className="text-left px-4 py-3">Entrega</th>
                 <th className="text-left px-4 py-3">Kit</th>
                 <th className="text-left px-4 py-3">Frete</th>
                 <th className="text-right px-4 py-3">Total</th>
@@ -74,28 +74,53 @@ export default function KitOrders() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {orders.map(o => {
-                const st = STATUS[o.status] || { label: o.status, color: 'bg-gray-100 text-gray-500' }
+                const st   = STATUS[o.status] || { label: o.status, color: 'bg-gray-100 text-gray-500' }
+                const addr = o.customer_address || {}
+                const isExp = expanded === o.id
                 return (
-                  <tr key={o.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-gray-800">{o.customer_name || '—'}</p>
-                      <p className="text-xs text-gray-400">{o.customer_email || ''}</p>
-                      <p className="text-xs text-gray-400">{o.customer_phone || ''}</p>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">{o.kit_name || '—'}</td>
-                    <td className="px-4 py-3">
-                      <p className="text-gray-700">{fmt(o.shipping_cost)}</p>
-                      {o.shipping_name && <p className="text-xs text-gray-400">{o.shipping_name}</p>}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-800">{fmt(o.total_amount)}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{o.payment_method || '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>
-                        {st.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{fmtDate(o.created_at)}</td>
-                  </tr>
+                  <>
+                    <tr key={o.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-gray-800">{o.customer_name || '—'}</p>
+                        <p className="text-xs text-gray-400">{o.customer_email || ''}</p>
+                        <p className="text-xs text-gray-400">{o.customer_phone || ''}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        {addr.city ? (
+                          <button
+                            onClick={() => setExpanded(isExp ? null : o.id)}
+                            className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700"
+                          >
+                            <MapPin className="h-3 w-3" />
+                            {addr.city}/{addr.state}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">{o.kit_name || '—'}</td>
+                      <td className="px-4 py-3">
+                        <p className="text-gray-700">{fmt(o.shipping_cost)}</p>
+                        {o.shipping_name && <p className="text-xs text-gray-400">{o.shipping_name}</p>}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-gray-800">{fmt(o.total_amount)}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{o.payment_method || '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>
+                          {st.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{fmtDate(o.created_at)}</td>
+                    </tr>
+                    {isExp && addr.street && (
+                      <tr key={`${o.id}-addr`} className="bg-blue-50">
+                        <td colSpan={8} className="px-4 py-2 text-xs text-blue-700">
+                          <span className="font-semibold">Endereço de entrega: </span>
+                          {addr.street}, {addr.number}{addr.complement ? ` — ${addr.complement}` : ''} · {addr.neighborhood} · {addr.city}/{addr.state} · CEP {o.customer_cep}
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 )
               })}
             </tbody>

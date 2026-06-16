@@ -60,7 +60,7 @@ export default function Kits() {
   const [saving,    setSaving]    = useState(false)
   const [companyId, setCompanyId] = useState(null)
   const [alert,     setAlert]     = useState(null)
-  const [form,      setForm]      = useState({ name: '', price: '', success_url: '', quantity: '1', weight_kg: '', length_cm: '', width_cm: '', height_cm: '' })
+  const [form,      setForm]      = useState({ name: '', price: '', success_url: '', quantity: '1', weight_kg: '', length_cm: '', width_cm: '', height_cm: '', stock_qty: '' })
 
   const showAlert = (type, msg) => {
     setAlert({ type, msg })
@@ -91,11 +91,11 @@ export default function Kits() {
       const cid = await getCompanyId()
       const { data, error } = await supabase
         .from('kits')
-        .insert({ company_id: cid, name: form.name.trim(), price: parseFloat(form.price), success_url: form.success_url || null, quantity: form.quantity ? parseInt(form.quantity) : 1, weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : 0.5, length_cm: form.length_cm ? parseFloat(form.length_cm) : 20, width_cm: form.width_cm ? parseFloat(form.width_cm) : 15, height_cm: form.height_cm ? parseFloat(form.height_cm) : 10, active: true })
+        .insert({ company_id: cid, name: form.name.trim(), price: parseFloat(form.price), success_url: form.success_url || null, quantity: form.quantity ? parseInt(form.quantity) : 1, weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : 0.5, length_cm: form.length_cm ? parseFloat(form.length_cm) : 20, width_cm: form.width_cm ? parseFloat(form.width_cm) : 15, height_cm: form.height_cm ? parseFloat(form.height_cm) : 10, stock_qty: form.stock_qty ? parseInt(form.stock_qty) : null, active: true })
         .select()
       if (error) throw error
       setKits(prev => [...prev, data[0]])
-      setForm({ name: '', price: '', success_url: '', quantity: '1', weight_kg: '', length_cm: '', width_cm: '', height_cm: '' })
+      setForm({ name: '', price: '', success_url: '', quantity: '1', weight_kg: '', length_cm: '', width_cm: '', height_cm: '', stock_qty: '' })
       showAlert('success', 'Kit criado!')
     } catch (e) { showAlert('error', e.message) }
     finally { setSaving(false) }
@@ -143,10 +143,14 @@ export default function Kits() {
               <Input value={form.quantity} onChange={e => set('quantity', e.target.value)} placeholder="1" type="number" min="1" className="text-sm" />
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs">URL pós-pagamento (opcional)</Label>
               <Input value={form.success_url} onChange={e => set('success_url', e.target.value)} placeholder="https://seusite.com/obrigado" className="text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Estoque disponível (opcional)</Label>
+              <Input value={form.stock_qty} onChange={e => set('stock_qty', e.target.value)} placeholder="ex: 50" type="number" min="0" className="text-sm" />
             </div>
           </div>
           <div>
@@ -196,7 +200,7 @@ export default function Kits() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-gray-800">{kit.name}</p>
-                      <p className="text-xs text-gray-400">{fmt(kit.price)} · {kit.quantity || 1} un · {kit.weight_kg || 0.5}kg/un</p>
+                      <p className="text-xs text-gray-400">{fmt(kit.price)} · {kit.quantity || 1} un · {kit.weight_kg || 0.5}kg/un{kit.stock_qty != null ? ` · ${kit.stock_qty} em estoque` : ''}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
