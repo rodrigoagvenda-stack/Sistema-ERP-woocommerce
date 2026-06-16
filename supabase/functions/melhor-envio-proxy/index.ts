@@ -198,8 +198,11 @@ serve(async (req) => {
       const weight = parseFloat((kit.weight_kg * qty).toFixed(3))
 
       const calcPayload = {
-        from:    { postal_code: senderCep },
-        to:      { postal_code: (postal_code || '').replace(/\D/g, '') },
+        from: {
+          postal_code: senderCep,
+          document:    (extra.sender_document || '').replace(/\D/g, ''),
+        },
+        to: { postal_code: (postal_code || '').replace(/\D/g, '') },
         package: {
           height: kit.height_cm || 10,
           width:  kit.width_cm  || 15,
