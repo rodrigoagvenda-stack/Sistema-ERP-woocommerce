@@ -12,7 +12,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { kit_id, company_id, coupon_code } = await req.json()
+    const { kit_id, company_id, coupon_code, payer, shipping_cost, shipping_name } = await req.json()
     log(`kit_id=${kit_id} company_id=${company_id} coupon_code=${coupon_code || 'none'}`)
 
     const supabase = createClient(
@@ -85,21 +85,38 @@ serve(async (req) => {
     const heightCm   = kit.height_cm || 10
     log(`frete: ${qty}un × ${kit.weight_kg}kg = ${weightG}g | dim=${lengthCm}x${widthCm}x${heightCm}`)
 
+    // Monta items com frete opcional
+    const items: Record<string, unknown>[] = [{
+      id:          kit.id,
+      title:       kit.name,
+      quantity:    1,
+      unit_price:  finalPrice,
+      currency_id: 'BRL',
+    }]
+    if (shipping_cost && shipping_cost > 0) {
+      items.push({
+        id:          'frete',
+        title:       shipping_name || 'Frete',
+        quantity:    1,
+        unit_price:  parseFloat(parseFloat(shipping_cost).toFixed(2)),
+        currency_id: 'BRL',
+      })
+    }
+
     // Monta preference
     const prefBody: Record<string, unknown> = {
-      items: [{
-        id:          kit.id,
-        title:       kit.name,
-        quantity:    1,
-        unit_price:  finalPrice,
-        currency_id: 'BRL',
-      }],
-      shipments: {
-        mode: 'me2',
-        dimensions: `${lengthCm}x${widthCm}x${heightCm},${weightG}`,
-        local_pickup: false,
-        ...(freeShipping ? { cost: 0, free_shipping: true } : {}),
-      },
+      items,
+      ...(payer ? {
+        payer: {
+          name:    payer.name.split(' ').slice(0, -1).join(' ') || payer.name,
+          surname: payer.name.split(' ').slice(-1)[0] || '',
+          email:   payer.email,
+          phone: {
+            area_code: payer.phone.replace(/\D/g,'').slice(0, 2),
+            number:    payer.phone.replace(/\D/g,'').slice(2),
+          },
+        }
+      } : {}),
       ...(kit.success_url ? {
         back_urls: { success: kit.success_url },
         auto_return: 'approved',
@@ -130,10 +147,10 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({
-      url: pref.init_point,
-      id: pref.id,
-      discount: discountAmount,
-      free_shipping: freeShipping,
+      url:           pref.init_point,
+      id:            pref.id,
+      discount:      discountAmount,
+      shipping_cost: shipping_cost || 0,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

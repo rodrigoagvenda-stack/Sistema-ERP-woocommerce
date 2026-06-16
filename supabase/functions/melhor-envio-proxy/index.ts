@@ -12,7 +12,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { method = 'GET', endpoint, body, action, order, order_id, company_id } = await req.json()
+    const { method = 'GET', endpoint, body, action, order, order_id, company_id, kit_id, postal_code } = await req.json()
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -177,6 +177,65 @@ serve(async (req) => {
         tracking:  generateData[cartId]?.tracking || cartData.tracking || null,
         cart_id:   cartId,
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // ── Calcular frete ────────────────────────────────────────────
+    if (action === 'calculate') {
+      const senderCep = (extra.sender_cep || '').replace(/\D/g, '')
+      if (!senderCep) throw new Error('CEP de origem não configurado nas credenciais do Melhor Envio.')
+
+      const { data: kit } = await supabase
+        .from('kits')
+        .select('weight_kg, length_cm, width_cm, height_cm, quantity')
+        .eq('id', kit_id)
+        .eq('company_id', company_id)
+        .single()
+
+      if (!kit) throw new Error('Kit não encontrado para calcular o frete.')
+      if (!kit.weight_kg) throw new Error('Peso do kit não cadastrado. Preencha o campo peso no cadastro do kit.')
+
+      const qty    = kit.quantity || 1
+      const weight = parseFloat((kit.weight_kg * qty).toFixed(3))
+
+      const calcPayload = {
+        from:    { postal_code: senderCep },
+        to:      { postal_code: (postal_code || '').replace(/\D/g, '') },
+        package: {
+          height: kit.height_cm || 10,
+          width:  kit.width_cm  || 15,
+          length: kit.length_cm || 20,
+          weight,
+        },
+        options: { receipt: false, own_hand: false },
+      }
+
+      const calcRes  = await fetch(`${ME_BASE}/shipment/calculate`, {
+        method:  'POST',
+        headers: meHeaders,
+        body:    JSON.stringify(calcPayload),
+      })
+      const calcData = await calcRes.json()
+
+      // Retorna o array completo — o frontend filtra serviços disponíveis
+      // Se não for array, é erro da API do ME
+      if (!Array.isArray(calcData)) {
+        throw new Error(calcData.message || calcData.error || JSON.stringify(calcData))
+      }
+
+      const allowedCarriers: string[] = (extra.allowed_carriers || '')
+        .split(',')
+        .map((c: string) => c.trim().toLowerCase())
+        .filter(Boolean)
+
+      const filtered = calcData.filter((s: any) => {
+        if (s.error || !s.price || parseFloat(s.price) <= 0) return false
+        if (allowedCarriers.length === 0) return true
+        return allowedCarriers.some(c => s.company?.name?.toLowerCase().includes(c))
+      })
+
+      return new Response(JSON.stringify(filtered), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     // ── Requisição genérica ────────────────────────────────────────

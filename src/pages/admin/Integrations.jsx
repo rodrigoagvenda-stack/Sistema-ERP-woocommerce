@@ -56,6 +56,7 @@ const INTEGRATIONS = [
       { key: 'sender_cep', label: 'CEP', placeholder: '18600-000' },
       { key: 'default_service', label: 'Serviço fallback (opcional)', placeholder: '1 = PAC, 2 = SEDEX, 3 = JadLog — usado só se não detectar pelo pedido' },
       { key: 'default_weight', label: 'Peso padrão (kg)', placeholder: '0.5' },
+      { key: 'allowed_carriers', label: 'Transportadoras permitidas (opcional)', placeholder: 'jadlog, correios, total express — deixe vazio para exibir todas' },
     ],
     docs: 'https://docs.melhorenvio.com.br',
     badge: 'Frete',
