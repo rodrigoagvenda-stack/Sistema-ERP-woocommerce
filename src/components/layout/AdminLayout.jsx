@@ -197,6 +197,7 @@ export default function AdminLayout({ children }) {
         children: [{ label: 'Nossas Cervejas', icon: Beer, to: `${base}/nossas-cervejas` }],
       }] : []),
       { label: 'Kits',        icon: Gift,         to: `${base}/kits` },
+      { label: 'Pedidos Kit', icon: ShoppingBag,  to: `${base}/kit-orders` },
       { label: 'Cupons Kit',  icon: BadgePercent, to: `${base}/cupons-kit` },
       { label: 'Integrações', icon: Plug, to: `${base}/integrations` },
       { label: 'FAQ', icon: FileText, to: `${base}/faq` },

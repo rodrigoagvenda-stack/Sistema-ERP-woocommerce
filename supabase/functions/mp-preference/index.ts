@@ -146,6 +146,25 @@ serve(async (req) => {
         .eq('id', coupon.id)
     }
 
+    // Salva pedido pendente
+    await supabase.from('kit_orders').insert({
+      company_id:         parseInt(company_id),
+      kit_id,
+      mp_preference_id:   pref.id,
+      external_reference: prefBody.external_reference,
+      status:             'pending',
+      customer_name:      payer?.name  || null,
+      customer_email:     payer?.email || null,
+      customer_phone:     payer?.phone || null,
+      kit_name:           kit.name,
+      kit_price:          finalPrice,
+      shipping_cost:      shipping_cost ? parseFloat(shipping_cost) : 0,
+      shipping_name:      shipping_name || null,
+      discount_amount:    discountAmount,
+      coupon_code:        coupon_code   || null,
+      total_amount:       finalPrice + (shipping_cost ? parseFloat(shipping_cost) : 0),
+    })
+
     return new Response(JSON.stringify({
       url:           pref.init_point,
       id:            pref.id,
