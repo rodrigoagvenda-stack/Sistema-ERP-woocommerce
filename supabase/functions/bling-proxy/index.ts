@@ -19,38 +19,13 @@ async function blingGet(url: string, headers: Record<string, string>) {
   return r.json()
 }
 
-async function resolveContatoId(cpf: string, nome: string, billing: any, shipping: any, headers: Record<string, string>): Promise<number> {
-  // Tenta achar contato existente pelo CPF/CNPJ
-  const search = await blingGet(`${BLING_BASE}/contatos?cpf_cnpj=${cpf}&limite=1`, headers)
-  const existing = search?.data?.[0]
-  if (existing?.id) return existing.id
-
-  // Cria o contato
-  const body = {
-    nome,
-    tipoPessoa: 'F',
-    cpfCnpj: cpf,
-    email:    billing.email || '',
-    telefone: (billing.phone || '').replace(/\D/g, ''),
-    endereco: {
-      endereco:    shipping.address_1 || '',
-      numero:      shipping.number || 'S/N',
-      complemento: shipping.address_2 || '',
-      bairro:      shipping.neighborhood || shipping.city || '',
-      cep:         (shipping.postcode || '').replace(/\D/g, ''),
-      municipio:   shipping.city || '',
-      uf:          shipping.state || '',
-      pais:        'Brasil',
-    },
+async function resolveContatoId(cpf: string, headers: Record<string, string>): Promise<number | null> {
+  try {
+    const search = await blingGet(`${BLING_BASE}/contatos?cpf_cnpj=${cpf}&limite=1`, headers)
+    return search?.data?.[0]?.id || null
+  } catch {
+    return null
   }
-  const create = await fetch(`${BLING_BASE}/contatos`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ data: body }),
-  })
-  const created = await create.json()
-  if (!created?.data?.id) throw new Error(`Erro ao criar contato Bling: ${JSON.stringify(created)}`)
-  return created.data.id
 }
 
 Deno.serve(async (req) => {
@@ -102,8 +77,8 @@ Deno.serve(async (req) => {
 
       const nome = `${billing.first_name || ''} ${billing.last_name || ''}`.trim()
 
-      // Busca ou cria o contato no Bling e pega o ID
-      const contatoId = await resolveContatoId(cpf, nome, billing, shipping, blingHeaders)
+      // Busca contato existente no Bling pelo CPF
+      const contatoId = cpf ? await resolveContatoId(cpf, blingHeaders) : null
 
       const itens = (order.line_items || []).map((item: any) => ({
         codigo:    String(item.sku || item.product_id || ''),
@@ -117,10 +92,15 @@ Deno.serve(async (req) => {
 
       if (itens.length === 0) throw new Error('Pedido sem itens — não é possível emitir NF-e.')
 
+      // Se achou o contato no Bling usa o ID, senão passa inline
+      const contato = contatoId
+        ? { id: contatoId }
+        : { nome, tipoPessoa: 'F', numeroDocumento: cpf, email: billing.email || '', telefone: (billing.phone || '').replace(/\D/g, '') }
+
       const nfePayload = {
         tipo: 1,
         dataOperacao: dataHoje,
-        contato: { id: contatoId },
+        contato,
         itens,
         parcelas: [{
           data:  dataHoje,
@@ -145,7 +125,7 @@ Deno.serve(async (req) => {
         const msg = result?.error?.fields?.map((f: any) => f.msg).join(', ') || result?.error?.description || JSON.stringify(result)
         return new Response(JSON.stringify({
           error: msg,
-          __debug: { cpf, contatoId, itensCount: itens.length, dataHoje, payload: nfePayload, blingRaw: result },
+          __debug: { cpf, contatoId, contato, itensCount: itens.length, dataHoje, payload: nfePayload, blingRaw: result },
         }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
 
