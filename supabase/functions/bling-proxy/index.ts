@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const BLING_BASE = 'https://www.bling.com.br/Api/v3'
+const BLING_BASE = 'https://api.bling.com.br/Api/v3'
 
 function resolveFormaPagamento(extra: any, paymentMethod: string = ''): number {
   const m = paymentMethod.toLowerCase()
