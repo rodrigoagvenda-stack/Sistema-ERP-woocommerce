@@ -57,18 +57,20 @@ serve(async (req) => {
 
       // CPF pode estar em meta_data (WooCommerce)
       const cpfMeta = (order.meta_data || []).find((m: any) =>
-        ['_billing_cpf','billing_cpf','_cpf','cpf','vindi_cpf','wc_cpf'].includes(m.key)
+        m.key && m.key.toLowerCase().includes('cpf') && m.value
       )?.value || ''
       const cpf = (billing.cpf || billing.document || cpfMeta || '').replace(/\D/g, '')
 
       // Data no formato DD/MM/YYYY
       const today = new Date()
-      const dataHoje = `${String(today.getDate()).padStart(2,'0')}/${String(today.getMonth()+1).padStart(2,'0')}/${today.getFullYear()}`
+      const dataHoje = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
 
       const itens = (order.line_items || []).map((item: any) => ({
-        descricao:  item.name,
-        codigo:     String(item.product_id || item.sku || ''),
-        unidade:    'UN',
+        produto: {
+          descricao: item.name,
+          codigo:    String(item.product_id || item.sku || ''),
+          unidade:   'UN',
+        },
         quantidade: Number(item.quantity) || 1,
         valor:      parseFloat(item.price) || parseFloat(item.subtotal) / (Number(item.quantity) || 1) || 0,
       }))
