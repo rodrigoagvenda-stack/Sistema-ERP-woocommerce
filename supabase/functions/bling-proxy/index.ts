@@ -116,8 +116,11 @@ Deno.serve(async (req) => {
       const result = await res.json()
 
       if (!res.ok) {
-        const msg = result?.error?.fields?.map((f: any) => f.msg).join(', ') || result?.error?.description || 'Erro ao emitir NF-e'
-        throw new Error(msg)
+        const msg = result?.error?.fields?.map((f: any) => f.msg).join(', ') || result?.error?.description || JSON.stringify(result)
+        return new Response(JSON.stringify({
+          error: msg,
+          __debug: { cpf, itensCount: itens.length, itens, dataHoje, payload: nfePayload, blingRaw: result },
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
 
       const nfeId = result?.data?.id
