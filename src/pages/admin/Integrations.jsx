@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase'
 import { getCompanyId } from '@/lib/company'
 import { mercadoPagoProxy, pagbankProxy, melhorEnvioProxy } from '@/lib/api'
+import { ENV } from '@/config/env'
 
 const TEST_FNS = {
   mercadopago: () => mercadoPagoProxy({ endpoint: 'v1/payment_methods' }),
@@ -103,7 +104,7 @@ function IntegrationCard({ integration, blingCode }) {
           .eq('marketplace', integration.key)
           .eq('company_id', cid)
           .limit(1)
-          .single()
+          .maybeSingle()
         if (data) {
           setForm({
             access_token: data.access_token || '',
@@ -175,11 +176,11 @@ function IntegrationCard({ integration, blingCode }) {
       try {
         const cid = await getCompanyId()
         const { data: { session } } = await supabase.auth.getSession()
-        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bling-oauth`, {
+        const res = await fetch(`${ENV.SUPABASE_URL}/functions/v1/bling-oauth`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'apikey': ENV.SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${session?.access_token}`,
           },
           body: JSON.stringify({ company_id: cid, code: blingCode }),
