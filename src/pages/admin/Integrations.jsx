@@ -125,21 +125,23 @@ function IntegrationCard({ integration, blingCode }) {
     try {
       const cid = await getCompanyId()
       const { access_token, is_active, ...extra_data } = form
-      const payload = {
-        marketplace: integration.key,
-        company_id: cid,
-        access_token: access_token || '',
-        extra_data,
-        is_active: true,
-      }
 
       const { data: existing } = await supabase
         .from('marketplace_credentials')
-        .select('id')
+        .select('id, access_token')
         .eq('marketplace', integration.key)
         .eq('company_id', cid)
         .limit(1)
-        .single()
+        .maybeSingle()
+
+      const payload = {
+        marketplace: integration.key,
+        company_id: cid,
+        // preserva access_token existente se o form não tiver (OAuth)
+        access_token: access_token || existing?.access_token || '',
+        extra_data,
+        is_active: true,
+      }
 
       if (existing?.id) {
         const { error } = await supabase.from('marketplace_credentials').update(payload).eq('id', existing.id)
