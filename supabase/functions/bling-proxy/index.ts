@@ -55,62 +55,57 @@ Deno.serve(async (req) => {
       const shipping = order.shipping || billing
 
       // CPF pode estar em meta_data (WooCommerce)
-      const cpfMeta = (order.meta_data || []).find((m: any) =>
-        m.key && m.key.toLowerCase().includes('cpf') && m.value
-      )?.value || ''
+      const CPF_KEYS = ['_billing_cpf','billing_cpf','_cpf','cpf','vindi_cpf','wc_cpf']
+      const cpfMeta = (order.meta_data || []).find((m: any) => CPF_KEYS.includes(m.key) && m.value)?.value || ''
       const cpf = (billing.cpf || billing.document || cpfMeta || '').replace(/\D/g, '')
 
-      // Data no formato DD/MM/YYYY
       const today = new Date()
-      const dataHoje = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const dataHoje = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())} ${pad(today.getHours())}:${pad(today.getMinutes())}:${pad(today.getSeconds())}`
 
       const itens = (order.line_items || []).map((item: any) => ({
-        produto: {
-          descricao: item.name,
-          codigo:    String(item.product_id || item.sku || ''),
-          unidade:   'UN',
-        },
+        codigo:    String(item.sku || item.product_id || ''),
+        descricao: item.name,
+        unidade:   'UN',
         quantidade: Number(item.quantity) || 1,
-        valor:      parseFloat(item.price) || parseFloat(item.subtotal) / (Number(item.quantity) || 1) || 0,
+        valor:     parseFloat(item.price) || (parseFloat(item.subtotal) / (Number(item.quantity) || 1)) || 0,
+        tipo:      'P',
+        origem:    0,
       }))
 
       if (itens.length === 0) throw new Error('Pedido sem itens — não é possível emitir NF-e.')
 
       const nfePayload = {
         tipo: 1,
-        serie: Number(extra.nfe_serie) || 3,
-        numero: 0,
         dataOperacao: dataHoje,
         contato: {
-          nome:       `${billing.first_name || ''} ${billing.last_name || ''}`.trim(),
-          email:      billing.email || '',
-          telefone:   (billing.phone || '').replace(/\D/g, ''),
-          tipoPessoa: 'F',
-          cpfCnpj:    cpf,
+          nome:            `${billing.first_name || ''} ${billing.last_name || ''}`.trim(),
+          tipoPessoa:      'F',
+          numeroDocumento: cpf,
+          email:           billing.email || '',
+          telefone:        (billing.phone || '').replace(/\D/g, ''),
           endereco: {
             endereco:    shipping.address_1 || '',
             numero:      shipping.number || 'S/N',
             complemento: shipping.address_2 || '',
-            bairro:      shipping.neighborhood || '',
+            bairro:      shipping.neighborhood || shipping.city || '',
             cep:         (shipping.postcode || '').replace(/\D/g, ''),
             municipio:   shipping.city || '',
             uf:          shipping.state || '',
-            pais:        'Brasil',
+            pais:        '',
           },
         },
         itens,
         parcelas: [{
-          dataVencimento: dataHoje,
+          data:  dataHoje.split(' ')[0],
           valor: parseFloat(order.total) || 0,
           formaPagamento: { id: resolveFormaPagamento(extra, order.payment_method) },
         }],
         transporte: {
-          fretePorConta: 'D',
-          transportadora: { nome: order.shipping_lines?.[0]?.method_title || '' },
+          fretePorConta: 9,
+          volumes: [],
         },
-        informacoesAdicionais: {
-          informacoes: `Pedido WooCommerce #${order.number || order.id}`,
-        },
+        observacoes: `Pedido WooCommerce #${order.number || order.id}`,
       }
 
       const res = await fetch(`${BLING_BASE}/nfe`, {
