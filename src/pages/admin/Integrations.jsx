@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Save, CheckCircle2, AlertCircle, Eye, EyeOff, RefreshCw, Wifi } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
+import { Save, CheckCircle2, AlertCircle, Eye, EyeOff, RefreshCw, Wifi, Link } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -66,22 +67,26 @@ const INTEGRATIONS = [
     name: 'Bling',
     description: 'Emitir NF-e série 03 direto no painel de pedidos.',
     fields: [
-      { key: 'access_token', label: 'API Token (v3)', secret: true, placeholder: 'Token de acesso Bling v3' },
-      { key: 'nfe_serie', label: 'Série da NF-e', placeholder: '3' },
-      { key: 'forma_pagamento_id', label: 'ID Forma de Pagamento', placeholder: 'ID cadastrado no Bling' },
+      { key: 'client_id',          label: 'Client ID',              placeholder: 'Client ID do app Bling' },
+      { key: 'client_secret',      label: 'Client Secret',          secret: true, placeholder: 'Client Secret do app Bling' },
+      { key: 'nfe_serie',          label: 'Série da NF-e',          placeholder: '3' },
+      { key: 'forma_pagamento_id', label: 'ID Forma de Pagamento',  placeholder: 'ID cadastrado no Bling' },
     ],
     docs: 'https://developer.bling.com.br/referencia',
     badge: 'NF-e',
+    oauth: true,
   },
 ]
 
-function IntegrationCard({ integration }) {
-  const [form,    setForm]    = useState({})
-  const [loading, setLoading] = useState(true)
-  const [saving,  setSaving]  = useState(false)
-  const [testing, setTesting] = useState(false)
-  const [alert,   setAlert]   = useState(null)
-  const [show,    setShow]    = useState({})
+function IntegrationCard({ integration, blingCode }) {
+  const [form,        setForm]        = useState({})
+  const [loading,     setLoading]     = useState(true)
+  const [saving,      setSaving]      = useState(false)
+  const [testing,     setTesting]     = useState(false)
+  const [connecting,  setConnecting]  = useState(false)
+  const [connected,   setConnected]   = useState(false)
+  const [alert,       setAlert]       = useState(null)
+  const [show,        setShow]        = useState({})
 
   const showAlert = (type, message) => {
     setAlert({ type, message })
@@ -162,6 +167,47 @@ function IntegrationCard({ integration }) {
     }
   }
 
+  // Troca código OAuth do Bling por access token
+  useEffect(() => {
+    if (integration.key !== 'bling' || !blingCode) return
+    const exchange = async () => {
+      setConnecting(true)
+      try {
+        const cid = await getCompanyId()
+        const { data: { session } } = await supabase.auth.getSession()
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bling-oauth`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ company_id: cid, code: blingCode }),
+        })
+        const data = await res.json()
+        if (data.error) throw new Error(data.error)
+        setConnected(true)
+        showAlert('success', 'Bling conectado com sucesso! Token salvo.')
+        // Atualiza form com o token
+        setForm(prev => ({ ...prev, access_token: data.access_token }))
+      } catch (e) {
+        showAlert('error', 'Erro ao conectar Bling: ' + e.message)
+      } finally {
+        setConnecting(false)
+        // Limpa o code da URL
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+    }
+    exchange()
+  }, [blingCode, integration.key])
+
+  const handleBlingConnect = () => {
+    const clientId = form.client_id
+    if (!clientId) return showAlert('error', 'Salve o Client ID primeiro.')
+    const url = `https://www.bling.com.br/Api/v3/oauth/authorize?response_type=code&client_id=${clientId}`
+    window.location.href = url
+  }
+
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
   const isConfigured = !!form.access_token
   const canTest = isConfigured && !!TEST_FNS[integration.key]
@@ -226,6 +272,12 @@ function IntegrationCard({ integration }) {
                   {testing ? 'Testando...' : 'Testar conexão'}
                 </Button>
               )}
+              {integration.oauth && (
+                <Button variant="outline" onClick={handleBlingConnect} disabled={connecting || saving} className="gap-2">
+                  {connecting ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Link className="h-4 w-4" />}
+                  {connecting ? 'Conectando...' : connected ? 'Reconectar Bling' : 'Conectar com Bling'}
+                </Button>
+              )}
               <Button onClick={handleSave} disabled={saving || testing} className="gap-2">
                 {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 {saving ? 'Salvando...' : 'Salvar configurações'}
@@ -239,6 +291,9 @@ function IntegrationCard({ integration }) {
 }
 
 export default function Integrations() {
+  const [searchParams] = useSearchParams()
+  const blingCode = searchParams.get('bling_code')
+
   return (
     <div className="space-y-6">
       <div>
@@ -254,7 +309,11 @@ export default function Integrations() {
       </Alert>
 
       {INTEGRATIONS.map(integration => (
-        <IntegrationCard key={integration.key} integration={integration} />
+        <IntegrationCard
+          key={integration.key}
+          integration={integration}
+          blingCode={integration.key === 'bling' ? blingCode : null}
+        />
       ))}
     </div>
   )

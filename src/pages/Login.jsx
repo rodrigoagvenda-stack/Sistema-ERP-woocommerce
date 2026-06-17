@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { LogIn, Eye, EyeOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 export default function Login() {
   const { slug } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const [company, setCompany] = useState(null)
   const [notFound, setNotFound] = useState(false)
@@ -17,6 +18,19 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  // Detecta redirect OAuth do Bling
+  useEffect(() => {
+    const code = searchParams.get('code')
+    if (!code || !slug) return
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigate(`/admin/${slug}/integrations?bling_code=${code}`, { replace: true })
+      } else {
+        sessionStorage.setItem('bling_oauth_code', code)
+      }
+    })
+  }, [searchParams, slug])
 
   // Carrega branding da empresa pelo slug
   useEffect(() => {
@@ -70,7 +84,13 @@ export default function Login() {
 
     // Salva slug para redirect caso a sessão expire
     localStorage.setItem('lastSlug', slug)
-    navigate(`/admin/${slug}/dashboard`)
+    const blingCode = sessionStorage.getItem('bling_oauth_code')
+    if (blingCode) {
+      sessionStorage.removeItem('bling_oauth_code')
+      navigate(`/admin/${slug}/integrations?bling_code=${blingCode}`, { replace: true })
+    } else {
+      navigate(`/admin/${slug}/dashboard`)
+    }
   }
 
   if (notFound) {
