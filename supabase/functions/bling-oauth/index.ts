@@ -43,16 +43,15 @@ serve(async (req) => {
         'Accept': 'application/json',
       },
       body: new URLSearchParams({
-        grant_type:   'authorization_code',
+        grant_type: 'authorization_code',
         code,
-        redirect_uri: 'https://crud.vendai.pro/login/geezer',
       }).toString(),
     })
 
     const tokenData = await tokenRes.json()
 
     if (!tokenRes.ok || !tokenData.access_token) {
-      throw new Error(tokenData.error_description || `Erro Bling: ${tokenRes.status}`)
+      throw new Error(`Bling ${tokenRes.status}: ${JSON.stringify(tokenData)}`)
     }
 
     // Salva access_token e refresh_token

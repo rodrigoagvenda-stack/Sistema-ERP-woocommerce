@@ -211,8 +211,7 @@ function IntegrationCard({ integration, blingCode }) {
     if (!clientId) return showAlert('error', 'Salve o Client ID primeiro.')
     const state = crypto.randomUUID()
     sessionStorage.setItem('bling_oauth_state', state)
-    const redirectUri = 'https://crud.vendai.pro/login/geezer'
-    const url = `https://www.bling.com.br/Api/v3/oauth/authorize?response_type=code&client_id=${clientId}&state=${state}&redirect_uri=${encodeURIComponent(redirectUri)}`
+    const url = `https://www.bling.com.br/Api/v3/oauth/authorize?response_type=code&client_id=${clientId}&state=${state}`
     window.location.href = url
   }
 
