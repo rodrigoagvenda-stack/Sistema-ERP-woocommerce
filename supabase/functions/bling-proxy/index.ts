@@ -19,10 +19,35 @@ async function blingGet(url: string, headers: Record<string, string>) {
   return r.json()
 }
 
-async function resolveContatoId(cpf: string, headers: Record<string, string>): Promise<number | null> {
+async function resolveContatoId(cpf: string, nome: string, billing: any, shipping: any, headers: Record<string, string>): Promise<number | null> {
   try {
     const search = await blingGet(`${BLING_BASE}/contatos?cpf_cnpj=${cpf}&limite=1`, headers)
-    return search?.data?.[0]?.id || null
+    const existing = search?.data?.[0]?.id
+    if (existing) return existing
+
+    const create = await fetch(`${BLING_BASE}/contatos`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ data: {
+        nome,
+        tipoPessoa: 'F',
+        cpfCnpj: cpf,
+        email:    billing.email || '',
+        telefone: (billing.phone || '').replace(/\D/g, ''),
+        endereco: {
+          endereco:    shipping.address_1 || '',
+          numero:      shipping.number || 'S/N',
+          complemento: shipping.address_2 || '',
+          bairro:      shipping.neighborhood || shipping.city || '',
+          cep:         (shipping.postcode || '').replace(/\D/g, ''),
+          municipio:   shipping.city || '',
+          uf:          shipping.state || '',
+          pais:        'Brasil',
+        },
+      }}),
+    })
+    const created = await create.json()
+    return created?.data?.id || null
   } catch {
     return null
   }
@@ -77,8 +102,8 @@ Deno.serve(async (req) => {
 
       const nome = `${billing.first_name || ''} ${billing.last_name || ''}`.trim()
 
-      // Busca contato existente no Bling pelo CPF
-      const contatoId = cpf ? await resolveContatoId(cpf, blingHeaders) : null
+      // Busca ou cria contato no Bling pelo CPF
+      const contatoId = cpf ? await resolveContatoId(cpf, nome, billing, shipping, blingHeaders) : null
 
       const itens = (order.line_items || []).map((item: any) => ({
         codigo:    String(item.sku || item.product_id || ''),
