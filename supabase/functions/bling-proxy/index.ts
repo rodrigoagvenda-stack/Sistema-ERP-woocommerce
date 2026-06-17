@@ -55,37 +55,51 @@ serve(async (req) => {
       const billing  = order.billing  || {}
       const shipping = order.shipping || billing
 
+      // CPF pode estar em meta_data (WooCommerce)
+      const cpfMeta = (order.meta_data || []).find((m: any) =>
+        ['_billing_cpf','billing_cpf','_cpf','cpf','vindi_cpf','wc_cpf'].includes(m.key)
+      )?.value || ''
+      const cpf = (billing.cpf || billing.document || cpfMeta || '').replace(/\D/g, '')
+
+      // Data no formato DD/MM/YYYY
+      const today = new Date()
+      const dataHoje = `${String(today.getDate()).padStart(2,'0')}/${String(today.getMonth()+1).padStart(2,'0')}/${today.getFullYear()}`
+
+      const itens = (order.line_items || []).map((item: any) => ({
+        descricao:  item.name,
+        codigo:     String(item.product_id || item.sku || ''),
+        unidade:    'UN',
+        quantidade: Number(item.quantity) || 1,
+        valor:      parseFloat(item.price) || parseFloat(item.subtotal) / (Number(item.quantity) || 1) || 0,
+      }))
+
+      if (itens.length === 0) throw new Error('Pedido sem itens — não é possível emitir NF-e.')
+
       const nfePayload = {
-        tipo: 1, // 1 = Saída
-        serie: extra.nfe_serie || '3',
-        numero: 0, // Bling auto-incrementa
-        dataOperacao: new Date().toISOString().split('T')[0],
+        tipo: 1,
+        serie: Number(extra.nfe_serie) || 3,
+        numero: 0,
+        dataOperacao: dataHoje,
         contato: {
           nome:       `${billing.first_name || ''} ${billing.last_name || ''}`.trim(),
           email:      billing.email || '',
           telefone:   (billing.phone || '').replace(/\D/g, ''),
           tipoPessoa: 'F',
-          cpfCnpj:    (billing.cpf || billing.document || '').replace(/\D/g, ''),
+          cpfCnpj:    cpf,
           endereco: {
-            endereco:      shipping.address_1 || '',
-            numero:        shipping.number || 'S/N',
-            complemento:   shipping.address_2 || '',
-            bairro:        shipping.neighborhood || '',
-            cep:           (shipping.postcode || '').replace(/\D/g, ''),
-            municipio:     shipping.city || '',
-            uf:            shipping.state || '',
-            pais:          'Brasil',
+            endereco:    shipping.address_1 || '',
+            numero:      shipping.number || 'S/N',
+            complemento: shipping.address_2 || '',
+            bairro:      shipping.neighborhood || '',
+            cep:         (shipping.postcode || '').replace(/\D/g, ''),
+            municipio:   shipping.city || '',
+            uf:          shipping.state || '',
+            pais:        'Brasil',
           },
         },
-        itens: (order.line_items || []).map((item: any) => ({
-          descricao:   item.name,
-          codigo:      String(item.product_id || ''),
-          unidade:     'UN',
-          quantidade:  item.quantity,
-          valor:       parseFloat(item.price) || 0,
-        })),
+        itens,
         parcelas: [{
-          dataVencimento: new Date().toISOString().split('T')[0],
+          dataVencimento: dataHoje,
           valor: parseFloat(order.total) || 0,
           formaPagamento: { id: resolveFormaPagamento(extra, order.payment_method) },
         }],
