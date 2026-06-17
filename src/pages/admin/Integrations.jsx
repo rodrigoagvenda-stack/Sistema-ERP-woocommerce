@@ -204,7 +204,9 @@ function IntegrationCard({ integration, blingCode }) {
   const handleBlingConnect = () => {
     const clientId = form.client_id
     if (!clientId) return showAlert('error', 'Salve o Client ID primeiro.')
-    const url = `https://www.bling.com.br/Api/v3/oauth/authorize?response_type=code&client_id=${clientId}`
+    const state = crypto.randomUUID()
+    sessionStorage.setItem('bling_oauth_state', state)
+    const url = `https://www.bling.com.br/Api/v3/oauth/authorize?response_type=code&client_id=${clientId}&state=${state}`
     window.location.href = url
   }
 
