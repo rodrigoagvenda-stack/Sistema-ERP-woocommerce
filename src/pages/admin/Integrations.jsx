@@ -70,8 +70,10 @@ const INTEGRATIONS = [
     fields: [
       { key: 'client_id',          label: 'Client ID',              placeholder: 'Client ID do app Bling' },
       { key: 'client_secret',      label: 'Client Secret',          secret: true, placeholder: 'Client Secret do app Bling' },
-      { key: 'nfe_serie',          label: 'Série da NF-e',          placeholder: '3' },
-      { key: 'forma_pagamento_id', label: 'ID Forma de Pagamento',  placeholder: 'ID cadastrado no Bling' },
+      { key: 'nfe_serie',  label: 'Série da NF-e', placeholder: '3' },
+      { key: 'fp_pix',    label: 'ID Bling → Pix',    placeholder: 'Ex: 10297923' },
+      { key: 'fp_boleto', label: 'ID Bling → Boleto',  placeholder: 'Ex: 10297924' },
+      { key: 'fp_cartao', label: 'ID Bling → Cartão',  placeholder: 'Ex: 10297925' },
     ],
     docs: 'https://developer.bling.com.br/referencia',
     badge: 'NF-e',

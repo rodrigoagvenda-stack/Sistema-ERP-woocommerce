@@ -8,6 +8,14 @@ const corsHeaders = {
 
 const BLING_BASE = 'https://www.bling.com.br/Api/v3'
 
+function resolveFormaPagamento(extra: any, paymentMethod: string = ''): number {
+  const m = paymentMethod.toLowerCase()
+  if (m.includes('boleto') || m.includes('bacs')) return Number(extra.fp_boleto) || 1
+  if (m.includes('card') || m.includes('cartao') || m.includes('credit') || m.includes('stripe') || m.includes('cielo')) return Number(extra.fp_cartao) || 1
+  // pix é o padrão (pagbank pix, woo pix, etc)
+  return Number(extra.fp_pix) || 1
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -79,7 +87,7 @@ serve(async (req) => {
         parcelas: [{
           dataVencimento: new Date().toISOString().split('T')[0],
           valor: parseFloat(order.total) || 0,
-          formaPagamento: { id: extra.forma_pagamento_id || 1 },
+          formaPagamento: { id: resolveFormaPagamento(extra, order.payment_method) },
         }],
         transporte: {
           fretePorConta: 'D',
