@@ -14,6 +14,43 @@ function resolveFormaPagamento(extra: any, paymentMethod: string = ''): number {
   return Number(extra.fp_pix) || 1
 }
 
+async function refreshBlingToken(supabase: any, company_id: string, extra: any): Promise<string | null> {
+  const refreshToken = extra.refresh_token
+  const clientId     = extra.client_id
+  const clientSecret = extra.client_secret
+  if (!refreshToken || !clientId || !clientSecret) return null
+
+  const credentials = btoa(`${clientId}:${clientSecret}`)
+  const res = await fetch('https://www.bling.com.br/Api/v3/oauth/token', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${credentials}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
+    },
+    body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken }).toString(),
+  })
+
+  if (!res.ok) return null
+  const data = await res.json()
+  if (!data.access_token) return null
+
+  await supabase
+    .from('marketplace_credentials')
+    .update({
+      access_token: data.access_token,
+      extra_data: {
+        ...extra,
+        refresh_token:    data.refresh_token || refreshToken,
+        token_expires_at: new Date(Date.now() + (data.expires_in || 3600) * 1000).toISOString(),
+      },
+    })
+    .eq('marketplace', 'bling')
+    .eq('company_id', company_id)
+
+  return data.access_token
+}
+
 async function blingGet(url: string, headers: Record<string, string>) {
   const r = await fetch(url, { headers })
   return r.json()
@@ -79,8 +116,15 @@ Deno.serve(async (req) => {
       })
     }
 
-    const token = creds.access_token
     const extra = creds.extra_data || {}
+
+    // Auto-refresh: renova se expirado ou próximo de expirar (5 min de margem)
+    let token = creds.access_token
+    const expiresAt = extra.token_expires_at ? new Date(extra.token_expires_at).getTime() : 0
+    if (expiresAt && Date.now() > expiresAt - 5 * 60 * 1000) {
+      const refreshed = await refreshBlingToken(supabase, company_id, extra)
+      if (refreshed) token = refreshed
+    }
 
     const blingHeaders = {
       'Authorization': `Bearer ${token}`,
@@ -105,6 +149,16 @@ Deno.serve(async (req) => {
       // Busca ou cria contato no Bling pelo CPF
       const contatoId = cpf ? await resolveContatoId(cpf, nome, billing, shipping, blingHeaders) : null
 
+      // Se o token estava expirado, tenta refresh antes de emitir
+      if (contatoId === null && cpf) {
+        // Tenta refresh agora mesmo caso resolveContato falhou por 401
+        const refreshed = await refreshBlingToken(supabase, company_id, extra)
+        if (refreshed) {
+          blingHeaders['Authorization'] = `Bearer ${refreshed}`
+          token = refreshed
+        }
+      }
+
       const itens = (order.line_items || []).map((item: any) => ({
         codigo:    String(item.sku || item.product_id || ''),
         descricao: item.name,
@@ -117,7 +171,6 @@ Deno.serve(async (req) => {
 
       if (itens.length === 0) throw new Error('Pedido sem itens — não é possível emitir NF-e.')
 
-      // Se achou o contato no Bling usa o ID, senão passa inline
       const contato = contatoId
         ? { id: contatoId }
         : { nome, tipoPessoa: 'F', numeroDocumento: cpf, email: billing.email || '', telefone: (billing.phone || '').replace(/\D/g, '') }
@@ -139,12 +192,26 @@ Deno.serve(async (req) => {
         observacoes: `Pedido WooCommerce #${order.number || order.id}`,
       }
 
-      const res = await fetch(`${BLING_BASE}/nfe`, {
+      let res = await fetch(`${BLING_BASE}/nfe`, {
         method: 'POST',
         headers: blingHeaders,
         body: JSON.stringify({ data: nfePayload }),
       })
-      const result = await res.json()
+      let result = await res.json()
+
+      // Se deu invalid_token, tenta refresh e reenvia uma vez
+      if (!res.ok && result?.error?.type === 'invalid_token') {
+        const refreshed = await refreshBlingToken(supabase, company_id, extra)
+        if (refreshed) {
+          blingHeaders['Authorization'] = `Bearer ${refreshed}`
+          res = await fetch(`${BLING_BASE}/nfe`, {
+            method: 'POST',
+            headers: blingHeaders,
+            body: JSON.stringify({ data: nfePayload }),
+          })
+          result = await res.json()
+        }
+      }
 
       if (!res.ok) {
         const msg = result?.error?.fields?.map((f: any) => f.msg).join(', ') || result?.error?.description || JSON.stringify(result)
@@ -175,10 +242,22 @@ Deno.serve(async (req) => {
     })
     const result = await res.json()
 
-    if (!res.ok) {
-      throw new Error(result?.error?.description || 'Erro Bling')
+    // Auto-refresh em requisições genéricas também
+    if (!res.ok && result?.error?.type === 'invalid_token') {
+      const refreshed = await refreshBlingToken(supabase, company_id, extra)
+      if (refreshed) {
+        const res2 = await fetch(url, {
+          method,
+          headers: { ...blingHeaders, 'Authorization': `Bearer ${refreshed}` },
+          ...(body ? { body: JSON.stringify({ data: body }) } : {}),
+        })
+        const result2 = await res2.json()
+        if (!res2.ok) throw new Error(result2?.error?.description || 'Erro Bling')
+        return new Response(JSON.stringify(result2?.data || result2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
     }
 
+    if (!res.ok) throw new Error(result?.error?.description || 'Erro Bling')
     return new Response(JSON.stringify(result?.data || result), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
