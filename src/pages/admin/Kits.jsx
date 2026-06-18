@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Copy, Check, RefreshCw, ShoppingBag } from 'lucide-react'
+import { Plus, Trash2, Copy, Check, RefreshCw, ShoppingBag, Pencil, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -61,6 +61,7 @@ export default function Kits() {
   const [companyId, setCompanyId] = useState(null)
   const [alert,     setAlert]     = useState(null)
   const [form,      setForm]      = useState({ name: '', price: '', success_url: '', quantity: '1', weight_kg: '', length_cm: '', width_cm: '', height_cm: '', stock_qty: '' })
+  const [editing,   setEditing]   = useState(null)
 
   const showAlert = (type, msg) => {
     setAlert({ type, msg })
@@ -101,6 +102,53 @@ export default function Kits() {
     finally { setSaving(false) }
   }
 
+  const handleEdit = (kit) => {
+    setEditing(kit.id)
+    setForm({
+      name:       kit.name        || '',
+      price:      kit.price       != null ? String(kit.price)      : '',
+      success_url:kit.success_url || '',
+      quantity:   kit.quantity    != null ? String(kit.quantity)   : '1',
+      weight_kg:  kit.weight_kg   != null ? String(kit.weight_kg)  : '',
+      length_cm:  kit.length_cm   != null ? String(kit.length_cm)  : '',
+      width_cm:   kit.width_cm    != null ? String(kit.width_cm)   : '',
+      height_cm:  kit.height_cm   != null ? String(kit.height_cm)  : '',
+      stock_qty:  kit.stock_qty   != null ? String(kit.stock_qty)  : '',
+    })
+    setTimeout(() => document.getElementById('kit-form-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
+
+  const handleCancelEdit = () => {
+    setEditing(null)
+    setForm({ name: '', price: '', success_url: '', quantity: '1', weight_kg: '', length_cm: '', width_cm: '', height_cm: '', stock_qty: '' })
+  }
+
+  const handleUpdate = async () => {
+    if (!form.name.trim() || !form.price) return showAlert('error', 'Nome e preço são obrigatórios.')
+    setSaving(true)
+    try {
+      const { error } = await supabase
+        .from('kits')
+        .update({
+          name:        form.name.trim(),
+          price:       parseFloat(form.price),
+          success_url: form.success_url || null,
+          quantity:    form.quantity  ? parseInt(form.quantity)   : 1,
+          weight_kg:   form.weight_kg ? parseFloat(form.weight_kg): 0.5,
+          length_cm:   form.length_cm ? parseFloat(form.length_cm): 20,
+          width_cm:    form.width_cm  ? parseFloat(form.width_cm) : 15,
+          height_cm:   form.height_cm ? parseFloat(form.height_cm): 10,
+          stock_qty:   form.stock_qty ? parseInt(form.stock_qty)  : null,
+        })
+        .eq('id', editing)
+      if (error) throw error
+      setKits(prev => prev.map(k => k.id === editing ? { ...k, name: form.name.trim(), price: parseFloat(form.price), success_url: form.success_url || null, quantity: form.quantity ? parseInt(form.quantity) : 1, weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : 0.5, length_cm: form.length_cm ? parseFloat(form.length_cm) : 20, width_cm: form.width_cm ? parseFloat(form.width_cm) : 15, height_cm: form.height_cm ? parseFloat(form.height_cm) : 10, stock_qty: form.stock_qty ? parseInt(form.stock_qty) : null } : k))
+      handleCancelEdit()
+      showAlert('success', 'Kit atualizado!')
+    } catch (e) { showAlert('error', e.message) }
+    finally { setSaving(false) }
+  }
+
   const handleDelete = async (id) => {
     if (!confirm('Excluir este kit?')) return
     await supabase.from('kits').delete().eq('id', id)
@@ -122,10 +170,10 @@ export default function Kits() {
         </Alert>
       )}
 
-      {/* Criar kit */}
-      <Card>
+      {/* Criar / Editar kit */}
+      <Card id="kit-form-card">
         <CardHeader>
-          <CardTitle className="text-base">Novo kit</CardTitle>
+          <CardTitle className="text-base">{editing ? 'Editar kit' : 'Novo kit'}</CardTitle>
           <CardDescription>O cliente clica no botão e vai direto para o checkout do Mercado Pago numa nova aba.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -174,10 +222,15 @@ export default function Kits() {
               </div>
             </div>
           </div>
-          <div className="flex justify-end">
-            <Button onClick={handleCreate} disabled={saving} className="gap-2">
-              {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              {saving ? 'Criando...' : 'Criar kit'}
+          <div className="flex justify-end gap-2">
+            {editing && (
+              <Button variant="outline" onClick={handleCancelEdit} className="gap-2">
+                <X className="h-4 w-4" /> Cancelar
+              </Button>
+            )}
+            <Button onClick={editing ? handleUpdate : handleCreate} disabled={saving} className="gap-2">
+              {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : editing ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {saving ? (editing ? 'Salvando...' : 'Criando...') : editing ? 'Salvar alterações' : 'Criar kit'}
             </Button>
           </div>
         </CardContent>
@@ -205,6 +258,9 @@ export default function Kits() {
                   </div>
                   <div className="flex items-center gap-2">
                     <CopyButton text={buildSnippet(kit, companyId)} />
+                    <button onClick={() => handleEdit(kit)} className="p-1.5 rounded-lg text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-colors" title="Editar kit">
+                      <Pencil className="h-4 w-4" />
+                    </button>
                     <button onClick={() => handleDelete(kit.id)} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
                       <Trash2 className="h-4 w-4" />
                     </button>
