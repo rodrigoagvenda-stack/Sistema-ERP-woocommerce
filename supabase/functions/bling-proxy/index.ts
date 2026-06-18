@@ -177,6 +177,7 @@ Deno.serve(async (req) => {
 
       const nfePayload = {
         tipo: 1,
+        serie: Number(extra.nfe_serie) || 3,
         dataOperacao: dataHoje,
         contato,
         itens,
