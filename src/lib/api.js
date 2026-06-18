@@ -482,6 +482,12 @@ export async function blingProxy({ method = 'GET', endpoint, body, action, order
     body: { method, endpoint, body, action, order, company_id }
   })
   if (error) throw new Error(error.message)
-  if (data?.error) throw new Error(data.error)
+  if (data?.error) {
+    console.error('[Bling] Erro:', data.error)
+    if (data.__debug) console.error('[Bling] Debug:', JSON.stringify(data.__debug, null, 2))
+    const err = new Error(data.error)
+    err.blingDebug = data.__debug
+    throw err
+  }
   return data
 }

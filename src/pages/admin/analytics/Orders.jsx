@@ -110,9 +110,18 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
   })
 
   const emitNFe = () => act('bling', async () => {
-    const r = await blingProxy({ action: 'emit_nfe', order })
-    onUpdate(order.id, { _nfe_number: r.numero, _nfe_status: r.situacao })
-    alert(`NF-e emitida! Nº ${r.numero}`)
+    try {
+      const r = await blingProxy({ action: 'emit_nfe', order })
+      onUpdate(order.id, { _nfe_number: r.numero, _nfe_status: r.situacao })
+      alert(`NF-e emitida! Nº ${r.numero}`)
+    } catch (e) {
+      const d = e.blingDebug
+      const debugStr = d
+        ? `\n\n--- DEBUG ---\ncpf: ${d.cpf}\ncontatoId: ${d.contatoId}\nitens: ${d.itensCount}\ndata: ${d.dataHoje}\nserie: ${d.serie}\n\nBling raw:\n${JSON.stringify(d.blingRaw, null, 2)}`
+        : ''
+      alert(`Erro NF-e: ${e.message}${debugStr}`)
+      throw e
+    }
   })
 
   const [mpInfo, setMpInfo] = useState(null)
