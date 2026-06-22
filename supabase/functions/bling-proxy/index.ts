@@ -300,13 +300,16 @@ Deno.serve(async (req) => {
       const danfeUrl = `${BLING_BASE}/nfe/${nfe_id}/danfe`
 
       const r = await fetch(danfeUrl, { headers: blingHeaders, redirect: 'follow' })
-      const status = r.status
-      const finalUrl = r.url
       const ct = r.headers.get('content-type') || ''
 
+      // ID inválido/deletado no Bling — frontend vai revinculuar pelo CPF
+      if (r.status === 404) {
+        return new Response(JSON.stringify({ not_found: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
       // Redirect para URL externa (S3/CDN)
-      if (r.ok && finalUrl && finalUrl !== danfeUrl) {
-        return new Response(JSON.stringify({ url: finalUrl }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      if (r.ok && r.url && r.url !== danfeUrl) {
+        return new Response(JSON.stringify({ url: r.url }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
 
       // PDF retornado diretamente — converte para base64
@@ -325,10 +328,7 @@ Deno.serve(async (req) => {
       const url = d?.data?.url || d?.url
       if (url) return new Response(JSON.stringify({ url }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
-      // DEBUG — mostra o que veio do Bling
-      return new Response(JSON.stringify({
-        error: `DANFE debug: HTTP ${status} | content-type: "${ct}" | nfe_id: ${nfe_id} | body: ${bodyText.substring(0, 300)}`,
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      throw new Error('DANFE não disponível')
     }
 
     // ── Requisição genérica ────────────────────────────────────────
