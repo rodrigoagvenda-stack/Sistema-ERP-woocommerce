@@ -112,7 +112,12 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
   const emitNFe = () => act('bling', async () => {
     try {
       const r = await blingProxy({ action: 'emit_nfe', order })
-      onUpdate(order.id, { _nfe_number: r.numero, _nfe_id: r.id, _nfe_status: r.situacao })
+      await wooProxy({ method: 'PUT', endpoint: `orders/${order.id}`, body: { meta_data: [
+        { key: '_nfe_number', value: String(r.numero) },
+        { key: '_nfe_id',     value: String(r.id) },
+        { key: '_nfe_status', value: r.situacao || 'Emitida' },
+      ]}})
+      onUpdate(order.id, { _nfe_number: r.numero, _nfe_id: String(r.id), _nfe_status: r.situacao })
       alert(`NF-e emitida! Nº ${r.numero}`)
     } catch (e) {
       const d = e.blingDebug
@@ -397,7 +402,12 @@ export default function Orders() {
     setLoading(true); setError(null)
     try {
       const data = await wooProxy({ endpoint: `orders?per_page=50&page=${page}&orderby=date&order=desc` })
-      setOrders(Array.isArray(data) ? data : [])
+      const mapped = (Array.isArray(data) ? data : []).map(o => {
+        const meta = (o.meta_data || [])
+        const getMeta = (key) => meta.find(m => m.key === key)?.value || null
+        return { ...o, _nfe_number: getMeta('_nfe_number'), _nfe_id: getMeta('_nfe_id'), _nfe_status: getMeta('_nfe_status') }
+      })
+      setOrders(mapped)
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
