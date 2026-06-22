@@ -261,12 +261,10 @@ Deno.serve(async (req) => {
         // NF-e duplicada — busca a existente e retorna como sucesso
         if (desc.toLowerCase().includes('existe uma nota fiscal') || desc.toLowerCase().includes('ja existe')) {
           try {
-            const searchRes = await fetch(`${BLING_BASE}/nfe?limite=10`, { headers: blingHeaders })
+            const searchRes = await fetch(`${BLING_BASE}/nfe?limite=10&situacao=5`, { headers: blingHeaders })
             const searchData = await searchRes.json()
             const nfes: any[] = searchData?.data || []
-            const found = nfes.find((n: any) =>
-              n.contato?.numeroDocumento?.replace(/\D/g, '') === cpf && (n.situacao?.value === 'Autorizada' || n.situacao?.id === 6)
-            ) || nfes.find((n: any) => n.situacao?.value === 'Autorizada') || nfes[0]
+            const found = nfes.find((n: any) => n.contato?.numeroDocumento?.replace(/\D/g, '') === cpf) || nfes[0]
             if (found?.id && found?.numero) {
               return new Response(JSON.stringify({
                 id:       found.id,

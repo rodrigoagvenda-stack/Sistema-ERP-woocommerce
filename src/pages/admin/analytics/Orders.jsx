@@ -122,11 +122,10 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
     } catch (e) {
       if (e.message?.toLowerCase().includes('já existe uma nota fiscal')) {
         try {
-          const hoje = new Date().toISOString().split('T')[0]
-          const lista = await blingProxy({ method: 'GET', endpoint: `nfe?dataEmissaoInicial=${hoje}&dataEmissaoFinal=${hoje}&situacao=6&limite=10` })
+          const lista = await blingProxy({ method: 'GET', endpoint: 'nfe?limite=10&situacao=5' })
           const arr = Array.isArray(lista) ? lista : (lista?.data || [])
-          const orderRef = String(order.number || order.id)
-          const nfe = arr.find(n => n.informacoesAdicionais?.informacoesContribuinte?.includes(orderRef)) || arr[0]
+          const cpfBusca = ((order.billing?.cpf || order.billing?.document || (order.meta_data || []).find((m: any) => ['_billing_cpf','billing_cpf','_cpf','cpf'].includes(m.key))?.value) || '').replace(/\D/g, '')
+          const nfe = arr.find((n: any) => n.contato?.numeroDocumento?.replace(/\D/g,'') === cpfBusca) || arr[0]
           if (nfe?.id && nfe?.numero) {
             await wooProxy({ method: 'PUT', endpoint: `orders/${order.id}`, body: { meta_data: [
               { key: '_nfe_number', value: String(nfe.numero) },
@@ -415,11 +414,10 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
                       </button>
                       <button
                         onClick={() => act('bling', async () => {
-                          const lista = await blingProxy({ method: 'GET', endpoint: 'nfe?limite=10' })
+                          const lista = await blingProxy({ method: 'GET', endpoint: 'nfe?limite=10&situacao=5' })
                           const arr = Array.isArray(lista) ? lista : []
                           const cpf = ((order.billing?.cpf || order.billing?.document || (order.meta_data || []).find(m => ['_billing_cpf','billing_cpf','_cpf','cpf'].includes(m.key))?.value) || '').replace(/\D/g, '')
-                          const nfe = arr.find(n => n.contato?.numeroDocumento?.replace(/\D/g,'') === cpf && (n.situacao?.value === 'Autorizada' || n.situacao?.id === 6))
-                            || arr.find(n => n.situacao?.value === 'Autorizada')
+                          const nfe = arr.find(n => n.contato?.numeroDocumento?.replace(/\D/g,'') === cpf) || arr[0]
                           if (!nfe?.id) { alert('Nenhuma NF-e autorizada encontrada no Bling para este pedido.'); return }
                           await wooProxy({ method: 'PUT', endpoint: `orders/${order.id}`, body: { meta_data: [
                             { key: '_nfe_number', value: String(nfe.numero) },
