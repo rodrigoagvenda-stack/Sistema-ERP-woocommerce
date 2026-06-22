@@ -298,17 +298,16 @@ Deno.serve(async (req) => {
     if (action === 'danfe') {
       if (!nfe_id) throw new Error('nfe_id obrigatório para download do DANFE')
 
-      const fetchDanfe = async (id: string) => {
-        const url = `${BLING_BASE}/nfe/${id}/danfe`
-        const r = await fetch(url, { headers: blingHeaders, redirect: 'follow' })
+      const buscarNfe = async (id: string) => {
+        const r = await fetch(`${BLING_BASE}/nfe/${id}`, { headers: blingHeaders })
         return r
       }
 
-      let r = await fetchDanfe(nfe_id)
+      let detalheRes = await buscarNfe(nfe_id)
       let resolvedId = nfe_id
 
       // ID desatualizado (404) — busca pelo número ou CPF
-      if (r.status === 404) {
+      if (detalheRes.status === 404) {
         const busca     = await fetch(`${BLING_BASE}/nfe?situacao=5&limite=100`, { headers: blingHeaders })
         const buscaData = await busca.json()
         const nfes: any[] = buscaData?.data || []
@@ -327,41 +326,68 @@ Deno.serve(async (req) => {
 
         if (found?.id) {
           await new Promise(res => setTimeout(res, 400))
-          r = await fetchDanfe(String(found.id))
+          detalheRes = await buscarNfe(String(found.id))
           resolvedId = String(found.id)
         }
       }
 
-      const status = r.status
-      const finalUrl = r.url
-      const ct = r.headers.get('content-type') || ''
-      const extra2 = resolvedId !== nfe_id ? { new_nfe_id: resolvedId } : {}
-
-      if (r.ok && finalUrl && finalUrl !== `${BLING_BASE}/nfe/${resolvedId}/danfe`) {
-        return new Response(JSON.stringify({ url: finalUrl, ...extra2 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-      }
-      if (r.ok && (ct.includes('pdf') || ct.includes('octet-stream'))) {
-        const buf = await r.arrayBuffer()
-        const bytes = new Uint8Array(buf)
-        let binary = ''
-        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
-        return new Response(JSON.stringify({ pdf_base64: btoa(binary), ...extra2 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      if (!detalheRes.ok) {
+        const blingMsg = await detalheRes.json().catch(() => ({}))
+        const msg = blingMsg?.error?.description || blingMsg?.error?.message || null
+        const userError =
+          detalheRes.status === 404 ? 'NF-e não encontrada no Bling. A nota pode ainda não ter sido emitida, ou o ID está desatualizado.' :
+          detalheRes.status === 401 || detalheRes.status === 403 ? 'Token do Bling sem permissão. Verifique as credenciais em Integrações → Bling.' :
+          detalheRes.status >= 500 ? 'Erro interno do Bling. Tente novamente em instantes.' :
+          msg ? `Bling: ${msg}` : `Não foi possível acessar a NF-e (código ${detalheRes.status}).`
+        return new Response(JSON.stringify({ error: userError }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
 
-      const bodyText = await r.text().catch(() => '')
-      let d: any = {}
-      try { d = JSON.parse(bodyText) } catch {}
-      const urlFromJson = d?.data?.url || d?.url
-      if (urlFromJson) return new Response(JSON.stringify({ url: urlFromJson, ...extra2 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      const detalhe = await detalheRes.json()
+      const nfeData = detalhe?.data || {}
+      const extra2  = resolvedId !== nfe_id ? { new_nfe_id: resolvedId } : {}
 
-      const blingMsg = d?.error?.description || d?.error?.message || null
-      const userError =
-        status === 404 ? 'NF-e não encontrada no Bling. A nota pode ainda não ter sido emitida, ou o ID está desatualizado.' :
-        status === 401 || status === 403 ? 'Token do Bling sem permissão para baixar o DANFE. Verifique as credenciais em Integrações → Bling.' :
-        status >= 500 ? 'Erro interno do Bling ao gerar o DANFE. Tente novamente em instantes.' :
-        blingMsg ? `Bling: ${blingMsg}` :
-        `Não foi possível baixar o DANFE (código ${status}).`
-      return new Response(JSON.stringify({ error: userError }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      // Opção 1: linkDanfe ou linkPDF direto no detalhe
+      const linkDireto = nfeData.linkDanfe || nfeData.linkPDF
+      if (linkDireto) {
+        return new Response(JSON.stringify({ url: linkDireto, ...extra2 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
+      // Opção 2: endpoint /nfe/documento/{chaveAcesso}?formato=pdf
+      const chaveAcesso = nfeData.chaveAcesso
+      if (!chaveAcesso) {
+        return new Response(JSON.stringify({ error: 'NF-e ainda não autorizada pela SEFAZ — chave de acesso indisponível.', ...extra2 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
+      await new Promise(res => setTimeout(res, 400))
+      const docRes  = await fetch(`${BLING_BASE}/nfe/documento/${chaveAcesso}?formato=pdf`, { headers: blingHeaders })
+      const docData = await docRes.json()
+      const doc     = docData?.data?.[0]
+
+      if (!doc?.conteudo) {
+        return new Response(JSON.stringify({ error: 'DANFE não disponível no Bling para esta NF-e.', ...extra2 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
+      // conteudo = PDF comprimido com GZIP + base64 — descomprime aqui para o frontend receber pdf_base64 puro
+      const gzipBytes = Uint8Array.from(atob(doc.conteudo), (c) => c.charCodeAt(0))
+      const ds = new DecompressionStream('gzip')
+      const writer = ds.writable.getWriter()
+      const reader = ds.readable.getReader()
+      writer.write(gzipBytes)
+      writer.close()
+      const chunks: Uint8Array[] = []
+      let readerDone = false
+      while (!readerDone) {
+        const { value, done } = await reader.read()
+        if (value) chunks.push(value)
+        readerDone = done
+      }
+      const totalLen = chunks.reduce((a, c) => a + c.length, 0)
+      const pdfBytes = new Uint8Array(totalLen)
+      let offset = 0
+      for (const c of chunks) { pdfBytes.set(c, offset); offset += c.length }
+      let binary = ''
+      for (let i = 0; i < pdfBytes.length; i++) binary += String.fromCharCode(pdfBytes[i])
+      return new Response(JSON.stringify({ pdf_base64: btoa(binary), nome: doc.nome, ...extra2 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // ── Requisição genérica ────────────────────────────────────────
