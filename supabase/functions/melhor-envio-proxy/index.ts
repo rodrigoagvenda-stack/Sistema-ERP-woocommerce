@@ -8,12 +8,13 @@ const corsHeaders = {
 const ME_BASE = 'https://melhorenvio.com.br/api/v2/me'
 
 async function safeJson(res: Response): Promise<any> {
-  const ct = res.headers.get('content-type') || ''
-  if (!ct.includes('application/json')) {
+  const text = await res.text()
+  try {
+    return JSON.parse(text)
+  } catch {
     if (res.status === 401 || res.status === 403) throw new Error('Token do Melhor Envio inválido ou expirado. Gere um novo em melhorenvio.com.br → Tokens de acesso.')
     throw new Error(`Melhor Envio retornou resposta inesperada (HTTP ${res.status}). Verifique o token nas Integrações.`)
   }
-  return res.json()
 }
 
 Deno.serve(async (req) => {
