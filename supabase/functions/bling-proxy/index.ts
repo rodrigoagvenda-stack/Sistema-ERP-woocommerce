@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
         contato,
         itens: blingItens,
         parcelas: [{
-          dataVencimento: dataHoje,
+          data:           dataHoje,
           valor:          parseFloat(order.total) || 0,
           formaPagamento: { id: resolveFormaPagamento(extra, order.payment_method) },
         }],
