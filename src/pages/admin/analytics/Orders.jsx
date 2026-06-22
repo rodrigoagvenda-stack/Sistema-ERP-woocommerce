@@ -407,11 +407,11 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
                                 ]}})
                                 onUpdate(order.id, { _nfe_number: String(nfe.numero), _nfe_id: String(nfe.id), _nfe_status: 'Autorizada' })
                                 const r2 = await blingProxy({ action: 'danfe', nfe_id: String(nfe.id) })
-                                if (!openPdf(r2)) throw new Error('DANFE não disponível mesmo após revinculação.')
+                                if (!openPdf(r2)) alert(`DEBUG r2: ${JSON.stringify(r2)}`)
                                 return
                               }
 
-                              throw new Error('DANFE não disponível')
+                              alert(`DEBUG r: ${JSON.stringify(r)}`)
                             })}
                             disabled={!!busy}
                             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 transition-colors"
