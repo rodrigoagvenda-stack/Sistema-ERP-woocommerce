@@ -117,7 +117,7 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
     } catch (e) {
       const d = e.blingDebug
       const debugStr = d
-        ? `\n\n--- DEBUG ---\ncpf: ${d.cpf}\ncontatoId: ${d.contatoId}\nitens: ${d.itensCount}\ndata: ${d.dataHoje}\nserie: ${d.serie}\n\nBling raw:\n${JSON.stringify(d.blingRaw, null, 2)}`
+        ? `\n\n--- DEBUG ---\ncpf: ${d.cpf}\ncontatoId: ${d.contatoId}\nitens: ${d.itensCount}\ndata: ${d.dataHoje}\nserie: ${d.payload?.serie}\nitens resolvidos: ${JSON.stringify(d.itens)}\n\nBling raw:\n${JSON.stringify(d.blingRaw, null, 2)}`
         : ''
       alert(`Erro NF-e: ${e.message}${debugStr}`)
       throw e
