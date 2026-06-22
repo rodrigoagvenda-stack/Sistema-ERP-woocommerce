@@ -173,7 +173,9 @@ Deno.serve(async (req) => {
 
       const pad = (n: number) => String(n).padStart(2, '0')
       const orderDate = order.date_created ? new Date(order.date_created) : new Date()
-      const dataHoje = `${orderDate.getFullYear()}-${pad(orderDate.getMonth()+1)}-${pad(orderDate.getDate())}`
+      const dataOperacao = `${orderDate.getFullYear()}-${pad(orderDate.getMonth()+1)}-${pad(orderDate.getDate())}`
+      const today = new Date()
+      const dataHoje = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`
 
       const nome = `${billing.first_name || ''} ${billing.last_name || ''}`.trim()
 
@@ -188,33 +190,54 @@ Deno.serve(async (req) => {
 
       if (blingItens.length === 0) throw new Error('Pedido sem itens — não é possível emitir NF-e.')
 
-      // Contato: campo id é readOnly — enviar dados completos
+      // Bug 1.1 — contato com endereço completo (municipio, bairro, logradouro obrigatórios)
       const tipoPessoa = cpf.length === 14 ? 'J' : 'F'
-      const contato = {
+      const addr = order.shipping?.address_1 ? order.shipping : billing
+      const contato: any = {
         nome,
         tipoPessoa,
         numeroDocumento: cpf,
         contribuinte: 9,
+        endereco: {
+          endereco:  addr.address_1 || '',
+          numero:    addr.number    || 'S/N',
+          bairro:    addr.neighborhood || addr.city || '',
+          municipio: addr.city      || '',
+          uf:        addr.state     || '',
+          cep:       (addr.postcode || '').replace(/\D/g, ''),
+        },
       }
 
+      // Bug 1.3 — PIX à vista: omitir parcelas (evita erro de vencimento)
+      const isPix = !order.payment_method || order.payment_method.toLowerCase().includes('pix') ||
+        resolveFormaPagamento(extra, order.payment_method) === (Number(extra.fp_pix) || 1)
+      const parcelas = isPix ? undefined : [{
+        data:           dataHoje,
+        valor:          parseFloat(order.total) || 0,
+        formaPagamento: { id: resolveFormaPagamento(extra, order.payment_method) },
+      }]
+
+      // Bug 1.2 — NCM (classificacaoFiscal) obrigatório para SEFAZ
+      // Default cerveja: 2203.00.00 — ajustar por produto se necessário
+      const blingItensComNcm = blingItens.map((item: any) => ({
+        ...item,
+        classificacaoFiscal: extra.ncm_padrao || '2203.00.00',
+      }))
+
       // POST sem wrapper { data: {} } — endpoint /nfe usa campos direto no root
-      const nfePayload = {
+      const nfePayload: any = {
         tipo:              1,
         serie:             Number(extra.nfe_serie) || 3,
-        dataOperacao:      `${dataHoje} 00:00:00`,
+        dataOperacao:      `${dataOperacao} 00:00:00`,
         naturezaOperacao:  { id: Number(extra.natureza_operacao_id) },
         contato,
-        itens: blingItens,
-        parcelas: [{
-          data:           dataHoje,
-          valor:          parseFloat(order.total) || 0,
-          formaPagamento: { id: resolveFormaPagamento(extra, order.payment_method) },
-        }],
+        itens: blingItensComNcm,
         transporte: { fretePorConta: 9 },
         informacoesAdicionais: {
           informacoesContribuinte: `Pedido WooCommerce #${order.number || order.id}`,
         },
       }
+      if (parcelas) nfePayload.parcelas = parcelas
 
       let res = await fetch(`${BLING_BASE}/nfe`, {
         method: 'POST',
