@@ -307,21 +307,23 @@ Deno.serve(async (req) => {
       let r = await fetchDanfe(nfe_id)
       let resolvedId = nfe_id
 
-      // ID desatualizado (404) — busca pelo número da nota ou CPF
+      // ID desatualizado (404) — busca pelo número ou CPF
       if (r.status === 404) {
-        const searchUrl = nfe_number
-          ? `${BLING_BASE}/nfe?situacao=5&numero=${parseInt(String(nfe_number))}`
-          : `${BLING_BASE}/nfe?situacao=5&limite=100`
-        const busca = await fetch(searchUrl, { headers: blingHeaders })
+        const busca     = await fetch(`${BLING_BASE}/nfe?situacao=5&limite=100`, { headers: blingHeaders })
         const buscaData = await busca.json()
         const nfes: any[] = buscaData?.data || []
-        const cpfClean = (nfe_cpf || '').replace(/\D/g, '')
 
-        const found = nfes.find((n: any) =>
-          nfe_number && String(parseInt(String(n.numero))) === String(parseInt(String(nfe_number)))
-        ) ?? nfes.find((n: any) =>
-          cpfClean && n.contato?.numeroDocumento?.replace(/\D/g, '') === cpfClean
-        ) ?? nfes[0]
+        const cpfClean    = (nfe_cpf || '').replace(/\D/g, '')
+        const numeroClean = nfe_number ? String(parseInt(String(nfe_number))) : null
+
+        const found =
+          (numeroClean
+            ? nfes.find((n: any) => String(parseInt(String(n.numero || '0'))) === numeroClean)
+            : null) ??
+          (cpfClean
+            ? nfes.find((n: any) => n.contato?.numeroDocumento?.replace(/\D/g, '') === cpfClean)
+            : null) ??
+          nfes[0]
 
         if (found?.id) {
           await new Promise(res => setTimeout(res, 400))
