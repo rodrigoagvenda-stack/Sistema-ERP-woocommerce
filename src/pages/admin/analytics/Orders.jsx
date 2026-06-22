@@ -376,8 +376,17 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
                             onClick={() => act('bling', async () => {
                               try {
                                 const r = await blingProxy({ action: 'danfe', nfe_id: order._nfe_id })
-                                if (r?.url) window.open(r.url, '_blank')
-                                else throw new Error('DANFE não disponível')
+                                if (r?.url) {
+                                  window.open(r.url, '_blank')
+                                } else if (r?.pdf_base64) {
+                                  const bin = atob(r.pdf_base64)
+                                  const bytes = new Uint8Array(bin.length)
+                                  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+                                  const blob = new Blob([bytes], { type: 'application/pdf' })
+                                  const blobUrl = URL.createObjectURL(blob)
+                                  window.open(blobUrl, '_blank')
+                                  setTimeout(() => URL.revokeObjectURL(blobUrl), 15000)
+                                } else throw new Error('DANFE não disponível')
                               } catch (e) {
                                 // NF-e deletada/rejeitada no Bling — limpa meta para poder reemitir
                                 if (e.message?.includes('não disponível') || e.message?.includes('nfe_id')) {

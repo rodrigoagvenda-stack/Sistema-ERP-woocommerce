@@ -299,21 +299,29 @@ Deno.serve(async (req) => {
       if (!nfe_id) throw new Error('nfe_id obrigatório para download do DANFE')
       const danfeUrl = `${BLING_BASE}/nfe/${nfe_id}/danfe`
 
-      // Tenta redirect manual primeiro (pega header Location)
-      const r = await fetch(danfeUrl, { headers: blingHeaders, redirect: 'manual' })
-      const location = r.headers.get('location')
-      if (location) return new Response(JSON.stringify({ url: location }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      const r = await fetch(danfeUrl, { headers: blingHeaders, redirect: 'follow' })
 
-      // Fallback: segue o redirect — a URL final é o PDF
-      const r2 = await fetch(danfeUrl, { headers: blingHeaders, redirect: 'follow' })
-      if (r2.ok && r2.url && r2.url !== danfeUrl) {
-        return new Response(JSON.stringify({ url: r2.url }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      // Redirect para URL externa (S3/CDN)
+      if (r.ok && r.url && r.url !== danfeUrl) {
+        return new Response(JSON.stringify({ url: r.url }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
 
-      // Fallback: resposta JSON com URL
-      const d = await r2.json().catch(() => ({}))
+      const ct = r.headers.get('content-type') || ''
+
+      // PDF retornado diretamente — converte para base64
+      if (r.ok && (ct.includes('pdf') || ct.includes('octet-stream'))) {
+        const buf = await r.arrayBuffer()
+        const bytes = new Uint8Array(buf)
+        let binary = ''
+        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
+        return new Response(JSON.stringify({ pdf_base64: btoa(binary) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
+      // Resposta JSON com URL
+      const d = await r.json().catch(() => ({}))
       const url = d?.data?.url || d?.url
       if (url) return new Response(JSON.stringify({ url }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+
       throw new Error('DANFE não disponível')
     }
 
