@@ -399,7 +399,7 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
                                 onUpdate(order.id, { _nfe_id: r.new_nfe_id })
                               }
 
-                              if (!openPdf(r)) throw new Error('DANFE não disponível')
+                              if (!openPdf(r)) alert(`DEBUG: ${JSON.stringify(r)}`)
                             })}
                             disabled={!!busy}
                             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 transition-colors"
