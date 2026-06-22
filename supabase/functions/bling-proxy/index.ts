@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
       const nfePayload: any = {
         tipo:              1,
         serie:             Number(extra.nfe_serie) || 3,
-        dataOperacao:      `${dataOperacao} 00:00:00`,
+        dataOperacao:      `${dataHoje} 00:00:00`,
         naturezaOperacao:  { id: Number(extra.natureza_operacao_id) },
         contato,
         itens: blingItensComNcm,
