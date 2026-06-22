@@ -404,14 +404,39 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
                       </div>
                     </div>
                   ) : (
-                    <button
-                      onClick={emitNFe}
-                      disabled={!!busy}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-gray-200 hover:bg-gray-50 text-gray-700 disabled:opacity-40 transition-colors"
-                    >
-                      {busy === 'bling' ? <RefreshCw className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
-                      Emitir NF-e
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={emitNFe}
+                        disabled={!!busy}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-gray-200 hover:bg-gray-50 text-gray-700 disabled:opacity-40 transition-colors"
+                      >
+                        {busy === 'bling' ? <RefreshCw className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+                        Emitir NF-e
+                      </button>
+                      <button
+                        onClick={() => act('bling', async () => {
+                          const lista = await blingProxy({ method: 'GET', endpoint: 'nfe?limite=10' })
+                          const arr = Array.isArray(lista) ? lista : []
+                          const cpf = ((order.billing?.cpf || order.billing?.document || (order.meta_data || []).find(m => ['_billing_cpf','billing_cpf','_cpf','cpf'].includes(m.key))?.value) || '').replace(/\D/g, '')
+                          const nfe = arr.find(n => n.contato?.numeroDocumento?.replace(/\D/g,'') === cpf && (n.situacao?.value === 'Autorizada' || n.situacao?.id === 6))
+                            || arr.find(n => n.situacao?.value === 'Autorizada')
+                          if (!nfe?.id) { alert('Nenhuma NF-e autorizada encontrada no Bling para este pedido.'); return }
+                          await wooProxy({ method: 'PUT', endpoint: `orders/${order.id}`, body: { meta_data: [
+                            { key: '_nfe_number', value: String(nfe.numero) },
+                            { key: '_nfe_id',     value: String(nfe.id) },
+                            { key: '_nfe_status', value: nfe.situacao?.value || 'Autorizada' },
+                          ]}})
+                          onUpdate(order.id, { _nfe_number: String(nfe.numero), _nfe_id: String(nfe.id), _nfe_status: nfe.situacao?.value || 'Autorizada' })
+                          alert(`NF-e Nº ${nfe.numero} vinculada!`)
+                        })}
+                        disabled={!!busy}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-orange-200 hover:bg-orange-50 text-orange-700 disabled:opacity-40 transition-colors"
+                        title="Vincular NF-e já existente no Bling"
+                      >
+                        {busy === 'bling' ? <RefreshCw className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                        Vincular NF-e
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
