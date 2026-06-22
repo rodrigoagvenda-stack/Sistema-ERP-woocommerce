@@ -256,7 +256,28 @@ Deno.serve(async (req) => {
       }
 
       if (!res.ok) {
-        const msg = result?.error?.fields?.map((f: any) => f.msg).join(', ') || result?.error?.description || JSON.stringify(result)
+        const desc = result?.error?.description || result?.error?.fields?.map((f: any) => f.msg).join(', ') || ''
+
+        // NF-e duplicada — busca a existente e retorna como sucesso
+        if (desc.toLowerCase().includes('existe uma nota fiscal') || desc.toLowerCase().includes('ja existe')) {
+          try {
+            const searchRes = await fetch(`${BLING_BASE}/nfe?limite=10`, { headers: blingHeaders })
+            const searchData = await searchRes.json()
+            const nfes: any[] = searchData?.data || []
+            const found = nfes.find((n: any) =>
+              n.contato?.numeroDocumento?.replace(/\D/g, '') === cpf && (n.situacao?.value === 'Autorizada' || n.situacao?.id === 6)
+            ) || nfes.find((n: any) => n.situacao?.value === 'Autorizada') || nfes[0]
+            if (found?.id && found?.numero) {
+              return new Response(JSON.stringify({
+                id:       found.id,
+                numero:   found.numero,
+                situacao: found.situacao?.value || 'Autorizada',
+              }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+            }
+          } catch {}
+        }
+
+        const msg = desc || JSON.stringify(result)
         return new Response(JSON.stringify({
           error: msg,
           __debug: { cpf, contato, itensCount: blingItens.length, itens: blingItens, payload: nfePayload, blingRaw: result },
