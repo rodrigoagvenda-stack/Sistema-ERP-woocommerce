@@ -1,4 +1,3 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
 const corsHeaders = {
@@ -8,7 +7,16 @@ const corsHeaders = {
 
 const ME_BASE = 'https://melhorenvio.com.br/api/v2/me'
 
-serve(async (req) => {
+async function safeJson(res: Response): Promise<any> {
+  const ct = res.headers.get('content-type') || ''
+  if (!ct.includes('application/json')) {
+    if (res.status === 401 || res.status === 403) throw new Error('Token do Melhor Envio inválido ou expirado. Gere um novo em melhorenvio.com.br → Tokens de acesso.')
+    throw new Error(`Melhor Envio retornou resposta inesperada (HTTP ${res.status}). Verifique o token nas Integrações.`)
+  }
+  return res.json()
+}
+
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
@@ -346,13 +354,13 @@ serve(async (req) => {
     }
 
     // ── Requisição genérica ────────────────────────────────────────
-    const url = `${ME_BASE}/${endpoint}`
+    const url = endpoint ? `${ME_BASE}/${endpoint}` : ME_BASE
     const res = await fetch(url, {
       method,
       headers: meHeaders,
       ...(body ? { body: JSON.stringify(body) } : {}),
     })
-    const result = await res.json()
+    const result = await safeJson(res)
 
     if (!res.ok) {
       return new Response(JSON.stringify({ error: result?.message || 'Erro Melhor Envio' }), {

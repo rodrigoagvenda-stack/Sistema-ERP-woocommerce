@@ -15,7 +15,7 @@ import { ENV } from '@/config/env'
 const TEST_FNS = {
   mercadopago: () => mercadoPagoProxy({ endpoint: 'v1/payment_methods' }),
   pagbank:     () => pagbankProxy({ endpoint: 'public-keys/card' }),
-  melhorenvio: () => melhorEnvioProxy({ endpoint: 'me' }),
+  melhorenvio: () => melhorEnvioProxy({ endpoint: '' }),
 }
 
 const INTEGRATIONS = [
