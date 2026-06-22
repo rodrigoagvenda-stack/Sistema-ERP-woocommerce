@@ -354,10 +354,14 @@ Deno.serve(async (req) => {
       const urlFromJson = d?.data?.url || d?.url
       if (urlFromJson) return new Response(JSON.stringify({ url: urlFromJson, ...extra2 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
-      // DEBUG completo
-      return new Response(JSON.stringify({
-        error: `DANFE HTTP ${status} | ct:"${ct}" | url:"${finalUrl}" | id:${resolvedId} | body:${bodyText.substring(0, 400)}`,
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      const blingMsg = d?.error?.description || d?.error?.message || null
+      const userError =
+        status === 404 ? 'NF-e não encontrada no Bling. A nota pode ainda não ter sido emitida, ou o ID está desatualizado.' :
+        status === 401 || status === 403 ? 'Token do Bling sem permissão para baixar o DANFE. Verifique as credenciais em Integrações → Bling.' :
+        status >= 500 ? 'Erro interno do Bling ao gerar o DANFE. Tente novamente em instantes.' :
+        blingMsg ? `Bling: ${blingMsg}` :
+        `Não foi possível baixar o DANFE (código ${status}).`
+      return new Response(JSON.stringify({ error: userError }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // ── Requisição genérica ────────────────────────────────────────
