@@ -389,7 +389,8 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
                                 return false
                               }
 
-                              const r = await blingProxy({ action: 'danfe', nfe_id: order._nfe_id, nfe_number: order._nfe_number })
+                              const _cpf = ((order.billing?.cpf || order.billing?.document || (order.meta_data || []).find(m => ['_billing_cpf','billing_cpf','_cpf','cpf'].includes(m.key))?.value) || '')
+                              const r = await blingProxy({ action: 'danfe', nfe_id: order._nfe_id, nfe_number: order._nfe_number, nfe_cpf: _cpf })
 
                               // Se trocou o ID (nota encontrada por numero), atualiza o meta
                               if (r?.new_nfe_id) {

@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { method = 'GET', endpoint, body, action, order, company_id, nfe_id, nfe_number } = await req.json()
+    const { method = 'GET', endpoint, body, action, order, company_id, nfe_id, nfe_number, nfe_cpf } = await req.json()
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -269,7 +269,7 @@ Deno.serve(async (req) => {
               return new Response(JSON.stringify({
                 id:       found.id,
                 numero:   found.numero,
-                situacao: found.situacao?.value || 'Autorizada',
+                situacao: 'Autorizada',
               }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
             }
           } catch {}
@@ -307,23 +307,26 @@ Deno.serve(async (req) => {
       let r = await fetchDanfe(nfe_id)
       let resolvedId = nfe_id
 
-      // ID desatualizado (404) — tenta encontrar pelo numero, ou varre as autorizadas
+      // ID desatualizado (404) — busca pelo número da nota ou CPF
       if (r.status === 404) {
-        const endpoint404 = nfe_number
+        const searchUrl = nfe_number
           ? `${BLING_BASE}/nfe?situacao=5&numero=${parseInt(String(nfe_number))}`
-          : `${BLING_BASE}/nfe?situacao=5&limite=5`
-        const busca = await fetch(endpoint404, { headers: blingHeaders })
+          : `${BLING_BASE}/nfe?situacao=5&limite=100`
+        const busca = await fetch(searchUrl, { headers: blingHeaders })
         const buscaData = await busca.json()
         const nfes: any[] = buscaData?.data || []
-        for (const nfe of nfes) {
-          if (!nfe?.id) continue
+        const cpfClean = (nfe_cpf || '').replace(/\D/g, '')
+
+        const found = nfes.find((n: any) =>
+          nfe_number && String(parseInt(String(n.numero))) === String(parseInt(String(nfe_number)))
+        ) ?? nfes.find((n: any) =>
+          cpfClean && n.contato?.numeroDocumento?.replace(/\D/g, '') === cpfClean
+        ) ?? nfes[0]
+
+        if (found?.id) {
           await new Promise(res => setTimeout(res, 400))
-          const attempt = await fetchDanfe(String(nfe.id))
-          if (attempt.status !== 404) {
-            resolvedId = String(nfe.id)
-            r = attempt
-            break
-          }
+          r = await fetchDanfe(String(found.id))
+          resolvedId = String(found.id)
         }
       }
 
