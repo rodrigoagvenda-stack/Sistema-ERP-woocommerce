@@ -56,15 +56,24 @@ async function blingGet(url: string, headers: Record<string, string>) {
   return r.json()
 }
 
-async function resolveBlingProductId(sku: string, headers: Record<string, string>): Promise<number | null> {
-  if (!sku) return null
-  try {
-    const r = await fetch(`${BLING_BASE}/produtos?codigo=${encodeURIComponent(sku)}&limite=1`, { headers })
-    const d = await r.json()
-    return d?.data?.[0]?.id || null
-  } catch {
-    return null
+async function resolveBlingProductId(sku: string, name: string, headers: Record<string, string>): Promise<number | null> {
+  // Tenta por SKU primeiro
+  if (sku) {
+    try {
+      const r = await fetch(`${BLING_BASE}/produtos?codigo=${encodeURIComponent(sku)}&limite=1`, { headers })
+      const d = await r.json()
+      if (d?.data?.[0]?.id) return d.data[0].id
+    } catch {}
   }
+  // Fallback: busca pelo nome do produto
+  if (name) {
+    try {
+      const r = await fetch(`${BLING_BASE}/produtos?pesquisa=${encodeURIComponent(name.substring(0, 40))}&limite=1`, { headers })
+      const d = await r.json()
+      if (d?.data?.[0]?.id) return d.data[0].id
+    } catch {}
+  }
+  return null
 }
 
 async function resolveContatoId(cpf: string, nome: string, billing: any, shipping: any, headers: Record<string, string>): Promise<number | null> {
@@ -173,7 +182,7 @@ Deno.serve(async (req) => {
       // Busca ID do produto no Bling pelo SKU para cada item do pedido
       const blingItens = await Promise.all((order.line_items || []).map(async (item: any) => {
         const sku = String(item.sku || '')
-        const blingId = sku ? await resolveBlingProductId(sku, blingHeaders) : null
+        const blingId = await resolveBlingProductId(sku, item.name || '', blingHeaders)
         const valor = parseFloat(item.price) || (parseFloat(item.subtotal) / (Number(item.quantity) || 1)) || 0
 
         if (blingId) {
