@@ -388,7 +388,10 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
                                   setTimeout(() => URL.revokeObjectURL(blobUrl), 15000)
                                 } else throw new Error('DANFE não disponível')
                               } catch (e) {
-                                // NF-e deletada/rejeitada no Bling — limpa meta para poder reemitir
+                                if (e.message?.includes('DANFE debug:')) {
+                                  alert(e.message)
+                                  return
+                                }
                                 if (e.message?.includes('não disponível') || e.message?.includes('nfe_id')) {
                                   await wooProxy({ method: 'PUT', endpoint: `orders/${order.id}`, body: { meta_data: [
                                     { key: '_nfe_number', value: '' },
