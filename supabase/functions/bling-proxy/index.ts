@@ -307,15 +307,23 @@ Deno.serve(async (req) => {
       let r = await fetchDanfe(nfe_id)
       let resolvedId = nfe_id
 
-      // ID desatualizado — busca pelo número da nota
-      if (r.status === 404 && nfe_number) {
-        const numero = parseInt(String(nfe_number))
-        const busca = await fetch(`${BLING_BASE}/nfe?situacao=5&numero=${numero}`, { headers: blingHeaders })
+      // ID desatualizado (404) — tenta encontrar pelo numero, ou varre as autorizadas
+      if (r.status === 404) {
+        const endpoint404 = nfe_number
+          ? `${BLING_BASE}/nfe?situacao=5&numero=${parseInt(String(nfe_number))}`
+          : `${BLING_BASE}/nfe?situacao=5&limite=5`
+        const busca = await fetch(endpoint404, { headers: blingHeaders })
         const buscaData = await busca.json()
-        const nfe = buscaData?.data?.[0]
-        if (!nfe?.id) throw new Error(`NF-e número ${numero} não encontrada: ${JSON.stringify(buscaData)}`)
-        resolvedId = String(nfe.id)
-        r = await fetchDanfe(resolvedId)
+        const nfes: any[] = buscaData?.data || []
+        for (const nfe of nfes) {
+          if (!nfe?.id) continue
+          const attempt = await fetchDanfe(String(nfe.id))
+          if (attempt.status !== 404) {
+            resolvedId = String(nfe.id)
+            r = attempt
+            break
+          }
+        }
       }
 
       const status = r.status
