@@ -124,8 +124,8 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
         try {
           const lista = await blingProxy({ method: 'GET', endpoint: 'nfe?limite=10&situacao=5' })
           const arr = Array.isArray(lista) ? lista : (lista?.data || [])
-          const cpfBusca = ((order.billing?.cpf || order.billing?.document || (order.meta_data || []).find((m: any) => ['_billing_cpf','billing_cpf','_cpf','cpf'].includes(m.key))?.value) || '').replace(/\D/g, '')
-          const nfe = arr.find((n: any) => n.contato?.numeroDocumento?.replace(/\D/g,'') === cpfBusca) || arr[0]
+          const cpfBusca = ((order.billing?.cpf || order.billing?.document || (order.meta_data || []).find(m => ['_billing_cpf','billing_cpf','_cpf','cpf'].includes(m.key))?.value) || '').replace(/\D/g, '')
+          const nfe = arr.find(n => n.contato?.numeroDocumento?.replace(/\D/g,'') === cpfBusca) || arr[0]
           if (nfe?.id && nfe?.numero) {
             await wooProxy({ method: 'PUT', endpoint: `orders/${order.id}`, body: { meta_data: [
               { key: '_nfe_number', value: String(nfe.numero) },
