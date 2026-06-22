@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { method = 'GET', endpoint, body, action, order, company_id, nfe_id } = await req.json()
+    const { method = 'GET', endpoint, body, action, order, company_id, nfe_id, nfe_number } = await req.json()
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -297,37 +297,50 @@ Deno.serve(async (req) => {
     // ── Download DANFE ────────────────────────────────────────────
     if (action === 'danfe') {
       if (!nfe_id) throw new Error('nfe_id obrigatório para download do DANFE')
-      const danfeUrl = `${BLING_BASE}/nfe/${nfe_id}/danfe`
 
-      const r = await fetch(danfeUrl, { headers: blingHeaders, redirect: 'follow' })
-      const ct = r.headers.get('content-type') || ''
-
-      // ID inválido/deletado no Bling — frontend vai revinculuar pelo CPF
-      if (r.status === 404) {
-        return new Response(JSON.stringify({ not_found: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      const fetchDanfe = async (id: string) => {
+        const url = `${BLING_BASE}/nfe/${id}/danfe`
+        const r = await fetch(url, { headers: blingHeaders, redirect: 'follow' })
+        return r
       }
 
-      // Redirect para URL externa (S3/CDN)
-      if (r.ok && r.url && r.url !== danfeUrl) {
-        return new Response(JSON.stringify({ url: r.url }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      const pdfResponse = async (r: Response, newId?: string) => {
+        const ct = r.headers.get('content-type') || ''
+        if (r.ok && r.url && r.url !== `${BLING_BASE}/nfe/${nfe_id}/danfe`) {
+          return new Response(JSON.stringify({ url: r.url, ...(newId ? { new_nfe_id: newId } : {}) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+        if (r.ok && (ct.includes('pdf') || ct.includes('octet-stream'))) {
+          const buf = await r.arrayBuffer()
+          const bytes = new Uint8Array(buf)
+          let binary = ''
+          for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
+          return new Response(JSON.stringify({ pdf_base64: btoa(binary), ...(newId ? { new_nfe_id: newId } : {}) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+        const bodyText = await r.text().catch(() => '')
+        let d: any = {}
+        try { d = JSON.parse(bodyText) } catch {}
+        const url2 = d?.data?.url || d?.url
+        if (url2) return new Response(JSON.stringify({ url: url2, ...(newId ? { new_nfe_id: newId } : {}) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        return null
       }
 
-      // PDF retornado diretamente — converte para base64
-      if (r.ok && (ct.includes('pdf') || ct.includes('octet-stream'))) {
-        const buf = await r.arrayBuffer()
-        const bytes = new Uint8Array(buf)
-        let binary = ''
-        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
-        return new Response(JSON.stringify({ pdf_base64: btoa(binary) }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      let r = await fetchDanfe(nfe_id)
+
+      // ID desatualizado — busca pelo número da nota
+      if (r.status === 404 && nfe_number) {
+        const numero = parseInt(String(nfe_number))
+        const busca = await fetch(`${BLING_BASE}/nfe?situacao=5&numero=${numero}`, { headers: blingHeaders })
+        const buscaData = await busca.json()
+        const nfe = buscaData?.data?.[0]
+        if (!nfe?.id) throw new Error(`NF-e número ${numero} não encontrada no Bling`)
+        r = await fetchDanfe(String(nfe.id))
+        const resp = await pdfResponse(r, String(nfe.id))
+        if (resp) return resp
+        throw new Error('DANFE não disponível após revinculação')
       }
 
-      // Resposta JSON com URL
-      const bodyText = await r.text().catch(() => '')
-      let d: any = {}
-      try { d = JSON.parse(bodyText) } catch {}
-      const url = d?.data?.url || d?.url
-      if (url) return new Response(JSON.stringify({ url }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-
+      const resp = await pdfResponse(r)
+      if (resp) return resp
       throw new Error('DANFE não disponível')
     }
 

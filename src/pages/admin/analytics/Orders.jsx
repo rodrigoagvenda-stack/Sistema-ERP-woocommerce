@@ -389,29 +389,17 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
                                 return false
                               }
 
-                              const r = await blingProxy({ action: 'danfe', nfe_id: order._nfe_id })
+                              const r = await blingProxy({ action: 'danfe', nfe_id: order._nfe_id, nfe_number: order._nfe_number })
 
-                              if (openPdf(r)) return
-
-                              // ID desatualizado (404) — revincular pelo CPF e tentar de novo
-                              if (r?.not_found) {
-                                const cpf = ((order.billing?.cpf || order.billing?.document || (order.meta_data || []).find(m => ['_billing_cpf','billing_cpf','_cpf','cpf'].includes(m.key))?.value) || '').replace(/\D/g, '')
-                                const lista = await blingProxy({ method: 'GET', endpoint: 'nfe?limite=10&situacao=5' })
-                                const arr = Array.isArray(lista) ? lista : []
-                                const nfe = arr.find(n => n.contato?.numeroDocumento?.replace(/\D/g,'') === cpf) || arr[0]
-                                if (!nfe?.id) throw new Error('NF-e autorizada não encontrada no Bling para revinculação.')
+                              // Se trocou o ID (nota encontrada por numero), atualiza o meta
+                              if (r?.new_nfe_id) {
                                 await wooProxy({ method: 'PUT', endpoint: `orders/${order.id}`, body: { meta_data: [
-                                  { key: '_nfe_number', value: String(nfe.numero) },
-                                  { key: '_nfe_id',     value: String(nfe.id) },
-                                  { key: '_nfe_status', value: 'Autorizada' },
+                                  { key: '_nfe_id', value: r.new_nfe_id },
                                 ]}})
-                                onUpdate(order.id, { _nfe_number: String(nfe.numero), _nfe_id: String(nfe.id), _nfe_status: 'Autorizada' })
-                                const r2 = await blingProxy({ action: 'danfe', nfe_id: String(nfe.id) })
-                                if (!openPdf(r2)) alert(`DEBUG r2: ${JSON.stringify(r2)}`)
-                                return
+                                onUpdate(order.id, { _nfe_id: r.new_nfe_id })
                               }
 
-                              alert(`DEBUG r: ${JSON.stringify(r)}`)
+                              if (!openPdf(r)) throw new Error('DANFE não disponível')
                             })}
                             disabled={!!busy}
                             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 transition-colors"
