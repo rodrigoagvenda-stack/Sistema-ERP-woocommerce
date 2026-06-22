@@ -179,31 +179,20 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Busca ID do produto no Bling pelo SKU para cada item do pedido
-      const blingItens = await Promise.all((order.line_items || []).map(async (item: any) => {
+      // Busca ID do produto no Bling sequencialmente (evita rate limit)
+      const blingItens: any[] = []
+      for (const item of (order.line_items || [])) {
         const sku = String(item.sku || '')
         const blingId = await resolveBlingProductId(sku, item.name || '', blingHeaders)
         const valor = parseFloat(item.price) || (parseFloat(item.subtotal) / (Number(item.quantity) || 1)) || 0
 
         if (blingId) {
-          return {
-            produto:    { id: blingId },
-            quantidade: Number(item.quantity) || 1,
-            valor,
-          }
+          blingItens.push({ produto: { id: blingId }, quantidade: Number(item.quantity) || 1, valor })
+        } else {
+          blingItens.push({ codigo: sku || `WC-${item.product_id}`, descricao: item.name, unidade: 'UN', quantidade: Number(item.quantity) || 1, valor, tipo: 'P', origem: 0 })
         }
-
-        // Fallback sem produto cadastrado no Bling
-        return {
-          codigo:     sku || `WC-${item.product_id}`,
-          descricao:  item.name,
-          unidade:    'UN',
-          quantidade: Number(item.quantity) || 1,
-          valor,
-          tipo:       'P',
-          origem:     0,
-        }
-      }))
+        await new Promise(r => setTimeout(r, 300))
+      }
 
       if (blingItens.length === 0) throw new Error('Pedido sem itens — não é possível emitir NF-e.')
 
