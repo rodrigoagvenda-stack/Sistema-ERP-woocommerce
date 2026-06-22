@@ -317,6 +317,7 @@ Deno.serve(async (req) => {
         const nfes: any[] = buscaData?.data || []
         for (const nfe of nfes) {
           if (!nfe?.id) continue
+          await new Promise(res => setTimeout(res, 400))
           const attempt = await fetchDanfe(String(nfe.id))
           if (attempt.status !== 404) {
             resolvedId = String(nfe.id)
