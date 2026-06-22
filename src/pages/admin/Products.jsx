@@ -20,13 +20,15 @@ import { useCompany } from '@/context/CompanyContext'
 const EMPTY_PRODUCT = {
   name: '', description: '', price: '', stock: '', min_stock: 5,
   category_id: '', subcategory_id: '', brand_id: '', status: 'active', image_urls: [],
-  weight: '', width: '', height: '', depth: '', woo_tags: [], style: ''
+  weight: '', width: '', height: '', depth: '', woo_tags: [], style: '',
+  ncm: '', cest: '',
 }
 
 const STEPS = [
   { n: 1, label: 'Básico' },
   { n: 2, label: 'Detalhes' },
   { n: 3, label: 'Mídia' },
+  { n: 4, label: 'Fiscal' },
 ]
 
 function StepIndicator({ step }) {
@@ -157,6 +159,34 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
         </div>
       )}
 
+      {/* Step 4 — Fiscal */}
+      {step === 4 && (
+        <div className="space-y-4 min-h-[420px]">
+          <div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+            <span>ℹ️</span>
+            <span>NCM e CEST são obrigatórios para emissão de NF-e. Para cervejas: NCM <strong>2203.00.00</strong> / CEST <strong>03.021.03</strong>.</span>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>NCM</Label>
+              <Input
+                value={current.ncm || ''}
+                onChange={e => set('ncm', e.target.value)}
+                placeholder="2203.00.00"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>CEST</Label>
+              <Input
+                value={current.cest || ''}
+                onChange={e => set('cest', e.target.value)}
+                placeholder="03.021.03"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Step 3 — Mídia + Dimensões */}
       {step === 3 && (
         <div className="space-y-5 min-h-[420px]">
@@ -258,7 +288,7 @@ function ProductStepper({ step, setStep, current, setCurrent, categories, brands
           {step === 1 ? 'Cancelar' : '← Voltar'}
         </button>
         <div className="flex gap-2">
-          {step < 3 ? (
+          {step < 4 ? (
             <button
               type="button"
               onClick={() => setStep(s => s + 1)}
@@ -460,6 +490,8 @@ export default function Products() {
         depth: current.depth ? parseFloat(current.depth) : null,
         woo_tags: current.woo_tags || [],
         style: current.style || null,
+        ncm: current.ncm || null,
+        cest: current.cest || null,
       }
       if (dialog === 'create') {
         const created = await api.createProduct(payload)
