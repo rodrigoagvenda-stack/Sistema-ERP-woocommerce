@@ -393,10 +393,10 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
                               }
                             })}
                             disabled={!!busy}
-                            className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-50 hover:bg-blue-100 text-blue-600 disabled:opacity-40 transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40 transition-colors"
                           >
                             {busy === 'bling' ? <RefreshCw className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
-                            DANFE
+                            Baixar DANFE
                           </button>
                         )}
                       </div>
