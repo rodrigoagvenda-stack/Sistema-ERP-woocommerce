@@ -171,9 +171,9 @@ Deno.serve(async (req) => {
 
       if (!cpf) throw new Error('CPF do cliente não encontrado no pedido — necessário para emitir NF-e.')
 
-      const today = new Date()
-      const pad   = (n: number) => String(n).padStart(2, '0')
-      const dataHoje = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const orderDate = order.date_created ? new Date(order.date_created) : new Date()
+      const dataHoje = `${orderDate.getFullYear()}-${pad(orderDate.getMonth()+1)}-${pad(orderDate.getDate())}`
 
       const nome = `${billing.first_name || ''} ${billing.last_name || ''}`.trim()
 
@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
         contato,
         itens: blingItens,
         parcelas: [{
-          dataVencimento: `${dataHoje} 00:00:00`,
+          dataVencimento: dataHoje,
           valor:          parseFloat(order.total) || 0,
           formaPagamento: { id: resolveFormaPagamento(extra, order.payment_method) },
         }],
