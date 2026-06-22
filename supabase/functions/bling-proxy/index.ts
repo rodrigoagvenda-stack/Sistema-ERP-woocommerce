@@ -56,6 +56,17 @@ async function blingGet(url: string, headers: Record<string, string>) {
   return r.json()
 }
 
+async function resolveBlingProductId(sku: string, headers: Record<string, string>): Promise<number | null> {
+  if (!sku) return null
+  try {
+    const r = await fetch(`${BLING_BASE}/produtos?codigo=${encodeURIComponent(sku)}&limite=1`, { headers })
+    const d = await r.json()
+    return d?.data?.[0]?.id || null
+  } catch {
+    return null
+  }
+}
+
 async function resolveContatoId(cpf: string, nome: string, billing: any, shipping: any, headers: Record<string, string>): Promise<number | null> {
   try {
     const search = await blingGet(`${BLING_BASE}/contatos?cpf_cnpj=${cpf}&limite=1`, headers)
@@ -159,38 +170,57 @@ Deno.serve(async (req) => {
         }
       }
 
-      const itens = (order.line_items || []).map((item: any) => ({
-        codigo:    String(item.sku || item.product_id || ''),
-        descricao: item.name,
-        unidade:   'UN',
-        quantidade: Number(item.quantity) || 1,
-        valor:     parseFloat(item.price) || (parseFloat(item.subtotal) / (Number(item.quantity) || 1)) || 0,
-        tipo:      'P',
-        origem:    0,
+      // Busca ID do produto no Bling pelo SKU para cada item do pedido
+      const blingItens = await Promise.all((order.line_items || []).map(async (item: any) => {
+        const sku = String(item.sku || '')
+        const blingId = sku ? await resolveBlingProductId(sku, blingHeaders) : null
+        const valor = parseFloat(item.price) || (parseFloat(item.subtotal) / (Number(item.quantity) || 1)) || 0
+
+        if (blingId) {
+          return {
+            produto:    { id: blingId },
+            quantidade: Number(item.quantity) || 1,
+            valor,
+          }
+        }
+
+        // Fallback sem produto cadastrado no Bling
+        return {
+          codigo:     sku || `WC-${item.product_id}`,
+          descricao:  item.name,
+          unidade:    'UN',
+          quantidade: Number(item.quantity) || 1,
+          valor,
+          tipo:       'P',
+          origem:     0,
+        }
       }))
 
-      if (itens.length === 0) throw new Error('Pedido sem itens — não é possível emitir NF-e.')
+      if (blingItens.length === 0) throw new Error('Pedido sem itens — não é possível emitir NF-e.')
 
       const contato = contatoId
         ? { id: contatoId }
-        : { nome, tipoPessoa: 'F', numeroDocumento: cpf, email: billing.email || '', telefone: (billing.phone || '').replace(/\D/g, '') }
+        : { nome, tipoPessoa: 'F', cpfCnpj: cpf, email: billing.email || '', telefone: (billing.phone || '').replace(/\D/g, '') }
 
-      const nfePayload = {
-        tipo: 1,
-        serie: Number(extra.nfe_serie) || 3,
-        dataOperacao: dataHoje,
+      const nfePayload: any = {
+        tipo:         1,
+        serie:        Number(extra.nfe_serie) || 3,
+        dataOperacao: `${dataHoje}T00:00:00`,
         contato,
-        itens,
+        itens: blingItens,
         parcelas: [{
-          data:  dataHoje,
-          valor: parseFloat(order.total) || 0,
+          dataVencimento: dataHoje,
+          valor:          parseFloat(order.total) || 0,
           formaPagamento: { id: resolveFormaPagamento(extra, order.payment_method) },
         }],
-        transporte: {
-          fretePorConta: 9,
-          volumes: [],
+        transporte: { fretePorConta: 9, volumes: [] },
+        informacoesAdicionais: {
+          informacoesContribuinte: `Pedido WooCommerce #${order.number || order.id}`,
         },
-        observacoes: `Pedido WooCommerce #${order.number || order.id}`,
+      }
+
+      if (extra.natureza_operacao_id) {
+        nfePayload.naturezaOperacao = { id: Number(extra.natureza_operacao_id) }
       }
 
       let res = await fetch(`${BLING_BASE}/nfe`, {
@@ -218,7 +248,7 @@ Deno.serve(async (req) => {
         const msg = result?.error?.fields?.map((f: any) => f.msg).join(', ') || result?.error?.description || JSON.stringify(result)
         return new Response(JSON.stringify({
           error: msg,
-          __debug: { cpf, contatoId, contato, itensCount: itens.length, dataHoje, payload: nfePayload, blingRaw: result },
+          __debug: { cpf, contatoId, contato, itensCount: blingItens.length, itens: blingItens, dataHoje, payload: nfePayload, blingRaw: result },
         }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
 
