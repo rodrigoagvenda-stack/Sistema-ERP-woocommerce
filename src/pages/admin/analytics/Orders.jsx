@@ -373,9 +373,24 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
                         {order._nfe_id && (
                           <button
                             onClick={() => act('bling', async () => {
-                              const r = await blingProxy({ action: 'danfe', nfe_id: order._nfe_id })
-                              if (r?.url) window.open(r.url, '_blank')
-                              else throw new Error('URL do DANFE não retornada')
+                              try {
+                                const r = await blingProxy({ action: 'danfe', nfe_id: order._nfe_id })
+                                if (r?.url) window.open(r.url, '_blank')
+                                else throw new Error('DANFE não disponível')
+                              } catch (e) {
+                                // NF-e deletada/rejeitada no Bling — limpa meta para poder reemitir
+                                if (e.message?.includes('não disponível') || e.message?.includes('nfe_id')) {
+                                  await wooProxy({ method: 'PUT', endpoint: `orders/${order.id}`, body: { meta_data: [
+                                    { key: '_nfe_number', value: '' },
+                                    { key: '_nfe_id',     value: '' },
+                                    { key: '_nfe_status', value: '' },
+                                  ]}})
+                                  onUpdate(order.id, { _nfe_number: null, _nfe_id: null, _nfe_status: null })
+                                  alert('NF-e não encontrada no Bling (deletada ou rejeitada). Botão de emissão restaurado.')
+                                  return
+                                }
+                                throw e
+                              }
                             })}
                             disabled={!!busy}
                             className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-50 hover:bg-blue-100 text-blue-600 disabled:opacity-40 transition-colors"
