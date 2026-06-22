@@ -120,6 +120,23 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
       onUpdate(order.id, { _nfe_number: r.numero, _nfe_id: String(r.id), _nfe_status: r.situacao })
       alert(`NF-e emitida! Nº ${r.numero}`)
     } catch (e) {
+      if (e.message?.toLowerCase().includes('já existe uma nota fiscal')) {
+        try {
+          const numero = order.number || order.id
+          const lista = await blingProxy({ method: 'GET', endpoint: `nfe?numero=${numero}&serie=3` })
+          const nfe = Array.isArray(lista) ? lista[0] : lista?.data?.[0]
+          if (nfe?.id && nfe?.numero) {
+            await wooProxy({ method: 'PUT', endpoint: `orders/${order.id}`, body: { meta_data: [
+              { key: '_nfe_number', value: String(nfe.numero) },
+              { key: '_nfe_id',     value: String(nfe.id) },
+              { key: '_nfe_status', value: nfe.situacao?.value || 'Emitida' },
+            ]}})
+            onUpdate(order.id, { _nfe_number: String(nfe.numero), _nfe_id: String(nfe.id), _nfe_status: nfe.situacao?.value || 'Emitida' })
+            alert(`NF-e já existia — vinculada! Nº ${nfe.numero}`)
+            return
+          }
+        } catch {}
+      }
       const d = e.blingDebug
       const debugStr = d
         ? `\n\n--- DEBUG ---\ncpf: ${d.cpf}\ncontatoId: ${d.contatoId}\nitens: ${d.itensCount}\ndata: ${d.dataHoje}\nserie: ${d.payload?.serie}\nitens resolvidos: ${JSON.stringify(d.itens)}\n\nBling raw:\n${JSON.stringify(d.blingRaw, null, 2)}`
