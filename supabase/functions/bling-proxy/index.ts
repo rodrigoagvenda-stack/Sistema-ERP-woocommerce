@@ -68,8 +68,11 @@ async function resolveBlingProductId(sku: string, name: string, headers: Record<
   // Fallback: busca pelo nome do produto
   if (name) {
     try {
-      const r = await fetch(`${BLING_BASE}/produtos?pesquisa=${encodeURIComponent(name.substring(0, 40))}&limite=1`, { headers })
+      const r = await fetch(`${BLING_BASE}/produtos?descricao=${encodeURIComponent(name.substring(0, 60))}&limite=5`, { headers })
       const d = await r.json()
+      // Tenta match exato pelo nome
+      const exact = d?.data?.find((p: any) => p.descricao?.toLowerCase() === name.toLowerCase())
+      if (exact?.id) return exact.id
       if (d?.data?.[0]?.id) return d.data[0].id
     } catch {}
   }
@@ -153,6 +156,12 @@ Deno.serve(async (req) => {
 
     // ── Emitir NF-e ───────────────────────────────────────────────
     if (action === 'emit_nfe' && order) {
+      if (!extra.natureza_operacao_id) {
+        return new Response(JSON.stringify({ error: 'Configure o "ID Natureza de Operação" nas Integrações → Bling antes de emitir NF-e.' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
       const billing  = order.billing  || {}
       const shipping = order.shipping || billing
 
@@ -160,50 +169,40 @@ Deno.serve(async (req) => {
       const cpfMeta = (order.meta_data || []).find((m: any) => CPF_KEYS.includes(m.key) && m.value)?.value || ''
       const cpf = (billing.cpf || billing.document || cpfMeta || '').replace(/\D/g, '')
 
+      if (!cpf) throw new Error('CPF do cliente não encontrado no pedido — necessário para emitir NF-e.')
+
       const today = new Date()
-      const pad = (n: number) => String(n).padStart(2, '0')
+      const pad   = (n: number) => String(n).padStart(2, '0')
       const dataHoje = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`
 
       const nome = `${billing.first_name || ''} ${billing.last_name || ''}`.trim()
 
-      // Busca ou cria contato no Bling pelo CPF
-      const contatoId = cpf ? await resolveContatoId(cpf, nome, billing, shipping, blingHeaders) : null
-
-      // Se o token estava expirado, tenta refresh antes de emitir
-      if (contatoId === null && cpf) {
-        // Tenta refresh agora mesmo caso resolveContato falhou por 401
-        const refreshed = await refreshBlingToken(supabase, company_id, extra)
-        if (refreshed) {
-          blingHeaders['Authorization'] = `Bearer ${refreshed}`
-          token = refreshed
-        }
-      }
-
-      // Busca ID do produto no Bling sequencialmente (evita rate limit)
-      const blingItens: any[] = []
-      for (const item of (order.line_items || [])) {
-        const sku = String(item.sku || '')
-        const blingId = await resolveBlingProductId(sku, item.name || '', blingHeaders)
-        const valor = parseFloat(item.price) || (parseFloat(item.subtotal) / (Number(item.quantity) || 1)) || 0
-
-        if (blingId) {
-          blingItens.push({ produto: { id: blingId }, quantidade: Number(item.quantity) || 1, valor })
-        } else {
-          blingItens.push({ codigo: sku || `WC-${item.product_id}`, descricao: item.name, unidade: 'UN', quantidade: Number(item.quantity) || 1, valor, tipo: 'P', origem: 0 })
-        }
-        await new Promise(r => setTimeout(r, 300))
-      }
+      // Itens: campo required é "codigo" (string), não produto.id
+      const blingItens = (order.line_items || []).map((item: any) => ({
+        codigo:     String(item.sku || `WC-${item.product_id}`),
+        descricao:  item.name,
+        unidade:    'UN',
+        quantidade: Number(item.quantity) || 1,
+        valor:      parseFloat(item.price) || (parseFloat(item.subtotal) / (Number(item.quantity) || 1)) || 0,
+      }))
 
       if (blingItens.length === 0) throw new Error('Pedido sem itens — não é possível emitir NF-e.')
 
-      const contato = contatoId
-        ? { id: contatoId }
-        : { nome, tipoPessoa: 'F', cpfCnpj: cpf, email: billing.email || '', telefone: (billing.phone || '').replace(/\D/g, '') }
+      // Contato: campo id é readOnly — enviar dados completos
+      const tipoPessoa = cpf.length === 14 ? 'J' : 'F'
+      const contato = {
+        nome,
+        tipoPessoa,
+        numeroDocumento: cpf,
+        contribuinte: 9,
+      }
 
-      const nfePayload: any = {
-        tipo:         1,
-        serie:        Number(extra.nfe_serie) || 3,
-        dataOperacao: `${dataHoje}T00:00:00`,
+      // POST sem wrapper { data: {} } — endpoint /nfe usa campos direto no root
+      const nfePayload = {
+        tipo:              1,
+        serie:             Number(extra.nfe_serie) || 3,
+        dataOperacao:      `${dataHoje} 00:00:00`,
+        naturezaOperacao:  { id: Number(extra.natureza_operacao_id) },
         contato,
         itens: blingItens,
         parcelas: [{
@@ -211,33 +210,24 @@ Deno.serve(async (req) => {
           valor:          parseFloat(order.total) || 0,
           formaPagamento: { id: resolveFormaPagamento(extra, order.payment_method) },
         }],
-        transporte: { fretePorConta: 9, volumes: [] },
+        transporte: { fretePorConta: 9 },
         informacoesAdicionais: {
           informacoesContribuinte: `Pedido WooCommerce #${order.number || order.id}`,
         },
       }
 
-      if (extra.natureza_operacao_id) {
-        nfePayload.naturezaOperacao = { id: Number(extra.natureza_operacao_id) }
-      }
-
       let res = await fetch(`${BLING_BASE}/nfe`, {
         method: 'POST',
         headers: blingHeaders,
-        body: JSON.stringify({ data: nfePayload }),
+        body: JSON.stringify(nfePayload),
       })
       let result = await res.json()
 
-      // Se deu invalid_token, tenta refresh e reenvia uma vez
       if (!res.ok && result?.error?.type === 'invalid_token') {
         const refreshed = await refreshBlingToken(supabase, company_id, extra)
         if (refreshed) {
           blingHeaders['Authorization'] = `Bearer ${refreshed}`
-          res = await fetch(`${BLING_BASE}/nfe`, {
-            method: 'POST',
-            headers: blingHeaders,
-            body: JSON.stringify({ data: nfePayload }),
-          })
+          res    = await fetch(`${BLING_BASE}/nfe`, { method: 'POST', headers: blingHeaders, body: JSON.stringify(nfePayload) })
           result = await res.json()
         }
       }
@@ -246,7 +236,7 @@ Deno.serve(async (req) => {
         const msg = result?.error?.fields?.map((f: any) => f.msg).join(', ') || result?.error?.description || JSON.stringify(result)
         return new Response(JSON.stringify({
           error: msg,
-          __debug: { cpf, contatoId, contato, itensCount: blingItens.length, itens: blingItens, dataHoje, payload: nfePayload, blingRaw: result },
+          __debug: { cpf, contato, itensCount: blingItens.length, itens: blingItens, payload: nfePayload, blingRaw: result },
         }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
 
