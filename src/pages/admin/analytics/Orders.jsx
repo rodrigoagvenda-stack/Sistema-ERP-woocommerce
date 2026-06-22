@@ -112,7 +112,7 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
   const emitNFe = () => act('bling', async () => {
     try {
       const r = await blingProxy({ action: 'emit_nfe', order })
-      onUpdate(order.id, { _nfe_number: r.numero, _nfe_status: r.situacao })
+      onUpdate(order.id, { _nfe_number: r.numero, _nfe_id: r.id, _nfe_status: r.situacao })
       alert(`NF-e emitida! Nº ${r.numero}`)
     } catch (e) {
       const d = e.blingDebug
@@ -346,7 +346,23 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
                   {order._nfe_number ? (
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1">NF-e</p>
-                      <span className="text-xs font-mono text-gray-600">Nº {order._nfe_number}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-gray-600">Nº {order._nfe_number}</span>
+                        {order._nfe_id && (
+                          <button
+                            onClick={() => act('bling', async () => {
+                              const r = await blingProxy({ action: 'danfe', nfe_id: order._nfe_id })
+                              if (r?.url) window.open(r.url, '_blank')
+                              else throw new Error('URL do DANFE não retornada')
+                            })}
+                            disabled={!!busy}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-50 hover:bg-blue-100 text-blue-600 disabled:opacity-40 transition-colors"
+                          >
+                            {busy === 'bling' ? <RefreshCw className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+                            DANFE
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <button

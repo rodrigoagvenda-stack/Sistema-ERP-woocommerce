@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { method = 'GET', endpoint, body, action, order, company_id } = await req.json()
+    const { method = 'GET', endpoint, body, action, order, company_id, nfe_id } = await req.json()
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -250,6 +250,18 @@ Deno.serve(async (req) => {
         numero:   result?.data?.numero || '',
         situacao: result?.data?.situacao?.value || 'Emitida',
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // ── Download DANFE ────────────────────────────────────────────
+    if (action === 'danfe') {
+      if (!nfe_id) throw new Error('nfe_id obrigatório para download do DANFE')
+      const r = await fetch(`${BLING_BASE}/nfe/${nfe_id}/danfe`, { headers: blingHeaders, redirect: 'manual' })
+      const location = r.headers.get('location')
+      if (location) return new Response(JSON.stringify({ url: location }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      const d = await r.json().catch(() => ({}))
+      const url = d?.data?.url || d?.url
+      if (url) return new Response(JSON.stringify({ url }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      throw new Error('DANFE não disponível')
     }
 
     // ── Requisição genérica ────────────────────────────────────────
