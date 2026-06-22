@@ -278,10 +278,21 @@ Deno.serve(async (req) => {
     // ── Download DANFE ────────────────────────────────────────────
     if (action === 'danfe') {
       if (!nfe_id) throw new Error('nfe_id obrigatório para download do DANFE')
-      const r = await fetch(`${BLING_BASE}/nfe/${nfe_id}/danfe`, { headers: blingHeaders, redirect: 'manual' })
+      const danfeUrl = `${BLING_BASE}/nfe/${nfe_id}/danfe`
+
+      // Tenta redirect manual primeiro (pega header Location)
+      const r = await fetch(danfeUrl, { headers: blingHeaders, redirect: 'manual' })
       const location = r.headers.get('location')
       if (location) return new Response(JSON.stringify({ url: location }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-      const d = await r.json().catch(() => ({}))
+
+      // Fallback: segue o redirect — a URL final é o PDF
+      const r2 = await fetch(danfeUrl, { headers: blingHeaders, redirect: 'follow' })
+      if (r2.ok && r2.url && r2.url !== danfeUrl) {
+        return new Response(JSON.stringify({ url: r2.url }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
+      // Fallback: resposta JSON com URL
+      const d = await r2.json().catch(() => ({}))
       const url = d?.data?.url || d?.url
       if (url) return new Response(JSON.stringify({ url }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       throw new Error('DANFE não disponível')
