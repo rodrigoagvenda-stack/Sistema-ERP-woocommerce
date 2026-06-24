@@ -143,7 +143,8 @@ export default function KitOrders() {
         <div className="text-sm text-gray-400 text-center py-16">Nenhum pedido encontrado.</div>
       ) : (
         <>
-        <div className="rounded-xl border border-gray-100 overflow-hidden">
+        {/* Desktop */}
+        <div className="hidden md:block rounded-xl border border-gray-100 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
               <tr>
@@ -176,9 +177,7 @@ export default function KitOrders() {
                           <p>{addr.neighborhood} · {addr.city}/{addr.state}</p>
                           <p className="text-gray-400">CEP {o.customer_cep}</p>
                         </div>
-                      ) : (
-                        <span className="text-xs text-gray-300">—</span>
-                      )}
+                      ) : <span className="text-xs text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-gray-700">{fmt(o.shipping_cost)}</p>
@@ -187,9 +186,7 @@ export default function KitOrders() {
                     <td className="px-4 py-3 text-right font-semibold text-gray-800">{fmt(o.total_amount)}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{o.payment_method || '—'}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>
-                        {st.label}
-                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>{st.label}</span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{fmtDate(o.created_at)}</td>
                   </tr>
@@ -197,6 +194,37 @@ export default function KitOrders() {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="md:hidden space-y-3">
+          {pageSlice.map(o => {
+            const st   = STATUS[o.status] || { label: o.status, color: 'bg-gray-100 text-gray-500' }
+            const addr = o.customer_address || {}
+            return (
+              <div key={o.id} className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold text-gray-900">{o.customer_name || '—'}</p>
+                    <p className="text-xs text-gray-400">{o.customer_email || ''}</p>
+                    <p className="text-xs text-gray-400">{o.customer_phone || ''}</p>
+                  </div>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${st.color}`}>{st.label}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">{o.kit_name || '—'}</span>
+                  <span className="font-bold text-gray-900">{fmt(o.total_amount)}</span>
+                </div>
+                {addr.city && (
+                  <p className="text-xs text-gray-400">{addr.street}, {addr.number} · {addr.city}/{addr.state}</p>
+                )}
+                <div className="flex items-center justify-between text-xs text-gray-400 pt-1 border-t border-gray-50">
+                  <span>{o.shipping_name || ''} {o.shipping_cost ? `· ${fmt(o.shipping_cost)}` : ''}</span>
+                  <span>{fmtDate(o.created_at)}</span>
+                </div>
+              </div>
+            )
+          })}
         </div>
         {totalPages > 1 && (
           <div className="flex items-center justify-between pt-1">

@@ -45,65 +45,102 @@ function SummaryCard({ icon: Icon, label, value, color }) {
 }
 
 
+function PaginationFooter({ pagination }) {
+  if (!pagination) return null
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+      <p className="text-xs text-gray-400">{pagination.label}</p>
+      <div className="flex gap-1 items-center">
+        <button onClick={() => pagination.onChange(pagination.page - 1)} disabled={pagination.page === 0} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="px-3 py-1 text-xs text-gray-600 font-medium">{pagination.page + 1} / {pagination.totalPages}</span>
+        <button onClick={() => pagination.onChange(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages - 1} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function PaymentTable({ rows, kitMap = {}, pagination }) {
   return (
-    <div className="rounded-xl border border-gray-100 overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-          <tr>
-            <th className="text-left px-4 py-3">ID</th>
-            <th className="text-left px-4 py-3">Cliente</th>
-            <th className="text-left px-4 py-3">Kit</th>
-            <th className="text-left px-4 py-3">Método</th>
-            <th className="text-right px-4 py-3">Valor</th>
-            <th className="text-left px-4 py-3">Status</th>
-            <th className="text-left px-4 py-3">Data</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-50">
-          {rows.map((r, i) => {
-            const kitName = kitMap[String(r.id)]
-            return (
-              <tr key={r.id ?? i} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3 text-xs text-gray-400 font-mono">{String(r.id).slice(0, 12)}…</td>
-                <td className="px-4 py-3">
-                  <p className="font-medium text-gray-800">{r.name || '—'}</p>
+    <div className="space-y-3">
+      {/* Desktop */}
+      <div className="hidden md:block rounded-xl border border-gray-100 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+            <tr>
+              <th className="text-left px-4 py-3">ID</th>
+              <th className="text-left px-4 py-3">Cliente</th>
+              <th className="text-left px-4 py-3">Kit</th>
+              <th className="text-left px-4 py-3">Método</th>
+              <th className="text-right px-4 py-3">Valor</th>
+              <th className="text-left px-4 py-3">Status</th>
+              <th className="text-left px-4 py-3">Data</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {rows.map((r, i) => {
+              const kitName = kitMap[String(r.id)]
+              return (
+                <tr key={r.id ?? i} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-xs text-gray-400 font-mono">{String(r.id).slice(0, 12)}…</td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-gray-800">{r.name || '—'}</p>
+                    <p className="text-xs text-gray-400">{r.email || ''}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    {kitName ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-medium">
+                        <Gift className="h-2.5 w-2.5" />{kitName}
+                      </span>
+                    ) : <span className="text-xs text-gray-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-500">{r.method || '—'}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-gray-800">{fmt(r.amount)}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${r.statusColor}`}>{r.statusLabel}</span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{fmtDate(r.date)}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        <PaginationFooter pagination={pagination} />
+      </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {rows.map((r, i) => {
+          const kitName = kitMap[String(r.id)]
+          return (
+            <div key={r.id ?? i} className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-semibold text-gray-900">{r.name || '—'}</p>
                   <p className="text-xs text-gray-400">{r.email || ''}</p>
-                </td>
-                <td className="px-4 py-3">
-                  {kitName ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-medium">
+                </div>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${r.statusColor}`}>{r.statusLabel}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">{r.method || '—'}</span>
+                  {kitName && (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-medium">
                       <Gift className="h-2.5 w-2.5" />{kitName}
                     </span>
-                  ) : (
-                    <span className="text-xs text-gray-300">—</span>
                   )}
-                </td>
-                <td className="px-4 py-3 text-xs text-gray-500">{r.method || '—'}</td>
-                <td className="px-4 py-3 text-right font-semibold text-gray-800">{fmt(r.amount)}</td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${r.statusColor}`}>{r.statusLabel}</span>
-                </td>
-                <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{fmtDate(r.date)}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-      {pagination && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
-          <p className="text-xs text-gray-400">{pagination.label}</p>
-          <div className="flex gap-1 items-center">
-            <button onClick={() => pagination.onChange(pagination.page - 1)} disabled={pagination.page === 0} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="px-3 py-1 text-xs text-gray-600 font-medium">{pagination.page + 1} / {pagination.totalPages}</span>
-            <button onClick={() => pagination.onChange(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages - 1} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+                </div>
+                <span className="font-bold text-gray-900">{fmt(r.amount)}</span>
+              </div>
+              <p className="text-xs text-gray-400">{fmtDate(r.date)}</p>
+            </div>
+          )
+        })}
+        <PaginationFooter pagination={pagination} />
+      </div>
     </div>
   )
 }
