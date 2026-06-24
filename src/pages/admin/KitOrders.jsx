@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { RefreshCw, Search, TrendingUp, CheckCircle2, Clock, Package } from 'lucide-react'
+import { RefreshCw, Search, TrendingUp, CheckCircle2, Clock, Package, ChevronLeft, ChevronRight } from 'lucide-react'
+
+const PAGE_SIZE = 20
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -46,6 +48,7 @@ export default function KitOrders() {
   const [loading,      setLoading]      = useState(true)
   const [search,       setSearch]       = useState('')
   const [statusFilter, setStatusFilter] = useState(null)
+  const [page,         setPage]         = useState(0)
 
   const load = async () => {
     setLoading(true)
@@ -78,6 +81,14 @@ export default function KitOrders() {
     }
     return list
   }, [orders, statusFilter, search])
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const pageSlice  = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
+  const changePage = (p) => { setPage(Math.max(0, Math.min(p, totalPages - 1))); window.scrollTo(0, 0) }
+
+  // Reset page when filter/search changes
+  useMemo(() => { setPage(0) }, [statusFilter, search])
 
   const approved = orders.filter(o => o.status === 'approved')
   const pending  = orders.filter(o => o.status === 'pending')
@@ -131,6 +142,7 @@ export default function KitOrders() {
       ) : filtered.length === 0 ? (
         <div className="text-sm text-gray-400 text-center py-16">Nenhum pedido encontrado.</div>
       ) : (
+        <>
         <div className="rounded-xl border border-gray-100 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
@@ -146,7 +158,7 @@ export default function KitOrders() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filtered.map(o => {
+              {pageSlice.map(o => {
                 const st   = STATUS[o.status] || { label: o.status, color: 'bg-gray-100 text-gray-500' }
                 const addr = o.customer_address || {}
                 return (
@@ -186,6 +198,23 @@ export default function KitOrders() {
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-1">
+            <p className="text-xs text-gray-400">
+              {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} de {filtered.length}
+            </p>
+            <div className="flex gap-1 items-center">
+              <button onClick={() => changePage(page - 1)} disabled={page === 0} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="px-3 py-1 text-xs text-gray-600 font-medium">{page + 1} / {totalPages}</span>
+              <button onClick={() => changePage(page + 1)} disabled={page >= totalPages - 1} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+        </>
       )}
     </div>
   )

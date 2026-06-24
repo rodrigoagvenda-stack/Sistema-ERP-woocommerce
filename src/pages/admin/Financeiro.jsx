@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { RefreshCw, TrendingUp, CheckCircle2, Clock, XCircle } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { RefreshCw, TrendingUp, CheckCircle2, Clock, XCircle, ChevronLeft, ChevronRight, Gift } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
@@ -8,6 +8,8 @@ import { mercadoPagoProxy, pagbankProxy } from '@/lib/api'
 
 const fmt     = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
 const fmtDate = (d) => d ? new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'
+
+const PAGE_SIZE = 20
 
 const MP_STATUS = {
   approved:   { label: 'Aprovado',    color: 'bg-green-100 text-green-700' },
@@ -42,7 +44,38 @@ function SummaryCard({ icon: Icon, label, value, color }) {
   )
 }
 
-function PaymentTable({ rows }) {
+function Pagination({ page, total, pageSize, onChange }) {
+  const totalPages = Math.ceil(total / pageSize)
+  if (totalPages <= 1) return null
+  return (
+    <div className="flex items-center justify-between pt-2">
+      <p className="text-xs text-gray-400">
+        {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} de {total}
+      </p>
+      <div className="flex gap-1">
+        <button
+          onClick={() => onChange(page - 1)}
+          disabled={page === 0}
+          className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="px-3 py-1 text-xs text-gray-600 font-medium">
+          {page + 1} / {totalPages}
+        </span>
+        <button
+          onClick={() => onChange(page + 1)}
+          disabled={page >= totalPages - 1}
+          className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function PaymentTable({ rows, kitIds }) {
   return (
     <div className="rounded-xl border border-gray-100 overflow-hidden">
       <table className="w-full text-sm">
@@ -59,7 +92,16 @@ function PaymentTable({ rows }) {
         <tbody className="divide-y divide-gray-50">
           {rows.map((r, i) => (
             <tr key={r.id ?? i} className="hover:bg-gray-50 transition-colors">
-              <td className="px-4 py-3 text-xs text-gray-400 font-mono">{String(r.id).slice(0, 14)}{String(r.id).length > 14 ? '…' : ''}</td>
+              <td className="px-4 py-3 text-xs text-gray-400 font-mono">
+                <div className="flex items-center gap-1.5">
+                  {String(r.id).slice(0, 12)}…
+                  {kitIds?.has(String(r.id)) && (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-medium">
+                      <Gift className="h-2.5 w-2.5" />Kit
+                    </span>
+                  )}
+                </div>
+              </td>
               <td className="px-4 py-3">
                 <p className="font-medium text-gray-800">{r.name || '—'}</p>
                 <p className="text-xs text-gray-400">{r.email || ''}</p>
@@ -80,20 +122,39 @@ function PaymentTable({ rows }) {
 
 function MPDashboard() {
   const [payments, setPayments] = useState([])
+  const [total,    setTotal]    = useState(0)
+  const [page,     setPage]     = useState(0)
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState(null)
+  const [kitIds,   setKitIds]   = useState(new Set())
 
-  const load = async () => {
+  const load = useCallback(async (p = 0) => {
     setLoading(true); setError(null)
     try {
-      const begin = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-      const data  = await mercadoPagoProxy({ endpoint: `v1/payments/search?sort=date_created&criteria=desc&limit=50&begin_date=${begin}` })
+      const begin  = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      const offset = p * PAGE_SIZE
+      const [data, cid] = await Promise.all([
+        mercadoPagoProxy({ endpoint: `v1/payments/search?sort=date_created&criteria=desc&limit=${PAGE_SIZE}&offset=${offset}&begin_date=${begin}` }),
+        getCompanyId(),
+      ])
       setPayments(data?.results || [])
+      setTotal(data?.paging?.total || 0)
+      setPage(p)
+
+      // Carrega IDs de kit na primeira página
+      if (p === 0) {
+        const { data: kits } = await supabase
+          .from('kit_orders')
+          .select('mp_payment_id')
+          .eq('company_id', cid)
+          .not('mp_payment_id', 'is', null)
+        setKitIds(new Set((kits || []).map(k => String(k.mp_payment_id))))
+      }
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
-  }
+  }, [])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(0) }, [load])
 
   const approved = payments.filter(p => p.status === 'approved')
   const pending  = payments.filter(p => ['pending', 'in_process'].includes(p.status))
@@ -119,9 +180,9 @@ function MPDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Financeiro — Mercado Pago</h1>
-          <p className="text-sm text-gray-400">Últimos 30 dias · {payments.length} transações</p>
+          <p className="text-sm text-gray-400">Últimos 30 dias · {total} transações</p>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-2">
+        <Button variant="outline" size="sm" onClick={() => load(0)} disabled={loading} className="gap-2">
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           Atualizar
         </Button>
@@ -141,22 +202,27 @@ function MPDashboard() {
       ) : rows.length === 0 ? (
         <div className="text-sm text-gray-400 text-center py-12">Nenhum pagamento nos últimos 30 dias.</div>
       ) : (
-        <PaymentTable rows={rows} />
+        <>
+          <PaymentTable rows={rows} kitIds={kitIds} />
+          <Pagination page={page} total={total} pageSize={PAGE_SIZE} onChange={p => load(p)} />
+        </>
       )}
     </div>
   )
 }
 
 function PBDashboard() {
-  const [charges, setCharges] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState(null)
+  const [charges,  setCharges]  = useState([])
+  const [page,     setPage]     = useState(0)
+  const [loading,  setLoading]  = useState(true)
+  const [error,    setError]    = useState(null)
 
   const load = async () => {
     setLoading(true); setError(null)
     try {
-      const data = await pagbankProxy({ endpoint: 'charges?limit=50' })
+      const data = await pagbankProxy({ endpoint: 'charges?limit=200' })
       setCharges(data?.charges || [])
+      setPage(0)
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
@@ -168,7 +234,8 @@ function PBDashboard() {
   const declined = charges.filter(c => ['DECLINED', 'CANCELED'].includes(c.status))
   const revenue  = paid.reduce((s, c) => s + ((c.amount?.value || 0) / 100), 0)
 
-  const rows = charges.map(c => {
+  const pageSlice = charges.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  const rows = pageSlice.map(c => {
     const st = PB_STATUS[c.status] || { label: c.status, color: 'bg-gray-100 text-gray-500' }
     return {
       id:          c.id,
@@ -209,7 +276,10 @@ function PBDashboard() {
       ) : rows.length === 0 ? (
         <div className="text-sm text-gray-400 text-center py-12">Nenhuma cobrança encontrada.</div>
       ) : (
-        <PaymentTable rows={rows} />
+        <>
+          <PaymentTable rows={rows} />
+          <Pagination page={page} total={charges.length} pageSize={PAGE_SIZE} onChange={setPage} />
+        </>
       )}
     </div>
   )
