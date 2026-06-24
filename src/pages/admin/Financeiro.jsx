@@ -44,38 +44,8 @@ function SummaryCard({ icon: Icon, label, value, color }) {
   )
 }
 
-function Pagination({ page, total, pageSize, onChange }) {
-  const totalPages = Math.ceil(total / pageSize)
-  if (totalPages <= 1) return null
-  return (
-    <div className="flex items-center justify-between pt-2">
-      <p className="text-xs text-gray-400">
-        {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} de {total}
-      </p>
-      <div className="flex gap-1">
-        <button
-          onClick={() => onChange(page - 1)}
-          disabled={page === 0}
-          className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <span className="px-3 py-1 text-xs text-gray-600 font-medium">
-          {page + 1} / {totalPages}
-        </span>
-        <button
-          onClick={() => onChange(page + 1)}
-          disabled={page >= totalPages - 1}
-          className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
-  )
-}
 
-function PaymentTable({ rows, kitIds }) {
+function PaymentTable({ rows, kitMap = {}, pagination }) {
   return (
     <div className="rounded-xl border border-gray-100 overflow-hidden">
       <table className="w-full text-sm">
@@ -83,6 +53,7 @@ function PaymentTable({ rows, kitIds }) {
           <tr>
             <th className="text-left px-4 py-3">ID</th>
             <th className="text-left px-4 py-3">Cliente</th>
+            <th className="text-left px-4 py-3">Kit</th>
             <th className="text-left px-4 py-3">Método</th>
             <th className="text-right px-4 py-3">Valor</th>
             <th className="text-left px-4 py-3">Status</th>
@@ -90,35 +61,59 @@ function PaymentTable({ rows, kitIds }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50">
-          {rows.map((r, i) => (
-            <tr key={r.id ?? i} className="hover:bg-gray-50 transition-colors">
-              <td className="px-4 py-3 text-xs text-gray-400 font-mono">
-                <div className="flex items-center gap-1.5">
-                  {String(r.id).slice(0, 12)}…
-                  {kitIds?.has(String(r.id)) && (
-                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-medium">
-                      <Gift className="h-2.5 w-2.5" />Kit
+          {rows.map((r, i) => {
+            const kitName = kitMap[String(r.id)]
+            return (
+              <tr key={r.id ?? i} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3 text-xs text-gray-400 font-mono">{String(r.id).slice(0, 12)}…</td>
+                <td className="px-4 py-3">
+                  <p className="font-medium text-gray-800">{r.name || '—'}</p>
+                  <p className="text-xs text-gray-400">{r.email || ''}</p>
+                </td>
+                <td className="px-4 py-3">
+                  {kitName ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-medium">
+                      <Gift className="h-2.5 w-2.5" />{kitName}
                     </span>
+                  ) : (
+                    <span className="text-xs text-gray-300">—</span>
                   )}
-                </div>
-              </td>
-              <td className="px-4 py-3">
-                <p className="font-medium text-gray-800">{r.name || '—'}</p>
-                <p className="text-xs text-gray-400">{r.email || ''}</p>
-              </td>
-              <td className="px-4 py-3 text-xs text-gray-500">{r.method || '—'}</td>
-              <td className="px-4 py-3 text-right font-semibold text-gray-800">{fmt(r.amount)}</td>
-              <td className="px-4 py-3">
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${r.statusColor}`}>{r.statusLabel}</span>
-              </td>
-              <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{fmtDate(r.date)}</td>
-            </tr>
-          ))}
+                </td>
+                <td className="px-4 py-3 text-xs text-gray-500">{r.method || '—'}</td>
+                <td className="px-4 py-3 text-right font-semibold text-gray-800">{fmt(r.amount)}</td>
+                <td className="px-4 py-3">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${r.statusColor}`}>{r.statusLabel}</span>
+                </td>
+                <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{fmtDate(r.date)}</td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
+      {pagination && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+          <p className="text-xs text-gray-400">{pagination.label}</p>
+          <div className="flex gap-1 items-center">
+            <button onClick={() => pagination.onChange(pagination.page - 1)} disabled={pagination.page === 0} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="px-3 py-1 text-xs text-gray-600 font-medium">{pagination.page + 1} / {pagination.totalPages}</span>
+            <button onClick={() => pagination.onChange(pagination.page + 1)} disabled={pagination.page >= pagination.totalPages - 1} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+
+const DATE_PRESETS = [
+  { label: '7 dias',      days: 7  },
+  { label: '30 dias',     days: 30 },
+  { label: '90 dias',     days: 90 },
+  { label: '6 meses',     days: 180 },
+]
 
 function MPDashboard() {
   const [payments, setPayments] = useState([])
@@ -126,12 +121,13 @@ function MPDashboard() {
   const [page,     setPage]     = useState(0)
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState(null)
-  const [kitIds,   setKitIds]   = useState(new Set())
+  const [kitMap,   setKitMap]   = useState({})
+  const [days,     setDays]     = useState(30)
 
-  const load = useCallback(async (p = 0) => {
+  const load = useCallback(async (p = 0, d = 30) => {
     setLoading(true); setError(null)
     try {
-      const begin  = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      const begin  = new Date(Date.now() - d * 24 * 60 * 60 * 1000).toISOString()
       const offset = p * PAGE_SIZE
       const [data, cid] = await Promise.all([
         mercadoPagoProxy({ endpoint: `v1/payments/search?sort=date_created&criteria=desc&limit=${PAGE_SIZE}&offset=${offset}&begin_date=${begin}` }),
@@ -141,26 +137,30 @@ function MPDashboard() {
       setTotal(data?.paging?.total || 0)
       setPage(p)
 
-      // Carrega IDs de kit na primeira página
       if (p === 0) {
         const { data: kits } = await supabase
           .from('kit_orders')
-          .select('mp_payment_id')
+          .select('mp_payment_id, kit_name')
           .eq('company_id', cid)
           .not('mp_payment_id', 'is', null)
-        setKitIds(new Set((kits || []).map(k => String(k.mp_payment_id))))
+        const map = {}
+        ;(kits || []).forEach(k => { map[String(k.mp_payment_id)] = k.kit_name })
+        setKitMap(map)
       }
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { load(0) }, [load])
+  useEffect(() => { load(0, days) }, [load])
+
+  const changePreset = (d) => { setDays(d); load(0, d) }
 
   const approved = payments.filter(p => p.status === 'approved')
   const pending  = payments.filter(p => ['pending', 'in_process'].includes(p.status))
   const rejected = payments.filter(p => ['rejected', 'cancelled'].includes(p.status))
   const revenue  = approved.reduce((s, p) => s + (p.transaction_amount || 0), 0)
 
+  const totalPages = Math.ceil(total / PAGE_SIZE)
   const rows = payments.map(p => {
     const st = MP_STATUS[p.status] || { label: p.status, color: 'bg-gray-100 text-gray-500' }
     return {
@@ -175,17 +175,33 @@ function MPDashboard() {
     }
   })
 
+  const paginationProps = totalPages > 1 ? {
+    page, totalPages,
+    label: `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, total)} de ${total}`,
+    onChange: (p) => load(p, days),
+  } : null
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Financeiro — Mercado Pago</h1>
-          <p className="text-sm text-gray-400">Últimos 30 dias · {total} transações</p>
+          <p className="text-sm text-gray-400">{total} transações no período</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => load(0)} disabled={loading} className="gap-2">
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1">
+            {DATE_PRESETS.map(pr => (
+              <button key={pr.days} onClick={() => changePreset(pr.days)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${days === pr.days ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {pr.label}
+              </button>
+            ))}
+          </div>
+          <Button variant="outline" size="sm" onClick={() => load(0, days)} disabled={loading} className="gap-2">
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {error && <div className="text-sm text-red-500 p-4 bg-red-50 rounded-lg">{error}</div>}
@@ -200,22 +216,19 @@ function MPDashboard() {
       {loading ? (
         <div className="text-sm text-gray-400 text-center py-12">Carregando...</div>
       ) : rows.length === 0 ? (
-        <div className="text-sm text-gray-400 text-center py-12">Nenhum pagamento nos últimos 30 dias.</div>
+        <div className="text-sm text-gray-400 text-center py-12">Nenhum pagamento no período selecionado.</div>
       ) : (
-        <>
-          <PaymentTable rows={rows} kitIds={kitIds} />
-          <Pagination page={page} total={total} pageSize={PAGE_SIZE} onChange={p => load(p)} />
-        </>
+        <PaymentTable rows={rows} kitMap={kitMap} pagination={paginationProps} />
       )}
     </div>
   )
 }
 
 function PBDashboard() {
-  const [charges,  setCharges]  = useState([])
-  const [page,     setPage]     = useState(0)
-  const [loading,  setLoading]  = useState(true)
-  const [error,    setError]    = useState(null)
+  const [charges, setCharges] = useState([])
+  const [page,    setPage]    = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error,   setError]   = useState(null)
 
   const load = async () => {
     setLoading(true); setError(null)
@@ -234,27 +247,30 @@ function PBDashboard() {
   const declined = charges.filter(c => ['DECLINED', 'CANCELED'].includes(c.status))
   const revenue  = paid.reduce((s, c) => s + ((c.amount?.value || 0) / 100), 0)
 
-  const pageSlice = charges.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  const totalPages = Math.ceil(charges.length / PAGE_SIZE)
+  const pageSlice  = charges.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
   const rows = pageSlice.map(c => {
     const st = PB_STATUS[c.status] || { label: c.status, color: 'bg-gray-100 text-gray-500' }
     return {
-      id:          c.id,
-      name:        c.description || '—',
-      email:       '',
-      method:      c.payment_method?.type || '—',
-      amount:      (c.amount?.value || 0) / 100,
-      statusLabel: st.label,
-      statusColor: st.color,
-      date:        c.created_at,
+      id: c.id, name: c.description || '—', email: '',
+      method: c.payment_method?.type || '—',
+      amount: (c.amount?.value || 0) / 100,
+      statusLabel: st.label, statusColor: st.color, date: c.created_at,
     }
   })
 
+  const paginationProps = totalPages > 1 ? {
+    page, totalPages,
+    label: `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, charges.length)} de ${charges.length}`,
+    onChange: setPage,
+  } : null
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Financeiro — PagBank</h1>
-          <p className="text-sm text-gray-400">Últimas cobranças · {charges.length} transações</p>
+          <p className="text-sm text-gray-400">{charges.length} transações</p>
         </div>
         <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-2">
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -276,10 +292,7 @@ function PBDashboard() {
       ) : rows.length === 0 ? (
         <div className="text-sm text-gray-400 text-center py-12">Nenhuma cobrança encontrada.</div>
       ) : (
-        <>
-          <PaymentTable rows={rows} />
-          <Pagination page={page} total={charges.length} pageSize={PAGE_SIZE} onChange={setPage} />
-        </>
+        <PaymentTable rows={rows} pagination={paginationProps} />
       )}
     </div>
   )
