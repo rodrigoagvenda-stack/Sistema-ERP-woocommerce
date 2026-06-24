@@ -476,10 +476,10 @@ export async function mercadoPagoProxy({ method = 'GET', endpoint, body, action,
 }
 
 // Bling proxy via Supabase Edge Function
-export async function blingProxy({ method = 'GET', endpoint, body, action, order, nfe_id } = {}) {
+export async function blingProxy({ method = 'GET', endpoint, body, action, order, nfe_id, nfe_number, nfe_cpf } = {}) {
   const company_id = await getCompanyId()
   const { data, error } = await supabase.functions.invoke('bling-proxy', {
-    body: { method, endpoint, body, action, order, company_id, nfe_id }
+    body: { method, endpoint, body, action, order, company_id, nfe_id, nfe_number, nfe_cpf }
   })
   if (error) throw new Error(error.message)
   if (data?.error) {

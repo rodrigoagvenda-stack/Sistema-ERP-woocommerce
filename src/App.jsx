@@ -32,6 +32,7 @@ const FAQ            = lazy(() => import('@/pages/admin/FAQ'))
 const Integrations   = lazy(() => import('@/pages/admin/Integrations'))
 const Kits           = lazy(() => import('@/pages/admin/Kits'))
 const KitOrders      = lazy(() => import('@/pages/admin/KitOrders'))
+const Financeiro     = lazy(() => import('@/pages/admin/Financeiro'))
 const Cupons         = lazy(() => import('@/pages/admin/Cupons'))
 
 // Analytics
@@ -95,6 +96,7 @@ export default function App() {
         <Route path="/admin/:slug/coupons"         element={<AdminPage><Coupons /></AdminPage>} />
         <Route path="/admin/:slug/nossas-cervejas" element={<AdminPage><NossasCervejas /></AdminPage>} />
         <Route path="/admin/:slug/integrations"    element={<AdminPage><Integrations /></AdminPage>} />
+        <Route path="/admin/:slug/financeiro"      element={<AdminPage><Financeiro /></AdminPage>} />
         <Route path="/admin/:slug/kits"            element={<AdminPage><Kits /></AdminPage>} />
         <Route path="/admin/:slug/kit-orders"     element={<AdminPage><KitOrders /></AdminPage>} />
         <Route path="/admin/:slug/cupons-kit"     element={<AdminPage><Cupons /></AdminPage>} />

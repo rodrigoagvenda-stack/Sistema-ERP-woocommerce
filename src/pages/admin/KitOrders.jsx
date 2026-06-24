@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
-import { RefreshCw, MapPin } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { RefreshCw, Search, TrendingUp, CheckCircle2, Clock, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase'
 import { getCompanyId } from '@/lib/company'
 
-const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
+const fmt     = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
 const fmtDate = (d) => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
 
 const STATUS = {
@@ -15,10 +17,35 @@ const STATUS = {
   refunded:  { label: 'Reembolsado', color: 'bg-purple-100 text-purple-700' },
 }
 
+const FILTERS = [
+  { key: null,        label: 'Todos'       },
+  { key: 'approved',  label: 'Aprovados'   },
+  { key: 'pending',   label: 'Pendentes'   },
+  { key: 'rejected',  label: 'Rejeitados'  },
+  { key: 'cancelled', label: 'Cancelados'  },
+]
+
+function SummaryCard({ icon: Icon, label, value, color }) {
+  return (
+    <Card>
+      <CardContent className="p-4 flex items-center gap-3">
+        <div className={`p-2 rounded-lg ${color}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="text-xs text-gray-500">{label}</p>
+          <p className="text-lg font-bold text-gray-900">{value}</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function KitOrders() {
-  const [orders,  setOrders]  = useState([])
-  const [loading, setLoading] = useState(true)
-  const [expanded, setExpanded] = useState(null)
+  const [orders,       setOrders]       = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [search,       setSearch]       = useState('')
+  const [statusFilter, setStatusFilter] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -29,7 +56,7 @@ export default function KitOrders() {
         .select('*')
         .eq('company_id', cid)
         .order('created_at', { ascending: false })
-        .limit(200)
+        .limit(500)
       setOrders(data || [])
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
@@ -37,15 +64,31 @@ export default function KitOrders() {
 
   useEffect(() => { load() }, [])
 
+  const filtered = useMemo(() => {
+    let list = orders
+    if (statusFilter) list = list.filter(o => o.status === statusFilter)
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(o =>
+        (o.customer_name  || '').toLowerCase().includes(q) ||
+        (o.customer_email || '').toLowerCase().includes(q) ||
+        (o.customer_phone || '').includes(q) ||
+        (o.kit_name       || '').toLowerCase().includes(q)
+      )
+    }
+    return list
+  }, [orders, statusFilter, search])
+
   const approved = orders.filter(o => o.status === 'approved')
+  const pending  = orders.filter(o => o.status === 'pending')
   const revenue  = approved.reduce((s, o) => s + parseFloat(o.total_amount || 0), 0)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Pedidos de Kit</h1>
-          <p className="text-sm text-gray-400">{orders.length} pedidos · {approved.length} aprovados · {fmt(revenue)} em receita</p>
+          <p className="text-sm text-gray-400">{orders.length} pedidos no total</p>
         </div>
         <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-2">
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -53,18 +96,48 @@ export default function KitOrders() {
         </Button>
       </div>
 
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <SummaryCard icon={Package}      label="Total de pedidos" value={orders.length}    color="bg-blue-100 text-blue-600" />
+        <SummaryCard icon={TrendingUp}   label="Receita aprovada" value={fmt(revenue)}     color="bg-green-100 text-green-600" />
+        <SummaryCard icon={CheckCircle2} label="Aprovados"        value={approved.length}  color="bg-green-100 text-green-600" />
+        <SummaryCard icon={Clock}        label="Pendentes"        value={pending.length}   color="bg-yellow-100 text-yellow-600" />
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+          <Input
+            placeholder="Buscar por nome, e-mail, kit..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9 text-sm h-9"
+          />
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          {FILTERS.map(f => (
+            <button
+              key={String(f.key)}
+              onClick={() => setStatusFilter(f.key)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${statusFilter === f.key ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {loading ? (
         <div className="text-sm text-gray-400 text-center py-16">Carregando pedidos...</div>
-      ) : orders.length === 0 ? (
-        <div className="text-sm text-gray-400 text-center py-16">Nenhum pedido ainda.</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-sm text-gray-400 text-center py-16">Nenhum pedido encontrado.</div>
       ) : (
         <div className="rounded-xl border border-gray-100 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
               <tr>
                 <th className="text-left px-4 py-3">Cliente</th>
-                <th className="text-left px-4 py-3">Entrega</th>
                 <th className="text-left px-4 py-3">Kit</th>
+                <th className="text-left px-4 py-3">Endereço</th>
                 <th className="text-left px-4 py-3">Frete</th>
                 <th className="text-right px-4 py-3">Total</th>
                 <th className="text-left px-4 py-3">Pagamento</th>
@@ -73,54 +146,41 @@ export default function KitOrders() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {orders.map(o => {
+              {filtered.map(o => {
                 const st   = STATUS[o.status] || { label: o.status, color: 'bg-gray-100 text-gray-500' }
                 const addr = o.customer_address || {}
-                const isExp = expanded === o.id
                 return (
-                  <>
-                    <tr key={o.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-gray-800">{o.customer_name || '—'}</p>
-                        <p className="text-xs text-gray-400">{o.customer_email || ''}</p>
-                        <p className="text-xs text-gray-400">{o.customer_phone || ''}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        {addr.city ? (
-                          <button
-                            onClick={() => setExpanded(isExp ? null : o.id)}
-                            className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700"
-                          >
-                            <MapPin className="h-3 w-3" />
-                            {addr.city}/{addr.state}
-                          </button>
-                        ) : (
-                          <span className="text-xs text-gray-300">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">{o.kit_name || '—'}</td>
-                      <td className="px-4 py-3">
-                        <p className="text-gray-700">{fmt(o.shipping_cost)}</p>
-                        {o.shipping_name && <p className="text-xs text-gray-400">{o.shipping_name}</p>}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-800">{fmt(o.total_amount)}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{o.payment_method || '—'}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>
-                          {st.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{fmtDate(o.created_at)}</td>
-                    </tr>
-                    {isExp && addr.street && (
-                      <tr key={`${o.id}-addr`} className="bg-blue-50">
-                        <td colSpan={8} className="px-4 py-2 text-xs text-blue-700">
-                          <span className="font-semibold">Endereço de entrega: </span>
-                          {addr.street}, {addr.number}{addr.complement ? ` — ${addr.complement}` : ''} · {addr.neighborhood} · {addr.city}/{addr.state} · CEP {o.customer_cep}
-                        </td>
-                      </tr>
-                    )}
-                  </>
+                  <tr key={o.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-gray-800">{o.customer_name || '—'}</p>
+                      <p className="text-xs text-gray-400">{o.customer_email || ''}</p>
+                      <p className="text-xs text-gray-400">{o.customer_phone || ''}</p>
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">{o.kit_name || '—'}</td>
+                    <td className="px-4 py-3">
+                      {addr.street ? (
+                        <div className="text-xs text-gray-500 leading-relaxed">
+                          <p>{addr.street}, {addr.number}{addr.complement ? ` — ${addr.complement}` : ''}</p>
+                          <p>{addr.neighborhood} · {addr.city}/{addr.state}</p>
+                          <p className="text-gray-400">CEP {o.customer_cep}</p>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="text-gray-700">{fmt(o.shipping_cost)}</p>
+                      {o.shipping_name && <p className="text-xs text-gray-400">{o.shipping_name}</p>}
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold text-gray-800">{fmt(o.total_amount)}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{o.payment_method || '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>
+                        {st.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{fmtDate(o.created_at)}</td>
+                  </tr>
                 )
               })}
             </tbody>
