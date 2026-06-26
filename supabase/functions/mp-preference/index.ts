@@ -123,6 +123,7 @@ serve(async (req) => {
         auto_return: 'approved',
       } : {}),
       external_reference: `kit_${kit.id}_${Date.now()}`,
+      notification_url:   `${Deno.env.get('SUPABASE_URL')}/functions/v1/mp-webhook?company_id=${company_id}`,
     }
 
     const prefRes = await fetch('https://api.mercadopago.com/checkout/preferences', {

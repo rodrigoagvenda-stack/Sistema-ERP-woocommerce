@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { RefreshCw, Search, TrendingUp, CheckCircle2, Clock, Package, ChevronLeft, ChevronRight } from 'lucide-react'
+import { RefreshCw, Search, TrendingUp, CheckCircle2, Clock, Package, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react'
 
 const PAGE_SIZE = 20
 import { Button } from '@/components/ui/button'
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase'
 import { getCompanyId } from '@/lib/company'
+import { mercadoPagoProxy } from '@/lib/api'
 
 const fmt     = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
 const fmtDate = (d) => new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
@@ -49,6 +50,7 @@ export default function KitOrders() {
   const [search,       setSearch]       = useState('')
   const [statusFilter, setStatusFilter] = useState(null)
   const [page,         setPage]         = useState(0)
+  const [syncing,      setSyncing]      = useState({})
 
   const load = async () => {
     setLoading(true)
@@ -66,6 +68,22 @@ export default function KitOrders() {
   }
 
   useEffect(() => { load() }, [])
+
+  const syncOrder = async (o) => {
+    if (!o.external_reference) return alert('Pedido sem external_reference — não é possível sincronizar.')
+    setSyncing(s => ({ ...s, [o.id]: true }))
+    try {
+      const payment = await mercadoPagoProxy({ action: 'check_payment', order: { id: o.external_reference } })
+      const statusMap = { approved: 'approved', pending: 'pending', in_process: 'pending', rejected: 'rejected', cancelled: 'cancelled', refunded: 'refunded', charged_back: 'refunded' }
+      const methodMap = { credit_card: 'Cartão de crédito', debit_card: 'Cartão de débito', ticket: 'Boleto', bank_transfer: 'Pix', account_money: 'Saldo MP' }
+      const newStatus = statusMap[payment.status] || payment.status
+      const method    = methodMap[payment.type] || payment.type || payment.method
+      await supabase.from('kit_orders').update({ status: newStatus, mp_payment_id: String(payment.id), payment_method: method })
+        .eq('id', o.id)
+      setOrders(prev => prev.map(x => x.id === o.id ? { ...x, status: newStatus, mp_payment_id: String(payment.id), payment_method: method } : x))
+    } catch (e) { alert('Erro ao sincronizar: ' + e.message) }
+    finally { setSyncing(s => ({ ...s, [o.id]: false })) }
+  }
 
   const filtered = useMemo(() => {
     let list = orders
@@ -186,7 +204,19 @@ export default function KitOrders() {
                     <td className="px-4 py-3 text-right font-semibold text-gray-800">{fmt(o.total_amount)}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{o.payment_method || '—'}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>{st.label}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>{st.label}</span>
+                        {o.status === 'pending' && (
+                          <button
+                            onClick={() => syncOrder(o)}
+                            disabled={syncing[o.id]}
+                            title="Verificar no Mercado Pago"
+                            className="p-0.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-40 transition-colors"
+                          >
+                            <RotateCcw className={`h-3 w-3 ${syncing[o.id] ? 'animate-spin' : ''}`} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{fmtDate(o.created_at)}</td>
                   </tr>
@@ -209,7 +239,19 @@ export default function KitOrders() {
                     <p className="text-xs text-gray-400">{o.customer_email || ''}</p>
                     <p className="text-xs text-gray-400">{o.customer_phone || ''}</p>
                   </div>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${st.color}`}>{st.label}</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${st.color}`}>{st.label}</span>
+                    {o.status === 'pending' && (
+                      <button
+                        onClick={() => syncOrder(o)}
+                        disabled={syncing[o.id]}
+                        title="Verificar no Mercado Pago"
+                        className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-40 transition-colors"
+                      >
+                        <RotateCcw className={`h-3.5 w-3.5 ${syncing[o.id] ? 'animate-spin' : ''}`} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">{o.kit_name || '—'}</span>
