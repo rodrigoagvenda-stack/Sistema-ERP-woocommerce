@@ -85,7 +85,7 @@ serve(async (req) => {
         payment_method: paymentMethod,
       })
       .eq('external_reference', payment.external_reference)
-      .select('id, kit_id, company_id, customer_name, customer_email, customer_phone, customer_address, shipping_service_id, shipping_cost, total_amount, kit_name, kit_price')
+      .select('id, kit_id, company_id, customer_name, customer_email, customer_phone, customer_address, shipping_service_id, shipping_cost, total_amount, kit_name, kit_price, me_cart_id')
       .single()
 
     if (error) {
@@ -107,6 +107,53 @@ serve(async (req) => {
         const novoEstoque = Math.max(0, kit.stock_qty - (kit.quantity || 1))
         await supabase.from('kits').update({ stock_qty: novoEstoque }).eq('id', order.kit_id)
         console.log('[MP-WEBHOOK] estoque decrementado:', kit.stock_qty, '->', novoEstoque)
+      }
+    }
+
+    // Faz checkout do carrinho ME quando pagamento aprovado
+    if (newStatus === 'approved' && order?.me_cart_id) {
+      try {
+        const { data: meCreds } = await supabase
+          .from('marketplace_credentials')
+          .select('access_token, extra_data')
+          .eq('marketplace', 'melhorenvio')
+          .eq('company_id', company_id)
+          .eq('is_active', true)
+          .single()
+
+        if (meCreds?.access_token) {
+          const ME_BASE   = 'https://melhorenvio.com.br/api/v2/me'
+          const extra     = meCreds.extra_data || {}
+          const meHeaders = {
+            'Authorization': `Bearer ${meCreds.access_token}`,
+            'Content-Type':  'application/json',
+            'Accept':        'application/json',
+            'User-Agent':    `ERP-Codigin (${extra.email || 'admin@codigin.com.br'})`,
+          }
+          const cartId = order.me_cart_id
+
+          const checkoutRes  = await fetch(`${ME_BASE}/shipment/checkout`, {
+            method: 'POST', headers: meHeaders,
+            body: JSON.stringify({ orders: [cartId] }),
+          })
+          const checkoutData = await checkoutRes.json()
+          if (!checkoutRes.ok) throw new Error(checkoutData.message || 'Erro checkout ME')
+          console.log('[MP-WEBHOOK] ME checkout ok:', cartId)
+
+          const generateRes  = await fetch(`${ME_BASE}/shipment/generate`, {
+            method: 'POST', headers: meHeaders,
+            body: JSON.stringify({ orders: [cartId] }),
+          })
+          const generateData = await generateRes.json()
+          const tracking = generateData[cartId]?.tracking || null
+          console.log('[MP-WEBHOOK] ME generate ok, tracking:', tracking)
+
+          if (tracking) {
+            await supabase.from('kit_orders').update({ tracking_code: tracking }).eq('id', order.id)
+          }
+        }
+      } catch (meErr) {
+        console.error('[MP-WEBHOOK] ME checkout erro (não bloqueia):', meErr.message)
       }
     }
 

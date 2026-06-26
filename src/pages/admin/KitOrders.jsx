@@ -113,11 +113,20 @@ export default function KitOrders() {
     setLabeling(l => ({ ...l, [o.id]: true }))
     try {
       const cid = await getCompanyId()
-      const { data: kit } = await supabase.from('kits').select('*').eq('id', o.kit_id).single()
-      if (!kit) throw new Error('Kit não encontrado')
-      const { data, error } = await supabase.functions.invoke('melhor-envio-proxy', {
-        body: { action: 'generate_kit_label', company_id: cid, kit_order: o, kit }
-      })
+      let data, error
+      if (o.me_cart_id) {
+        // Cart já criado no momento da compra — só faz checkout + generate + print
+        ;({ data, error } = await supabase.functions.invoke('melhor-envio-proxy', {
+          body: { action: 'checkout_kit_label', company_id: cid, cart_id: o.me_cart_id }
+        }))
+      } else {
+        // Fallback: cria cart do zero
+        const { data: kit } = await supabase.from('kits').select('*').eq('id', o.kit_id).single()
+        if (!kit) throw new Error('Kit não encontrado')
+        ;({ data, error } = await supabase.functions.invoke('melhor-envio-proxy', {
+          body: { action: 'generate_kit_label', company_id: cid, kit_order: o, kit }
+        }))
+      }
       if (error) throw new Error(error.message)
       if (data?.error) throw new Error(data.error)
       if (data?.label_url) window.open(data.label_url, '_blank')
