@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { RefreshCw, Search, TrendingUp, CheckCircle2, Clock, Package, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react'
+import { RefreshCw, Search, TrendingUp, CheckCircle2, Clock, Package, ChevronLeft, ChevronRight, RotateCcw, Truck } from 'lucide-react'
 
 const PAGE_SIZE = 20
 import { Button } from '@/components/ui/button'
@@ -51,6 +51,7 @@ export default function KitOrders() {
   const [statusFilter, setStatusFilter] = useState(null)
   const [page,         setPage]         = useState(0)
   const [syncing,      setSyncing]      = useState({})
+  const [labeling,     setLabeling]     = useState({})
 
   const load = async () => {
     setLoading(true)
@@ -107,6 +108,23 @@ export default function KitOrders() {
 
   // Reset page when filter/search changes
   useMemo(() => { setPage(0) }, [statusFilter, search])
+
+  const genLabel = async (o) => {
+    setLabeling(l => ({ ...l, [o.id]: true }))
+    try {
+      const cid = await getCompanyId()
+      const { data: kit } = await supabase.from('kits').select('*').eq('id', o.kit_id).single()
+      if (!kit) throw new Error('Kit não encontrado')
+      const { data, error } = await supabase.functions.invoke('melhor-envio-proxy', {
+        body: { action: 'generate_kit_label', company_id: cid, kit_order: o, kit }
+      })
+      if (error) throw new Error(error.message)
+      if (data?.error) throw new Error(data.error)
+      if (data?.label_url) window.open(data.label_url, '_blank')
+      else throw new Error('URL da etiqueta não retornada')
+    } catch (e) { alert('Erro ao gerar etiqueta: ' + e.message) }
+    finally { setLabeling(l => ({ ...l, [o.id]: false })) }
+  }
 
   const approved = orders.filter(o => o.status === 'approved')
   const pending  = orders.filter(o => o.status === 'pending')
@@ -174,6 +192,7 @@ export default function KitOrders() {
                 <th className="text-left px-4 py-3">Pagamento</th>
                 <th className="text-left px-4 py-3">Status</th>
                 <th className="text-left px-4 py-3">Data</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -219,6 +238,19 @@ export default function KitOrders() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{fmtDate(o.created_at)}</td>
+                    <td className="px-4 py-3">
+                      {o.status === 'approved' && (
+                        <button
+                          onClick={() => genLabel(o)}
+                          disabled={labeling[o.id]}
+                          title="Gerar etiqueta Melhor Envio"
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-gray-900 hover:bg-gray-700 text-white disabled:opacity-40 transition-colors"
+                        >
+                          {labeling[o.id] ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Truck className="h-3 w-3" />}
+                          Etiqueta
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 )
               })}
@@ -264,6 +296,16 @@ export default function KitOrders() {
                   <span>{o.shipping_name || ''} {o.shipping_cost ? `· ${fmt(o.shipping_cost)}` : ''}</span>
                   <span>{fmtDate(o.created_at)}</span>
                 </div>
+                {o.status === 'approved' && (
+                  <button
+                    onClick={() => genLabel(o)}
+                    disabled={labeling[o.id]}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium bg-gray-900 hover:bg-gray-700 text-white disabled:opacity-40 transition-colors"
+                  >
+                    {labeling[o.id] ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
+                    Gerar etiqueta
+                  </button>
+                )}
               </div>
             )
           })}
