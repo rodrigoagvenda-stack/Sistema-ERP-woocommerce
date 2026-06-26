@@ -12,7 +12,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { kit_id, company_id, coupon_code, payer, shipping_cost, shipping_name, shipping_service_id, customer_address } = await req.json()
+    const { kit_id, company_id, coupon_code, payer, shipping_cost, shipping_name, shipping_service_id, customer_address, customer_cpf } = await req.json()
     const ME_BASE = 'https://melhorenvio.com.br/api/v2/me'
     log(`kit_id=${kit_id} company_id=${company_id} coupon_code=${coupon_code || 'none'}`)
 
@@ -198,6 +198,7 @@ serve(async (req) => {
               city:        addr.city         || '',
               state_abbr:  addr.state        || '',
               postal_code: (addr.postal_code || '').replace(/\D/g, ''),
+              document:    (customer_cpf     || '').replace(/\D/g, ''),
               note:        '',
             },
             products: [{
@@ -249,6 +250,7 @@ serve(async (req) => {
       customer_email:      payer?.email || null,
       customer_phone:      payer?.phone || null,
       customer_cep:        customer_address?.postal_code || null,
+      customer_cpf:        customer_cpf ? (customer_cpf).replace(/\D/g, '') : null,
       customer_address:    customer_address || null,
       shipping_service_id: shipping_service_id || null,
       me_cart_id:          meCartId,

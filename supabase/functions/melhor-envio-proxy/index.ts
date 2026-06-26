@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
           name:        kit_order.customer_name  || 'Destinatário',
           phone:       (kit_order.customer_phone || '').replace(/\D/g, ''),
           email:       kit_order.customer_email || '',
-          document:    '',
+          document:    (kit_order.customer_cpf  || '').replace(/\D/g, ''),
           address:     addr.street        || '',
           complement:  addr.complement    || '',
           number:      addr.number        || 'S/N',
@@ -271,16 +271,19 @@ Deno.serve(async (req) => {
 
       const cartRes  = await fetch(`${ME_BASE}/cart`, { method: 'POST', headers: meHeaders, body: JSON.stringify(cartPayload) })
       const cartData = await cartRes.json()
-      if (!cartRes.ok || cartData.errors) throw new Error(JSON.stringify(cartData.errors || cartData.message || 'Erro ao adicionar ao carrinho ME'))
+      console.log('[ME] cart response HTTP', cartRes.status, JSON.stringify(cartData))
+      if (!cartRes.ok || cartData.errors) throw new Error(JSON.stringify(cartData.errors ?? cartData.message ?? cartData))
       const cartId = cartData.id
 
       const checkoutRes = await fetch(`${ME_BASE}/shipment/checkout`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ orders: [cartId] }) })
       const checkoutData = await checkoutRes.json()
-      if (!checkoutRes.ok) throw new Error(checkoutData.message || 'Erro no checkout ME')
+      console.log('[ME] checkout response HTTP', checkoutRes.status, JSON.stringify(checkoutData))
+      if (!checkoutRes.ok) throw new Error(JSON.stringify(checkoutData.message ?? checkoutData))
 
       const generateRes  = await fetch(`${ME_BASE}/shipment/generate`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ orders: [cartId] }) })
       const generateData = await generateRes.json()
-      if (!generateRes.ok) throw new Error(generateData.message || 'Erro ao gerar etiqueta ME')
+      console.log('[ME] generate response HTTP', generateRes.status, JSON.stringify(generateData))
+      if (!generateRes.ok) throw new Error(JSON.stringify(generateData.message ?? generateData))
 
       const printRes  = await fetch(`${ME_BASE}/shipment/print`, { method: 'POST', headers: meHeaders, body: JSON.stringify({ mode: 'public', orders: [cartId] }) })
       const printData = await printRes.json()
