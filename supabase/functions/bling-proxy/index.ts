@@ -211,9 +211,10 @@ Deno.serve(async (req) => {
       // Bug 1.3 — PIX à vista: omitir parcelas (evita erro de vencimento)
       const isPix = !order.payment_method || order.payment_method.toLowerCase().includes('pix') ||
         resolveFormaPagamento(extra, order.payment_method) === (Number(extra.fp_pix) || 1)
+      const totalItens = Math.round(blingItens.reduce((s, i) => s + i.valor * i.quantidade, 0) * 100) / 100
       const parcelas = isPix ? undefined : [{
         data:           dataHoje,
-        valor:          parseFloat(order.total) || 0,
+        valor:          totalItens,
         formaPagamento: { id: resolveFormaPagamento(extra, order.payment_method) },
       }]
 

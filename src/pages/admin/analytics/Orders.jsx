@@ -105,7 +105,16 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
   })
 
   const genLabel = () => act('me', async () => {
-    const r = await melhorEnvioProxy({ action: 'generate_label', order })
+    let orderWithPhone = order
+    const phone = (order.billing?.phone || '').replace(/\D/g, '')
+    if (!phone) {
+      const entered = window.prompt('Telefone do cliente não cadastrado.\nDigite o telefone para gerar a etiqueta (só números, com DDD):')
+      if (!entered) return
+      const phoneLimpo = entered.replace(/\D/g, '')
+      if (!phoneLimpo) return alert('Telefone inválido.')
+      orderWithPhone = { ...order, billing: { ...order.billing, phone: phoneLimpo } }
+    }
+    const r = await melhorEnvioProxy({ action: 'generate_label', order: orderWithPhone })
     if (r?.label_url) { window.open(r.label_url, '_blank'); onUpdate(order.id, { _tracking: r.tracking }) }
   })
 
