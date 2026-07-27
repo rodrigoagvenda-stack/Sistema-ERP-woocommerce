@@ -105,6 +105,10 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
   })
 
   const genLabel = () => act('me', async () => {
+    // Se já tem etiqueta gerada, abre direto sem cobrar de novo
+    const existingUrl = (order.meta_data || []).find(m => m.key === '_me_label_url')?.value
+    if (existingUrl) { window.open(existingUrl, '_blank'); return }
+
     let orderWithPhone = order
     const phone = (order.billing?.phone || '').replace(/\D/g, '')
     if (!phone) {
@@ -115,7 +119,14 @@ function OrderRow({ order, onUpdate, onCancelRequest }) {
       orderWithPhone = { ...order, billing: { ...order.billing, phone: phoneLimpo } }
     }
     const r = await melhorEnvioProxy({ action: 'generate_label', order: orderWithPhone })
-    if (r?.label_url) { window.open(r.label_url, '_blank'); onUpdate(order.id, { _tracking: r.tracking }) }
+    if (r?.label_url) {
+      window.open(r.label_url, '_blank')
+      await wooProxy({ method: 'PUT', endpoint: `orders/${order.id}`, body: { meta_data: [
+        { key: '_me_label_url', value: r.label_url },
+        { key: '_me_tracking',  value: r.tracking || '' },
+      ]}})
+      onUpdate(order.id, { _tracking: r.tracking, _me_label_url: r.label_url })
+    }
   })
 
   const emitNFe = () => act('bling', async () => {

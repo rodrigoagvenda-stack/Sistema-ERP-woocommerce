@@ -145,7 +145,17 @@ Deno.serve(async (req) => {
       const cartData = await cartRes.json()
 
       if (!cartRes.ok || cartData.errors) {
-        throw new Error(JSON.stringify(cartData.errors || cartData.message || 'Erro ao adicionar ao carrinho ME'))
+        const meMsg = typeof cartData.errors === 'object'
+          ? Object.values(cartData.errors).flat().join(', ')
+          : (cartData.message || JSON.stringify(cartData.errors || cartData))
+        const userMsg = meMsg.toLowerCase().includes('saldo') || meMsg.toLowerCase().includes('insuficiente') || meMsg.toLowerCase().includes('balance')
+          ? `Saldo insuficiente no Melhor Envio. Recarregue o saldo em melhorenvio.com.br e tente novamente.`
+          : meMsg.toLowerCase().includes('phone') || meMsg.toLowerCase().includes('telefone')
+          ? `Telefone do destinatário inválido ou ausente: ${meMsg}`
+          : meMsg.toLowerCase().includes('document') || meMsg.toLowerCase().includes('cpf')
+          ? `CPF do destinatário inválido ou ausente: ${meMsg}`
+          : `Melhor Envio: ${meMsg}`
+        throw new Error(userMsg)
       }
 
       const cartId = cartData.id
@@ -159,7 +169,11 @@ Deno.serve(async (req) => {
       const checkoutData = await checkoutRes.json()
 
       if (!checkoutRes.ok) {
-        throw new Error(checkoutData.message || 'Erro no checkout ME')
+        const msg = checkoutData.message || JSON.stringify(checkoutData)
+        const userMsg = msg.toLowerCase().includes('saldo') || msg.toLowerCase().includes('insuficiente') || msg.toLowerCase().includes('balance')
+          ? `Saldo insuficiente no Melhor Envio. Recarregue o saldo em melhorenvio.com.br e tente novamente.`
+          : `Melhor Envio (checkout): ${msg}`
+        throw new Error(userMsg)
       }
 
       // 3. Generate (prepara etiqueta para impressão)
