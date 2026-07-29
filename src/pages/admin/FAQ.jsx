@@ -145,6 +145,14 @@ const SECTIONS = [
         a: `Na tela Analytics → Pedidos, há um botão verde de WhatsApp ao lado de cada pedido. Ao clicar, o WhatsApp Web (ou app do celular) abre automaticamente com uma mensagem já escrita, incluindo o nome do cliente, número do pedido e valor.\n\nA mensagem muda de acordo com o status do pedido:\n• Pendente: lembrete para finalizar a compra.\n• Em espera: aviso de que aguardamos confirmação de pagamento.\n• Processando: confirmação do pedido e aviso de envio em breve.\n• Concluído: agradecimento e pedido de avaliação.\n• Cancelado: convite para fazer um novo pedido.\n\nRequisitos:\n• O WhatsApp deve estar aberto no computador (WhatsApp Web) ou celular onde o sistema está sendo usado.\n• O cliente precisa ter preenchido o telefone corretamente no checkout — se não houver número cadastrado, o sistema avisa na hora.`,
       },
       {
+        q: 'Como emitir a NF-e de um pedido e baixar o DANFE?',
+        a: `Na tela Analytics → Pedidos, expanda o pedido e localize a seção NF-e.\n\n1. Clique em "Emitir NF-e". O sistema emite a nota diretamente no Bling e vincula automaticamente ao pedido.\n2. Assim que emitida, o número da nota aparece e o botão "Emitir NF-e" é substituído pelo botão "Baixar DANFE".\n3. Clique em "Baixar DANFE" para abrir/baixar o PDF da nota fiscal.\n\n⚠️ Clique em "Emitir NF-e" apenas UMA VEZ por pedido. Depois de emitida a nota, não existe mais um botão para emitir de novo — só o de baixar o DANFE. Se o pedido ainda mostrar "Emitir NF-e" mas a nota já existir no Bling (ex: emitida e a tela não atualizou), o sistema detecta o erro "já existe uma nota fiscal" e vincula a nota existente automaticamente ao pedido, sem duplicar.`,
+      },
+      {
+        q: 'Como gerar a etiqueta de envio (Melhor Envio)?',
+        a: `Na tela Analytics → Pedidos, expanda o pedido e clique em "Gerar etiqueta".\n\nO sistema compra a etiqueta no Melhor Envio e salva a URL no pedido — o botão passa a abrir direto a etiqueta já gerada.\n\n⚠️ Clique em "Gerar etiqueta" apenas UMA VEZ. Cada clique nesse botão compra uma etiqueta nova e desconta do saldo do Melhor Envio. Depois de gerada, clicar de novo apenas reabre a etiqueta existente (não cobra de novo) — mas clicar repetidamente ANTES da primeira geração terminar pode comprar etiquetas duplicadas e gerar cobranças extras. Se o telefone do cliente não estiver cadastrado no pedido, o sistema pede para digitar antes de gerar.`,
+      },
+      {
         q: 'Como configurar metas de receita?',
         a: 'Vá em Analytics → Configurações. Lá você define meta de receita, período padrão e limiar de estoque baixo.',
       },
